@@ -53,13 +53,22 @@ export default function Dashboard() {
               <p className="text-[10px] font-mono text-muted-foreground tracking-widest">LOGISTICS COMPLIANCE PLATFORM</p>
             </div>
           </div>
-          <nav className="flex items-center gap-4">
+          <nav className="flex items-center gap-2 md:gap-4 flex-wrap">
+            <Link to="/pricing" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+              <CreditCard size={12} /> PLANS
+            </Link>
+            <Link to="/hints" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+              <Lightbulb size={12} /> GUIDE
+            </Link>
             <Link to="/admin" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
               ADMIN
             </Link>
             <Link to="/legal" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
               LEGAL DB
             </Link>
+            <Button variant="ghost" size="sm" onClick={signOut} className="text-xs font-mono text-muted-foreground hover:text-foreground h-auto p-1">
+              <LogOut size={12} />
+            </Button>
           </nav>
         </div>
       </header>
