@@ -14,7 +14,226 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      admin_settings: {
+        Row: {
+          id: string
+          system_prompt: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          system_prompt?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          system_prompt?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          created_at: string
+          currency: string
+          exporter_address: string | null
+          exporter_name: string | null
+          gross_weight_kg: number
+          hs_code: string
+          id: string
+          item_description: string
+          net_weight_kg: number
+          quantity: number
+          shipment_id: string
+          total_value: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          exporter_address?: string | null
+          exporter_name?: string | null
+          gross_weight_kg: number
+          hs_code: string
+          id?: string
+          item_description: string
+          net_weight_kg: number
+          quantity: number
+          shipment_id: string
+          total_value: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          exporter_address?: string | null
+          exporter_name?: string | null
+          gross_weight_kg?: number
+          hs_code?: string
+          id?: string
+          item_description?: string
+          net_weight_kg?: number
+          quantity?: number
+          shipment_id?: string
+          total_value?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["shipment_id"]
+          },
+        ]
+      }
+      legal_knowledge: {
+        Row: {
+          created_at: string
+          effective_date: string
+          full_text: string | null
+          hs_codes_affected: string[]
+          id: string
+          jurisdiction: string
+          regulation_body: string
+          source_url: string | null
+          summary: string
+          title: string
+          transport_modes: Database["public"]["Enums"]["transport_mode"][]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          effective_date: string
+          full_text?: string | null
+          hs_codes_affected?: string[]
+          id?: string
+          jurisdiction: string
+          regulation_body: string
+          source_url?: string | null
+          summary: string
+          title: string
+          transport_modes?: Database["public"]["Enums"]["transport_mode"][]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          effective_date?: string
+          full_text?: string | null
+          hs_codes_affected?: string[]
+          id?: string
+          jurisdiction?: string
+          regulation_body?: string
+          source_url?: string | null
+          summary?: string
+          title?: string
+          transport_modes?: Database["public"]["Enums"]["transport_mode"][]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      manifests: {
+        Row: {
+          bill_of_lading: string | null
+          created_at: string
+          gross_weight_kg: number
+          hs_code: string
+          id: string
+          item_description: string
+          net_weight_kg: number
+          packages: number
+          quantity: number
+          shipment_id: string
+          total_value: number
+          vessel_voyage: string | null
+        }
+        Insert: {
+          bill_of_lading?: string | null
+          created_at?: string
+          gross_weight_kg: number
+          hs_code: string
+          id?: string
+          item_description: string
+          net_weight_kg: number
+          packages?: number
+          quantity: number
+          shipment_id: string
+          total_value: number
+          vessel_voyage?: string | null
+        }
+        Update: {
+          bill_of_lading?: string | null
+          created_at?: string
+          gross_weight_kg?: number
+          hs_code?: string
+          id?: string
+          item_description?: string
+          net_weight_kg?: number
+          packages?: number
+          quantity?: number
+          shipment_id?: string
+          total_value?: number
+          vessel_voyage?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manifests_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["shipment_id"]
+          },
+        ]
+      }
+      shipments: {
+        Row: {
+          consignee: string
+          created_at: string
+          declared_value: number
+          description: string
+          hs_code: string
+          id: string
+          mode: Database["public"]["Enums"]["transport_mode"]
+          risk_notes: string | null
+          risk_score: number
+          shipment_id: string
+          status: Database["public"]["Enums"]["shipment_status"]
+          updated_at: string
+        }
+        Insert: {
+          consignee: string
+          created_at?: string
+          declared_value?: number
+          description: string
+          hs_code: string
+          id?: string
+          mode: Database["public"]["Enums"]["transport_mode"]
+          risk_notes?: string | null
+          risk_score?: number
+          shipment_id: string
+          status?: Database["public"]["Enums"]["shipment_status"]
+          updated_at?: string
+        }
+        Update: {
+          consignee?: string
+          created_at?: string
+          declared_value?: number
+          description?: string
+          hs_code?: string
+          id?: string
+          mode?: Database["public"]["Enums"]["transport_mode"]
+          risk_notes?: string | null
+          risk_score?: number
+          shipment_id?: string
+          status?: Database["public"]["Enums"]["shipment_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +242,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      shipment_status: "in_transit" | "customs_hold" | "cleared" | "flagged"
+      transport_mode: "air" | "sea" | "land"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +370,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      shipment_status: ["in_transit", "customs_hold", "cleared", "flagged"],
+      transport_mode: ["air", "sea", "land"],
+    },
   },
 } as const
