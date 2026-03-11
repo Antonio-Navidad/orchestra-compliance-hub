@@ -189,6 +189,42 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          company_name: string | null
+          compliance_pulse_opt_in: boolean
+          created_at: string
+          full_name: string | null
+          id: string
+          stripe_customer_id: string | null
+          subscription_status: string
+          subscription_tier: Database["public"]["Enums"]["subscription_tier"]
+          updated_at: string
+        }
+        Insert: {
+          company_name?: string | null
+          compliance_pulse_opt_in?: boolean
+          created_at?: string
+          full_name?: string | null
+          id: string
+          stripe_customer_id?: string | null
+          subscription_status?: string
+          subscription_tier?: Database["public"]["Enums"]["subscription_tier"]
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string | null
+          compliance_pulse_opt_in?: boolean
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          stripe_customer_id?: string | null
+          subscription_status?: string
+          subscription_tier?: Database["public"]["Enums"]["subscription_tier"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       shipments: {
         Row: {
           consignee: string
@@ -243,6 +279,7 @@ export type Database = {
     }
     Enums: {
       shipment_status: "in_transit" | "customs_hold" | "cleared" | "flagged"
+      subscription_tier: "free" | "gold" | "black"
       transport_mode: "air" | "sea" | "land"
     }
     CompositeTypes: {
@@ -372,6 +409,7 @@ export const Constants = {
   public: {
     Enums: {
       shipment_status: ["in_transit", "customs_hold", "cleared", "flagged"],
+      subscription_tier: ["free", "gold", "black"],
       transport_mode: ["air", "sea", "land"],
     },
   },
