@@ -7,9 +7,11 @@ import { ComparisonView } from "@/components/ComparisonView";
 import { ModeCompliancePanel } from "@/components/ModeCompliancePanel";
 import { PdfUpload } from "@/components/PdfUpload";
 import { compareInvoiceManifest, getRiskBgClass } from "@/lib/compliance";
+import { ExposurePanel } from "@/components/ExposurePanel";
 import { Shipment, Invoice, Manifest, TransportMode } from "@/types/orchestra";
-import { ArrowLeft, FileText, Package, AlertTriangle } from "lucide-react";
+import { ArrowLeft, FileText, Package, AlertTriangle, TrendingDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ShipmentDetail() {
   const { id } = useParams<{ id: string }>();
