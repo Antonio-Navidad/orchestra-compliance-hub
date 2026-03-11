@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
   const [activeMode, setActiveMode] = useState<string>("all");
+  const { signOut } = useAuth();
 
   const { data: shipments = [], isLoading } = useQuery({
     queryKey: ["shipments"],
