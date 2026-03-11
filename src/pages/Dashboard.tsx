@@ -3,12 +3,15 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ShipmentTable } from "@/components/ShipmentTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plane, Ship, Truck, Activity, AlertTriangle, ShieldCheck, Package } from "lucide-react";
+import { Plane, Ship, Truck, Activity, AlertTriangle, ShieldCheck, Package, CreditCard, Lightbulb, LogOut } from "lucide-react";
 import { Shipment, TransportMode } from "@/types/orchestra";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
   const [activeMode, setActiveMode] = useState<string>("all");
+  const { signOut } = useAuth();
 
   const { data: shipments = [], isLoading } = useQuery({
     queryKey: ["shipments"],
@@ -50,13 +53,22 @@ export default function Dashboard() {
               <p className="text-[10px] font-mono text-muted-foreground tracking-widest">LOGISTICS COMPLIANCE PLATFORM</p>
             </div>
           </div>
-          <nav className="flex items-center gap-4">
+          <nav className="flex items-center gap-2 md:gap-4 flex-wrap">
+            <Link to="/pricing" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+              <CreditCard size={12} /> PLANS
+            </Link>
+            <Link to="/hints" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+              <Lightbulb size={12} /> GUIDE
+            </Link>
             <Link to="/admin" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
               ADMIN
             </Link>
             <Link to="/legal" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
               LEGAL DB
             </Link>
+            <Button variant="ghost" size="sm" onClick={signOut} className="text-xs font-mono text-muted-foreground hover:text-foreground h-auto p-1">
+              <LogOut size={12} />
+            </Button>
           </nav>
         </div>
       </header>

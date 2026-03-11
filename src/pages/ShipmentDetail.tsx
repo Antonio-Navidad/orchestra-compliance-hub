@@ -7,9 +7,11 @@ import { ComparisonView } from "@/components/ComparisonView";
 import { ModeCompliancePanel } from "@/components/ModeCompliancePanel";
 import { PdfUpload } from "@/components/PdfUpload";
 import { compareInvoiceManifest, getRiskBgClass } from "@/lib/compliance";
+import { ExposurePanel } from "@/components/ExposurePanel";
 import { Shipment, Invoice, Manifest, TransportMode } from "@/types/orchestra";
-import { ArrowLeft, FileText, Package, AlertTriangle } from "lucide-react";
+import { ArrowLeft, FileText, Package, AlertTriangle, TrendingDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ShipmentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -103,101 +105,109 @@ export default function ShipmentDetail() {
           </div>
         )}
 
-        {/* Shipment Info Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-            <h3 className="font-mono text-xs text-muted-foreground">SHIPMENT INFO</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Mode</span>
-                <span className="font-mono uppercase">{shipment.mode}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Consignee</span>
-                <span>{shipment.consignee}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">HS Code</span>
-                <span className="font-mono">{shipment.hs_code}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Declared Value</span>
-                <span className="font-mono">${shipment.declared_value.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Status</span>
-                <Badge variant="outline" className="font-mono text-[10px]">
-                  {shipment.status.replace('_', ' ').toUpperCase()}
-                </Badge>
-              </div>
-            </div>
-          </div>
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="bg-secondary/50 border border-border">
+            <TabsTrigger value="overview" className="font-mono text-xs">OVERVIEW</TabsTrigger>
+            <TabsTrigger value="exposure" className="font-mono text-xs">
+              <TrendingDown size={12} className="mr-1" /> EXPOSURE
+            </TabsTrigger>
+            <TabsTrigger value="documents" className="font-mono text-xs">
+              <FileText size={12} className="mr-1" /> DOCUMENTS
+            </TabsTrigger>
+          </TabsList>
 
-          <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-            <h3 className="font-mono text-xs text-muted-foreground">DESCRIPTION</h3>
-            <p className="text-sm">{shipment.description}</p>
-            {shipment.risk_notes && (
-              <>
-                <h3 className="font-mono text-xs text-muted-foreground mt-4">RISK ANALYSIS</h3>
-                <p className="text-sm text-muted-foreground">{shipment.risk_notes}</p>
-              </>
-            )}
-          </div>
-
-          <ModeCompliancePanel mode={shipment.mode as TransportMode} />
-        </div>
-
-        {/* Comparison View */}
-        <div className="space-y-3">
-          <h3 className="font-mono text-xs text-muted-foreground flex items-center gap-2">
-            <FileText size={14} />
-            INVOICE vs MANIFEST COMPARISON
-          </h3>
-          {invoice && manifest ? (
-            <ComparisonView mismatches={mismatches} />
-          ) : (
-            <div className="rounded-lg border border-border bg-card p-6 text-center">
-              <p className="text-sm text-muted-foreground">No invoice/manifest data available for comparison.</p>
-            </div>
-          )}
-        </div>
-
-        {/* Invoice & Manifest Details Side by Side */}
-        {(invoice || manifest) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {invoice && (
+          <TabsContent value="overview" className="mt-4 space-y-6">
+            {/* Shipment Info Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-                <h3 className="font-mono text-xs text-muted-foreground">INVOICE DATA</h3>
-                <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Item</span><span className="text-right max-w-[200px] truncate">{invoice.item_description}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Qty</span><span className="font-mono">{invoice.quantity}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">HS Code</span><span className="font-mono">{invoice.hs_code}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-mono">${invoice.total_value.toLocaleString()}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Net Weight</span><span className="font-mono">{invoice.net_weight_kg.toLocaleString()} kg</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Gross Weight</span><span className="font-mono">{invoice.gross_weight_kg.toLocaleString()} kg</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Exporter</span><span className="text-right max-w-[200px] truncate">{invoice.exporter_name}</span></div>
+                <h3 className="font-mono text-xs text-muted-foreground">SHIPMENT INFO</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Mode</span><span className="font-mono uppercase">{shipment.mode}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Consignee</span><span>{shipment.consignee}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">HS Code</span><span className="font-mono">{shipment.hs_code}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Declared Value</span><span className="font-mono">${shipment.declared_value.toLocaleString()}</span></div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Status</span>
+                    <Badge variant="outline" className="font-mono text-[10px]">{shipment.status.replace('_', ' ').toUpperCase()}</Badge>
+                  </div>
                 </div>
               </div>
-            )}
-            {manifest && (
+
               <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-                <h3 className="font-mono text-xs text-muted-foreground">MANIFEST DATA</h3>
-                <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Item</span><span className="text-right max-w-[200px] truncate">{manifest.item_description}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Qty</span><span className="font-mono">{manifest.quantity}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">HS Code</span><span className="font-mono">{manifest.hs_code}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-mono">${manifest.total_value.toLocaleString()}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Net Weight</span><span className="font-mono">{manifest.net_weight_kg.toLocaleString()} kg</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Gross Weight</span><span className="font-mono">{manifest.gross_weight_kg.toLocaleString()} kg</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">B/L</span><span className="font-mono">{manifest.bill_of_lading || '—'}</span></div>
+                <h3 className="font-mono text-xs text-muted-foreground">DESCRIPTION</h3>
+                <p className="text-sm">{shipment.description}</p>
+                {shipment.risk_notes && (
+                  <>
+                    <h3 className="font-mono text-xs text-muted-foreground mt-4">RISK ANALYSIS</h3>
+                    <p className="text-sm text-muted-foreground">{shipment.risk_notes}</p>
+                  </>
+                )}
+              </div>
+
+              <ModeCompliancePanel mode={shipment.mode as TransportMode} />
+            </div>
+
+            {/* Comparison View */}
+            <div className="space-y-3">
+              <h3 className="font-mono text-xs text-muted-foreground flex items-center gap-2">
+                <FileText size={14} /> INVOICE vs MANIFEST COMPARISON
+              </h3>
+              {invoice && manifest ? (
+                <ComparisonView mismatches={mismatches} />
+              ) : (
+                <div className="rounded-lg border border-border bg-card p-6 text-center">
+                  <p className="text-sm text-muted-foreground">No invoice/manifest data available for comparison.</p>
                 </div>
+              )}
+            </div>
+
+            {/* Invoice & Manifest Details */}
+            {(invoice || manifest) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {invoice && (
+                  <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+                    <h3 className="font-mono text-xs text-muted-foreground">INVOICE DATA</h3>
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex justify-between"><span className="text-muted-foreground">Item</span><span className="text-right max-w-[200px] truncate">{invoice.item_description}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Qty</span><span className="font-mono">{invoice.quantity}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">HS Code</span><span className="font-mono">{invoice.hs_code}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-mono">${invoice.total_value.toLocaleString()}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Net Weight</span><span className="font-mono">{invoice.net_weight_kg.toLocaleString()} kg</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Gross Weight</span><span className="font-mono">{invoice.gross_weight_kg.toLocaleString()} kg</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Exporter</span><span className="text-right max-w-[200px] truncate">{invoice.exporter_name}</span></div>
+                    </div>
+                  </div>
+                )}
+                {manifest && (
+                  <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+                    <h3 className="font-mono text-xs text-muted-foreground">MANIFEST DATA</h3>
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex justify-between"><span className="text-muted-foreground">Item</span><span className="text-right max-w-[200px] truncate">{manifest.item_description}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Qty</span><span className="font-mono">{manifest.quantity}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">HS Code</span><span className="font-mono">{manifest.hs_code}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-mono">${manifest.total_value.toLocaleString()}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Net Weight</span><span className="font-mono">{manifest.net_weight_kg.toLocaleString()} kg</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">Gross Weight</span><span className="font-mono">{manifest.gross_weight_kg.toLocaleString()} kg</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">B/L</span><span className="font-mono">{manifest.bill_of_lading || '—'}</span></div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
+          </TabsContent>
 
-        {/* PDF Upload */}
-        <PdfUpload shipmentId={shipment.shipment_id} />
+          <TabsContent value="exposure" className="mt-4">
+            <ExposurePanel
+              riskScore={shipment.risk_score}
+              declaredValue={shipment.declared_value}
+              jurisdictionCode="US"
+            />
+          </TabsContent>
+
+          <TabsContent value="documents" className="mt-4">
+            <PdfUpload shipmentId={shipment.shipment_id} />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
