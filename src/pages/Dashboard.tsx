@@ -3,9 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ShipmentTable } from "@/components/ShipmentTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plane, Ship, Truck, Activity, AlertTriangle, ShieldCheck, Package } from "lucide-react";
+import { Plane, Ship, Truck, Activity, AlertTriangle, ShieldCheck, Package, CreditCard, Lightbulb, LogOut } from "lucide-react";
 import { Shipment, TransportMode } from "@/types/orchestra";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
   const [activeMode, setActiveMode] = useState<string>("all");
