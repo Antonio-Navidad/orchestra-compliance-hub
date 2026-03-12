@@ -103,6 +103,17 @@ export default function ShipmentDetail() {
               <RiskBadge score={shipment.risk_score} />
             </button>
           </ExplainabilityDrawer>
+          <div className="ml-auto flex items-center gap-3">
+            <BrokerSelector
+              shipmentId={shipment.shipment_id}
+              currentBrokerId={(shipment as any).broker_id}
+              currentBrokerName={(shipment as any).assigned_broker}
+            />
+            <JurisdictionSelector
+              shipmentId={shipment.shipment_id}
+              currentCode={jurisdictionCode}
+            />
+          </div>
         </div>
       </header>
 
