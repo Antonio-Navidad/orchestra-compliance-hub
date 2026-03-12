@@ -314,7 +314,7 @@ export default function Dashboard() {
             <ShipmentTable shipments={filteredByDirection as Shipment[]} mode="land" />
           </TabsContent>
         </Tabs>
-      </main>
+      </div>
     </div>
   );
 }
