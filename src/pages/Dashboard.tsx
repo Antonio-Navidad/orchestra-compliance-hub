@@ -69,6 +69,7 @@ export default function Dashboard() {
             </Link>
             <Link to="/brokers" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
               <Users size={12} /> BROKERS
+            </Link>
             <Link to="/admin" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
               ADMIN
             </Link>
