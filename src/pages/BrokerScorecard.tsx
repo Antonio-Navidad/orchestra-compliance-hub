@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Users, ArrowUpDown, Download, Shield, Upload } from "lucide-react";
 import { CsvImport } from "@/components/CsvImport";
-import { ArrowLeft, Users, ArrowUpDown, Download, Shield } from "lucide-react";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
