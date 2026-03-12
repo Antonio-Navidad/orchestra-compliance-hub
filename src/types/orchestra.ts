@@ -10,7 +10,7 @@ export interface Shipment {
   declared_value: number;
   risk_score: number;
   risk_notes: string | null;
-  status: 'in_transit' | 'customs_hold' | 'cleared' | 'flagged';
+  status: 'in_transit' | 'customs_hold' | 'cleared' | 'flagged' | 'new' | 'in_review' | 'waiting_docs' | 'sent_to_broker' | 'escalated' | 'corrected' | 'filed' | 'closed_avoided' | 'closed_incident';
   created_at: string;
   updated_at: string;
 }
