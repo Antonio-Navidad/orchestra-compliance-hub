@@ -2,3 +2,9 @@ project_id = "xdygwvkapjrrolxhdaie"
 
 [functions.legal-webhook]
 verify_jwt = false
+
+[functions.classify-product]
+verify_jwt = false
+
+[functions.validate-documents]
+verify_jwt = false
