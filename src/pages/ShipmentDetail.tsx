@@ -297,6 +297,10 @@ export default function ShipmentDetail() {
             />
           </TabsContent>
 
+          <TabsContent value="packet" className="mt-4">
+            <PacketScoreCard result={packetScore} />
+          </TabsContent>
+
           <TabsContent value="documents" className="mt-4">
             <PdfUpload shipmentId={shipment.shipment_id} />
           </TabsContent>
