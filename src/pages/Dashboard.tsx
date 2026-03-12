@@ -55,6 +55,9 @@ export default function Dashboard() {
             </div>
           </div>
           <nav className="flex items-center gap-2 md:gap-4 flex-wrap">
+            <Link to="/intake" className="text-xs font-mono text-primary hover:text-primary/80 transition-colors flex items-center gap-1 border border-primary/30 rounded px-2 py-1">
+              <Plus size={12} /> NEW SHIPMENT
+            </Link>
             <Link to="/pricing" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
               <CreditCard size={12} /> PLANS
             </Link>
