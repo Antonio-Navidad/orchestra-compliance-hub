@@ -8,8 +8,12 @@ import { ModeCompliancePanel } from "@/components/ModeCompliancePanel";
 import { PdfUpload } from "@/components/PdfUpload";
 import { compareInvoiceManifest, getRiskBgClass } from "@/lib/compliance";
 import { ExposurePanel } from "@/components/ExposurePanel";
+import { FixNowPanel } from "@/components/FixNowPanel";
+import { ExplainabilityDrawer } from "@/components/ExplainabilityDrawer";
+import { AuditTimeline } from "@/components/AuditTimeline";
+import { StatusWorkflow } from "@/components/StatusWorkflow";
 import { Shipment, Invoice, Manifest, TransportMode } from "@/types/orchestra";
-import { ArrowLeft, FileText, Package, AlertTriangle, TrendingDown } from "lucide-react";
+import { ArrowLeft, FileText, AlertTriangle, TrendingDown, Zap, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -72,6 +76,8 @@ export default function ShipmentDetail() {
     );
   }
 
+  const jurisdictionCode = (shipment as any).jurisdiction_code || "US";
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
@@ -83,11 +89,30 @@ export default function ShipmentDetail() {
             <ModeIcon mode={shipment.mode as TransportMode} className="text-primary" size={18} />
             <h1 className="text-lg font-bold font-mono">{shipment.shipment_id}</h1>
           </div>
-          <RiskBadge score={shipment.risk_score} />
+          <ExplainabilityDrawer
+            riskScore={shipment.risk_score}
+            riskNotes={shipment.risk_notes}
+            hsCode={shipment.hs_code}
+            mode={shipment.mode}
+            status={shipment.status}
+            jurisdictionCode={jurisdictionCode}
+          >
+            <button className="cursor-pointer">
+              <RiskBadge score={shipment.risk_score} />
+            </button>
+          </ExplainabilityDrawer>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-6">
+        {/* Status Workflow */}
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <span className="font-mono text-xs text-muted-foreground">WORKFLOW STATUS</span>
+            <StatusWorkflow shipmentId={shipment.shipment_id} currentStatus={shipment.status} />
+          </div>
+        </div>
+
         {/* Risk Banner */}
         {shipment.risk_score >= 60 && (
           <div className={`rounded-lg border p-4 ${getRiskBgClass(shipment.risk_score)} ${
@@ -106,18 +131,23 @@ export default function ShipmentDetail() {
         )}
 
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="bg-secondary/50 border border-border">
+          <TabsList className="bg-secondary/50 border border-border flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="overview" className="font-mono text-xs">OVERVIEW</TabsTrigger>
+            <TabsTrigger value="fix" className="font-mono text-xs">
+              <Zap size={12} className="mr-1" /> FIX NOW
+            </TabsTrigger>
             <TabsTrigger value="exposure" className="font-mono text-xs">
               <TrendingDown size={12} className="mr-1" /> EXPOSURE
             </TabsTrigger>
             <TabsTrigger value="documents" className="font-mono text-xs">
               <FileText size={12} className="mr-1" /> DOCUMENTS
             </TabsTrigger>
+            <TabsTrigger value="audit" className="font-mono text-xs">
+              <Clock size={12} className="mr-1" /> AUDIT TRAIL
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-4 space-y-6">
-            {/* Shipment Info Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="rounded-lg border border-border bg-card p-4 space-y-3">
                 <h3 className="font-mono text-xs text-muted-foreground">SHIPMENT INFO</h3>
@@ -126,10 +156,7 @@ export default function ShipmentDetail() {
                   <div className="flex justify-between"><span className="text-muted-foreground">Consignee</span><span>{shipment.consignee}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">HS Code</span><span className="font-mono">{shipment.hs_code}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Declared Value</span><span className="font-mono">${shipment.declared_value.toLocaleString()}</span></div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Status</span>
-                    <Badge variant="outline" className="font-mono text-[10px]">{shipment.status.replace('_', ' ').toUpperCase()}</Badge>
-                  </div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Jurisdiction</span><span className="font-mono">{jurisdictionCode}</span></div>
                 </div>
               </div>
 
@@ -196,16 +223,32 @@ export default function ShipmentDetail() {
             )}
           </TabsContent>
 
+          <TabsContent value="fix" className="mt-4">
+            <FixNowPanel
+              shipmentId={shipment.shipment_id}
+              riskScore={shipment.risk_score}
+              status={shipment.status}
+              riskNotes={shipment.risk_notes}
+              hsCode={shipment.hs_code}
+              declaredValue={shipment.declared_value}
+              mismatches={mismatches}
+            />
+          </TabsContent>
+
           <TabsContent value="exposure" className="mt-4">
             <ExposurePanel
               riskScore={shipment.risk_score}
               declaredValue={shipment.declared_value}
-              jurisdictionCode="US"
+              jurisdictionCode={jurisdictionCode}
             />
           </TabsContent>
 
           <TabsContent value="documents" className="mt-4">
             <PdfUpload shipmentId={shipment.shipment_id} />
+          </TabsContent>
+
+          <TabsContent value="audit" className="mt-4">
+            <AuditTimeline shipmentId={shipment.shipment_id} />
           </TabsContent>
         </Tabs>
       </main>

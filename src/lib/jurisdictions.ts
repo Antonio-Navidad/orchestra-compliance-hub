@@ -66,6 +66,17 @@ export const jurisdictionAdapters: Record<string, JurisdictionAdapter> = {
     reworkCost: 4000,
     notes: "Receita Federal. Complex ICMS/IPI tax structure. Strict Siscomex documentation.",
   },
+  PA: {
+    code: "PA",
+    name: "Panama",
+    currency: "USD",
+    holdDailyRate: 1000,
+    storageDailyRate: 180,
+    avgPenaltyPercent: 4.5,
+    legalEscalationCost: 12000,
+    reworkCost: 2800,
+    notes: "Colon Free Zone rules. ANA customs authority. Panama Canal transit documentation. TPA with US.",
+  },
 };
 
 export interface ExposureCalculation {

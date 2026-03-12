@@ -60,6 +60,9 @@ export default function Dashboard() {
             <Link to="/hints" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
               <Lightbulb size={12} /> GUIDE
             </Link>
+            <Link to="/review" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+              <ClipboardList size={12} /> REVIEW QUEUE
+            </Link>
             <Link to="/admin" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
               ADMIN
             </Link>
