@@ -195,7 +195,7 @@ export default function ShipmentDetail() {
           </div>
         )}
 
-        <Tabs defaultValue="overview" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-secondary/50 border border-border flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="overview" className="font-mono text-xs">OVERVIEW</TabsTrigger>
             <TabsTrigger value="fix" className="font-mono text-xs">
