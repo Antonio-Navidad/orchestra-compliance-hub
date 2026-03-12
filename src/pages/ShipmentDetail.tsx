@@ -13,7 +13,7 @@ import { ExplainabilityDrawer } from "@/components/ExplainabilityDrawer";
 import { AuditTimeline } from "@/components/AuditTimeline";
 import { StatusWorkflow } from "@/components/StatusWorkflow";
 import { Shipment, Invoice, Manifest, TransportMode } from "@/types/orchestra";
-import { ArrowLeft, FileText, AlertTriangle, TrendingDown, Zap, Clock, ClipboardCheck } from "lucide-react";
+import { ArrowLeft, FileText, AlertTriangle, TrendingDown, Zap, Clock, ClipboardCheck, Send } from "lucide-react";
 import { PacketScoreCard } from "@/components/PacketScoreCard";
 import { computePacketScore } from "@/lib/packetScore";
 import { EscalationPanel } from "@/components/EscalationPanel";
@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BrokerSelector } from "@/components/BrokerSelector";
 import { JurisdictionSelector } from "@/components/JurisdictionSelector";
+import { SendToBrokerPanel } from "@/components/SendToBrokerPanel";
 
 export default function ShipmentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -143,6 +144,15 @@ export default function ShipmentDetail() {
             <JurisdictionSelector
               shipmentId={shipment.shipment_id}
               currentCode={jurisdictionCode}
+            />
+            <SendToBrokerPanel
+              shipmentId={shipment.shipment_id}
+              brokerId={(shipment as any).broker_id}
+              brokerName={(shipment as any).assigned_broker}
+              direction={(shipment as any).direction}
+              destinationCountry={(shipment as any).destination_country}
+              packetScore={packetScore.overallScore}
+              filingReadiness={(shipment as any).filing_readiness}
             />
             <EscalationPanel
               shipmentId={shipment.shipment_id}
