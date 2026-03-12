@@ -230,7 +230,7 @@ export default function BrokerProfile() {
 
       <main className="container mx-auto px-4 py-6 space-y-6">
         {/* Summary KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
           {[
             { label: "SHIPMENTS", value: stats.total, color: "text-primary" },
             { label: "HOLD RATE", value: `${stats.holdRate}%`, color: stats.holdRate > 20 ? "text-destructive" : "text-risk-safe" },
@@ -238,12 +238,46 @@ export default function BrokerProfile() {
             { label: "SLA", value: `${stats.sla}%`, color: stats.sla < 80 ? "text-destructive" : "text-risk-safe" },
             { label: "EXPOSURE", value: `$${stats.exposure.toLocaleString()}`, color: "text-destructive" },
             { label: "RESOLVED", value: `$${stats.resolved.toLocaleString()}`, color: "text-risk-safe" },
+            { label: "RESPONSE", value: avgResponseTime != null ? `${avgResponseTime}h` : "—", color: avgResponseTime != null && avgResponseTime > 48 ? "text-risk-medium" : "" },
           ].map((kpi) => (
             <div key={kpi.label} className="rounded-lg border border-border bg-card p-4 text-center">
               <p className="font-mono text-[9px] text-muted-foreground">{kpi.label}</p>
               <p className={`font-mono text-xl font-bold ${kpi.color}`}>{kpi.value}</p>
             </div>
           ))}
+        </div>
+
+        {/* Filters */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <Filter size={14} className="text-muted-foreground" />
+          <Select value={modeFilter} onValueChange={setModeFilter}>
+            <SelectTrigger className="w-[120px] h-8 text-xs bg-secondary/50 font-mono">
+              <SelectValue placeholder="Mode" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Modes</SelectItem>
+              <SelectItem value="air">Air</SelectItem>
+              <SelectItem value="sea">Sea</SelectItem>
+              <SelectItem value="land">Land</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={jurisdictionFilter} onValueChange={setJurisdictionFilter}>
+            <SelectTrigger className="w-[140px] h-8 text-xs bg-secondary/50 font-mono">
+              <SelectValue placeholder="Jurisdiction" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Jurisdictions</SelectItem>
+              <SelectItem value="US">US</SelectItem>
+              <SelectItem value="MX">Mexico</SelectItem>
+              <SelectItem value="EU">EU</SelectItem>
+              <SelectItem value="CO">Colombia</SelectItem>
+              <SelectItem value="BR">Brazil</SelectItem>
+              <SelectItem value="PA">Panama</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-[10px] text-muted-foreground font-mono ml-auto">
+            {brokerShipments.length} shipments shown
+          </span>
         </div>
 
         <Tabs defaultValue="trends">
