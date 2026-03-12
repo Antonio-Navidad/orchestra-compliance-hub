@@ -236,6 +236,9 @@ export default function BrokerScorecard() {
             <TabsTrigger value="compare" className="font-mono text-xs">
               COMPARE {compareIds.length >= 2 && `(${compareIds.length})`}
             </TabsTrigger>
+            <TabsTrigger value="import" className="font-mono text-xs gap-1">
+              <Upload size={12} /> IMPORT
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="scorecards" className="mt-4 space-y-3">
