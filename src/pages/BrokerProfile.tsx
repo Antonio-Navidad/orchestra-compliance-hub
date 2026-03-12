@@ -103,11 +103,31 @@ export default function BrokerProfile() {
 
   const brokerShipments = useMemo(() => {
     if (!broker) return [];
-    return shipments.filter(
+    let filtered = shipments.filter(
       (s) => s.broker_id === broker.id || s.assigned_broker === broker.canonical_name ||
              (broker.aliases || []).some((a: string) => a.toLowerCase() === (s.assigned_broker || "").toLowerCase())
     );
-  }, [broker, shipments]);
+    if (modeFilter !== "all") filtered = filtered.filter((s) => s.mode === modeFilter);
+    if (jurisdictionFilter !== "all") filtered = filtered.filter((s) => (s.jurisdiction_code || "US") === jurisdictionFilter);
+    return filtered;
+  }, [broker, shipments, modeFilter, jurisdictionFilter]);
+
+  const avgResponseTime = useMemo(() => {
+    if (events.length < 2) return null;
+    const escalations = events.filter((e) => e.event_type === "escalation_sent" || e.event_type === "documents_sent_to_broker");
+    const resolutions = events.filter((e) => e.event_type === "issue_resolved" || e.event_type === "corrected_doc_uploaded");
+    if (escalations.length === 0 || resolutions.length === 0) return null;
+    // Estimate average response time from event gaps
+    let totalHours = 0, count = 0;
+    escalations.forEach((esc) => {
+      const nextRes = resolutions.find((r) => new Date(r.created_at) > new Date(esc.created_at));
+      if (nextRes) {
+        totalHours += (new Date(nextRes.created_at).getTime() - new Date(esc.created_at).getTime()) / 3600000;
+        count++;
+      }
+    });
+    return count > 0 ? Math.round(totalHours / count) : null;
+  }, [events]);
 
   const stats = useMemo(() => {
     const holds = brokerShipments.filter((s) => s.status === "customs_hold").length;
