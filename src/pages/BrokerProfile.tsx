@@ -2,10 +2,11 @@ import { useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Users, Save, MessageSquare } from "lucide-react";
+import { ArrowLeft, Users, Save, MessageSquare, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { jurisdictionAdapters } from "@/lib/jurisdictions";
@@ -35,6 +36,8 @@ export default function BrokerProfile() {
   const queryClient = useQueryClient();
   const [notes, setNotes] = useState<string>("");
   const [notesLoaded, setNotesLoaded] = useState(false);
+  const [modeFilter, setModeFilter] = useState("all");
+  const [jurisdictionFilter, setJurisdictionFilter] = useState("all");
 
   const { data: broker } = useQuery({
     queryKey: ["broker", id],
@@ -100,11 +103,31 @@ export default function BrokerProfile() {
 
   const brokerShipments = useMemo(() => {
     if (!broker) return [];
-    return shipments.filter(
+    let filtered = shipments.filter(
       (s) => s.broker_id === broker.id || s.assigned_broker === broker.canonical_name ||
              (broker.aliases || []).some((a: string) => a.toLowerCase() === (s.assigned_broker || "").toLowerCase())
     );
-  }, [broker, shipments]);
+    if (modeFilter !== "all") filtered = filtered.filter((s) => s.mode === modeFilter);
+    if (jurisdictionFilter !== "all") filtered = filtered.filter((s) => (s.jurisdiction_code || "US") === jurisdictionFilter);
+    return filtered;
+  }, [broker, shipments, modeFilter, jurisdictionFilter]);
+
+  const avgResponseTime = useMemo(() => {
+    if (events.length < 2) return null;
+    const escalations = events.filter((e) => e.event_type === "escalation_sent" || e.event_type === "documents_sent_to_broker");
+    const resolutions = events.filter((e) => e.event_type === "issue_resolved" || e.event_type === "corrected_doc_uploaded");
+    if (escalations.length === 0 || resolutions.length === 0) return null;
+    // Estimate average response time from event gaps
+    let totalHours = 0, count = 0;
+    escalations.forEach((esc) => {
+      const nextRes = resolutions.find((r) => new Date(r.created_at) > new Date(esc.created_at));
+      if (nextRes) {
+        totalHours += (new Date(nextRes.created_at).getTime() - new Date(esc.created_at).getTime()) / 3600000;
+        count++;
+      }
+    });
+    return count > 0 ? Math.round(totalHours / count) : null;
+  }, [events]);
 
   const stats = useMemo(() => {
     const holds = brokerShipments.filter((s) => s.status === "customs_hold").length;
@@ -207,7 +230,7 @@ export default function BrokerProfile() {
 
       <main className="container mx-auto px-4 py-6 space-y-6">
         {/* Summary KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
           {[
             { label: "SHIPMENTS", value: stats.total, color: "text-primary" },
             { label: "HOLD RATE", value: `${stats.holdRate}%`, color: stats.holdRate > 20 ? "text-destructive" : "text-risk-safe" },
@@ -215,12 +238,46 @@ export default function BrokerProfile() {
             { label: "SLA", value: `${stats.sla}%`, color: stats.sla < 80 ? "text-destructive" : "text-risk-safe" },
             { label: "EXPOSURE", value: `$${stats.exposure.toLocaleString()}`, color: "text-destructive" },
             { label: "RESOLVED", value: `$${stats.resolved.toLocaleString()}`, color: "text-risk-safe" },
+            { label: "RESPONSE", value: avgResponseTime != null ? `${avgResponseTime}h` : "—", color: avgResponseTime != null && avgResponseTime > 48 ? "text-risk-medium" : "" },
           ].map((kpi) => (
             <div key={kpi.label} className="rounded-lg border border-border bg-card p-4 text-center">
               <p className="font-mono text-[9px] text-muted-foreground">{kpi.label}</p>
               <p className={`font-mono text-xl font-bold ${kpi.color}`}>{kpi.value}</p>
             </div>
           ))}
+        </div>
+
+        {/* Filters */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <Filter size={14} className="text-muted-foreground" />
+          <Select value={modeFilter} onValueChange={setModeFilter}>
+            <SelectTrigger className="w-[120px] h-8 text-xs bg-secondary/50 font-mono">
+              <SelectValue placeholder="Mode" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Modes</SelectItem>
+              <SelectItem value="air">Air</SelectItem>
+              <SelectItem value="sea">Sea</SelectItem>
+              <SelectItem value="land">Land</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={jurisdictionFilter} onValueChange={setJurisdictionFilter}>
+            <SelectTrigger className="w-[140px] h-8 text-xs bg-secondary/50 font-mono">
+              <SelectValue placeholder="Jurisdiction" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Jurisdictions</SelectItem>
+              <SelectItem value="US">US</SelectItem>
+              <SelectItem value="MX">Mexico</SelectItem>
+              <SelectItem value="EU">EU</SelectItem>
+              <SelectItem value="CO">Colombia</SelectItem>
+              <SelectItem value="BR">Brazil</SelectItem>
+              <SelectItem value="PA">Panama</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-[10px] text-muted-foreground font-mono ml-auto">
+            {brokerShipments.length} shipments shown
+          </span>
         </div>
 
         <Tabs defaultValue="trends">

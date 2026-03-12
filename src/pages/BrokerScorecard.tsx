@@ -297,23 +297,35 @@ export default function BrokerScorecard() {
                   </div>
                 </div>
 
-                {/* KPI Grid - expanded */}
+                {/* KPI Grid with confidence badges and drill-down */}
                 <div className="grid grid-cols-3 md:grid-cols-8 gap-3 mt-4">
                   {[
-                    { label: "SHIPMENTS", value: kpi.shipmentsHandled, color: "" },
-                    { label: "HOLD RATE", value: `${kpi.holdRate}%`, color: kpi.holdRate > 20 ? "text-destructive" : kpi.holdRate > 10 ? "text-risk-medium" : "text-risk-safe" },
-                    { label: "DOC ERRORS", value: `${kpi.docMismatchRate}%`, color: kpi.docMismatchRate > 15 ? "text-destructive" : "" },
-                    { label: "HS FIXES", value: kpi.hsCorrections, color: "" },
-                    { label: "AVG DELAY", value: `${kpi.avgDelayDays}d`, color: kpi.avgDelayDays > 3 ? "text-risk-medium" : "" },
-                    { label: "CLEARANCE", value: `${kpi.avgClearanceTime}d`, color: "" },
-                    { label: "SLA", value: `${kpi.slaCompliance}%`, color: kpi.slaCompliance < 80 ? "text-destructive" : "text-risk-safe" },
-                    { label: "EXPOSURE", value: `$${kpi.exposureGenerated.toLocaleString()}`, color: "text-destructive" },
-                  ].map((m) => (
-                    <div key={m.label} className="text-center">
-                      <p className="font-mono text-[8px] text-muted-foreground">{m.label}</p>
-                      <p className={`font-mono text-sm font-bold ${m.color}`}>{m.value}</p>
-                    </div>
-                  ))}
+                    { label: "SHIPMENTS", value: kpi.shipmentsHandled, color: "", key: "shipments" },
+                    { label: "HOLD RATE", value: `${kpi.holdRate}%`, color: kpi.holdRate > 20 ? "text-destructive" : kpi.holdRate > 10 ? "text-risk-medium" : "text-risk-safe", key: "holds" },
+                    { label: "DOC ERRORS", value: `${kpi.docMismatchRate}%`, color: kpi.docMismatchRate > 15 ? "text-destructive" : "", key: "errors" },
+                    { label: "HS FIXES", value: kpi.hsCorrections, color: "", key: "hs" },
+                    { label: "AVG DELAY", value: `${kpi.avgDelayDays}d`, color: kpi.avgDelayDays > 3 ? "text-risk-medium" : "", key: "delay" },
+                    { label: "CLEARANCE", value: `${kpi.avgClearanceTime}d`, color: "", key: "clearance" },
+                    { label: "SLA", value: `${kpi.slaCompliance}%`, color: kpi.slaCompliance < 80 ? "text-destructive" : "text-risk-safe", key: "sla" },
+                    { label: "EXPOSURE", value: `$${kpi.exposureGenerated.toLocaleString()}`, color: "text-destructive", key: "exposure" },
+                  ].map((m) => {
+                    const totalEvidence = Object.values(kpi.evidenceBreakdown).reduce((a, b) => a + b, 0);
+                    const confirmedPct = totalEvidence > 0 ? Math.round((kpi.evidenceBreakdown.confirmed / totalEvidence) * 100) : 0;
+                    return (
+                      <Link key={m.label} to={`/broker/${kpi.broker.id}`} className="text-center hover:bg-secondary/30 rounded-md p-1 transition-colors cursor-pointer">
+                        <p className="font-mono text-[8px] text-muted-foreground">{m.label}</p>
+                        <p className={`font-mono text-sm font-bold ${m.color}`}>{m.value}</p>
+                        {totalEvidence > 0 && (
+                          <div className="flex items-center justify-center gap-0.5 mt-0.5">
+                            <div className="h-1 rounded-full bg-secondary overflow-hidden w-8">
+                              <div className="h-full bg-risk-safe rounded-full" style={{ width: `${confirmedPct}%` }} />
+                            </div>
+                            <span className="text-[7px] font-mono text-muted-foreground/60">{confirmedPct}%</span>
+                          </div>
+                        )}
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             ))}
