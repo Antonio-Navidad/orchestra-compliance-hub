@@ -51,7 +51,7 @@ export function AppSidebar() {
   const isActive = (path: string) => location.pathname === path;
 
   const renderGroup = (label: string, items: typeof mainNav) => (
-    <SidebarGroup defaultOpen>
+    <SidebarGroup>
       <SidebarGroupLabel className="text-[10px] tracking-widest font-mono text-muted-foreground/60">
         {label}
       </SidebarGroupLabel>
