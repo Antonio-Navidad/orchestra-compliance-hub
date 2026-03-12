@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ShipmentTable } from "@/components/ShipmentTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plane, Ship, Truck, Activity, AlertTriangle, ShieldCheck, Package, CreditCard, Lightbulb, LogOut, ClipboardList, BarChart3 } from "lucide-react";
+import { Plane, Ship, Truck, Activity, AlertTriangle, ShieldCheck, Package, CreditCard, Lightbulb, LogOut, ClipboardList, BarChart3, Users } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Shipment, TransportMode } from "@/types/orchestra";
 import { Link } from "react-router-dom";
@@ -66,6 +66,9 @@ export default function Dashboard() {
             </Link>
             <Link to="/analytics" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
               <BarChart3 size={12} /> ROI
+            </Link>
+            <Link to="/brokers" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+              <Users size={12} /> BROKERS
             </Link>
             <Link to="/admin" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
               ADMIN

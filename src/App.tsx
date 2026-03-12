@@ -13,6 +13,8 @@ import Auth from "./pages/Auth";
 import Pricing from "./pages/Pricing";
 import Hints from "./pages/Hints";
 import Analytics from "./pages/Analytics";
+import BrokerScorecard from "./pages/BrokerScorecard";
+import BrokerProfile from "./pages/BrokerProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +47,8 @@ const App = () => (
           <Route path="/review" element={<ProtectedRoute><ReviewQueue /></ProtectedRoute>} />
           <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+          <Route path="/brokers" element={<ProtectedRoute><BrokerScorecard /></ProtectedRoute>} />
+          <Route path="/broker/:id" element={<ProtectedRoute><BrokerProfile /></ProtectedRoute>} />
           <Route path="/hints" element={<ProtectedRoute><Hints /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
