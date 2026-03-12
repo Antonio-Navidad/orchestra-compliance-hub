@@ -56,6 +56,7 @@ const App = () => (
           <Route path="/broker/:id" element={<ProtectedRoute><BrokerProfile /></ProtectedRoute>} />
           <Route path="/intake" element={<ProtectedRoute><ShipmentIntake /></ProtectedRoute>} />
           <Route path="/audit-trail" element={<ProtectedRoute><AuditTrail /></ProtectedRoute>} />
+          <Route path="/jurisdiction-settings" element={<ProtectedRoute><JurisdictionSettings /></ProtectedRoute>} />
           <Route path="/hints" element={<ProtectedRoute><Hints /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
