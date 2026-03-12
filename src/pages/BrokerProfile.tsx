@@ -36,6 +36,8 @@ export default function BrokerProfile() {
   const queryClient = useQueryClient();
   const [notes, setNotes] = useState<string>("");
   const [notesLoaded, setNotesLoaded] = useState(false);
+  const [modeFilter, setModeFilter] = useState("all");
+  const [jurisdictionFilter, setJurisdictionFilter] = useState("all");
 
   const { data: broker } = useQuery({
     queryKey: ["broker", id],
