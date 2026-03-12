@@ -16,6 +16,8 @@ import { Shipment, Invoice, Manifest, TransportMode } from "@/types/orchestra";
 import { ArrowLeft, FileText, AlertTriangle, TrendingDown, Zap, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BrokerSelector } from "@/components/BrokerSelector";
+import { JurisdictionSelector } from "@/components/JurisdictionSelector";
 
 export default function ShipmentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -101,6 +103,17 @@ export default function ShipmentDetail() {
               <RiskBadge score={shipment.risk_score} />
             </button>
           </ExplainabilityDrawer>
+          <div className="ml-auto flex items-center gap-3">
+            <BrokerSelector
+              shipmentId={shipment.shipment_id}
+              currentBrokerId={(shipment as any).broker_id}
+              currentBrokerName={(shipment as any).assigned_broker}
+            />
+            <JurisdictionSelector
+              shipmentId={shipment.shipment_id}
+              currentCode={jurisdictionCode}
+            />
+          </div>
         </div>
       </header>
 
