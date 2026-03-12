@@ -24,8 +24,7 @@ const mainNav = [
 const aiNav = [
   { title: "Classify Product", url: "/classify", icon: Search },
   { title: "Validate Documents", url: "/validate-docs", icon: FileText },
-  // { title: "Route Builder", url: "/routes", icon: Map },
-  // { title: "Decision Twin", url: "/decision-twin", icon: Zap },
+  { title: "Decision Twin", url: "/decision-twin", icon: Zap },
 ];
 
 const insightsNav = [
