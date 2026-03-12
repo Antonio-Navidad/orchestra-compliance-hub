@@ -60,6 +60,7 @@ export default function ShipmentIntake() {
 
   const [form, setForm] = useState({
     shipment_id: '',
+    direction: 'inbound' as 'inbound' | 'outbound',
     origin_country: '',
     destination_country: '',
     import_country: '',
@@ -157,6 +158,7 @@ export default function ShipmentIntake() {
         hs_code: form.hs_code || '0000.00',
         declared_value: form.declared_value ? parseFloat(form.declared_value) : 0,
         status: 'new' as any,
+        direction: form.direction as any,
         origin_country: form.origin_country || null,
         destination_country: form.destination_country,
         jurisdiction_code: form.jurisdiction_code,
@@ -245,6 +247,16 @@ export default function ShipmentIntake() {
                 <div className="space-y-1.5">
                   <Label className="text-xs font-mono">Shipment ID *</Label>
                   <Input value={form.shipment_id} onChange={e => updateField('shipment_id', e.target.value)} placeholder="ORC-XXX" className="font-mono" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-mono">Direction *</Label>
+                  <Select value={form.direction} onValueChange={v => updateField('direction', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="inbound">↓ Inbound (Import)</SelectItem>
+                      <SelectItem value="outbound">↑ Outbound (Export)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-mono">Mode *</Label>

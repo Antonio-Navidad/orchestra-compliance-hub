@@ -429,6 +429,7 @@ export type Database = {
           declared_value: number
           description: string
           destination_country: string | null
+          direction: Database["public"]["Enums"]["shipment_direction"] | null
           estimated_arrival: string | null
           export_country: string | null
           filing_readiness: string | null
@@ -463,6 +464,7 @@ export type Database = {
           declared_value?: number
           description: string
           destination_country?: string | null
+          direction?: Database["public"]["Enums"]["shipment_direction"] | null
           estimated_arrival?: string | null
           export_country?: string | null
           filing_readiness?: string | null
@@ -497,6 +499,7 @@ export type Database = {
           declared_value?: number
           description?: string
           destination_country?: string | null
+          direction?: Database["public"]["Enums"]["shipment_direction"] | null
           estimated_arrival?: string | null
           export_country?: string | null
           filing_readiness?: string | null
@@ -587,6 +590,7 @@ export type Database = {
         | "inspection_certificate"
         | "multimodal_transport_doc"
         | "other"
+      shipment_direction: "inbound" | "outbound"
       shipment_status:
         | "in_transit"
         | "customs_hold"
@@ -748,6 +752,7 @@ export const Constants = {
         "multimodal_transport_doc",
         "other",
       ],
+      shipment_direction: ["inbound", "outbound"],
       shipment_status: [
         "in_transit",
         "customs_hold",
