@@ -245,6 +245,7 @@ export type Database = {
           company_name: string | null
           compliance_pulse_opt_in: boolean
           created_at: string
+          email: string | null
           full_name: string | null
           id: string
           stripe_customer_id: string | null
@@ -256,6 +257,7 @@ export type Database = {
           company_name?: string | null
           compliance_pulse_opt_in?: boolean
           created_at?: string
+          email?: string | null
           full_name?: string | null
           id: string
           stripe_customer_id?: string | null
@@ -267,6 +269,7 @@ export type Database = {
           company_name?: string | null
           compliance_pulse_opt_in?: boolean
           created_at?: string
+          email?: string | null
           full_name?: string | null
           id?: string
           stripe_customer_id?: string | null
