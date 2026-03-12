@@ -190,6 +190,9 @@ export default function ShipmentDetail() {
             <TabsTrigger value="exposure" className="font-mono text-xs">
               <TrendingDown size={12} className="mr-1" /> EXPOSURE
             </TabsTrigger>
+            <TabsTrigger value="packet" className="font-mono text-xs">
+              <ClipboardCheck size={12} className="mr-1" /> PACKET
+            </TabsTrigger>
             <TabsTrigger value="documents" className="font-mono text-xs">
               <FileText size={12} className="mr-1" /> DOCUMENTS
             </TabsTrigger>
