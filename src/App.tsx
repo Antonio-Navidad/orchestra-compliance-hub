@@ -12,6 +12,7 @@ import ReviewQueue from "./pages/ReviewQueue";
 import Auth from "./pages/Auth";
 import Pricing from "./pages/Pricing";
 import Hints from "./pages/Hints";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
