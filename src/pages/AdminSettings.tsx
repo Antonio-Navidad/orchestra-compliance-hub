@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Save, Shield, UserPlus, Trash2, Users, Ban, Search, Mail, History } from "lucide-react";
+import { ArrowLeft, Save, Shield, UserPlus, Trash2, Users, Ban, Search, Mail, History, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
