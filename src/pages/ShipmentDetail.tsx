@@ -14,6 +14,7 @@ import { AuditTimeline } from "@/components/AuditTimeline";
 import { StatusWorkflow } from "@/components/StatusWorkflow";
 import { Shipment, Invoice, Manifest, TransportMode } from "@/types/orchestra";
 import { ArrowLeft, FileText, AlertTriangle, TrendingDown, Zap, Clock } from "lucide-react";
+import { EscalationPanel } from "@/components/EscalationPanel";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BrokerSelector } from "@/components/BrokerSelector";
@@ -112,6 +113,13 @@ export default function ShipmentDetail() {
             <JurisdictionSelector
               shipmentId={shipment.shipment_id}
               currentCode={jurisdictionCode}
+            />
+            <EscalationPanel
+              shipmentId={shipment.shipment_id}
+              brokerId={(shipment as any).broker_id}
+              issueType={shipment.risk_score >= 60 ? "High risk shipment" : undefined}
+              issueDescription={shipment.risk_notes || undefined}
+              estimatedExposure={shipment.risk_score >= 60 ? Math.round(shipment.declared_value * 0.15) : undefined}
             />
           </div>
         </div>

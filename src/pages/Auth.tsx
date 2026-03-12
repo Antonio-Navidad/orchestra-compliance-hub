@@ -23,7 +23,7 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -32,11 +32,34 @@ export default function Auth() {
         },
       });
       if (error) throw error;
-      // Update compliance pulse after signup
+      // Supabase returns a user with an empty identities array when email is already taken
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        toast({ title: "Email already registered", description: "An account with this email already exists. Please sign in instead.", variant: "destructive" });
+        return;
+      }
       toast({
         title: "Check your email",
         description: "We've sent you a verification link. Please confirm your email to continue.",
       });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast({ title: "Enter your email", description: "Please enter your email address first.", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast({ title: "Reset link sent", description: "Check your email for a password reset link." });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -97,6 +120,9 @@ export default function Auth() {
                   <Button type="submit" className="w-full font-mono" disabled={loading}>
                     {loading ? "AUTHENTICATING..." : "ACCESS PLATFORM"} <ArrowRight size={14} />
                   </Button>
+                  <button type="button" onClick={handleForgotPassword} className="w-full text-xs text-primary hover:underline font-mono" disabled={loading}>
+                    FORGOT PASSWORD?
+                  </button>
                 </CardContent>
               </form>
             </TabsContent>
