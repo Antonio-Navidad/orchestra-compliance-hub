@@ -60,6 +60,7 @@ export default function ShipmentIntake() {
 
   const [form, setForm] = useState({
     shipment_id: '',
+    direction: 'inbound' as 'inbound' | 'outbound',
     origin_country: '',
     destination_country: '',
     import_country: '',
