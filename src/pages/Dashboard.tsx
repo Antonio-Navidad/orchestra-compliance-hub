@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ShipmentTable } from "@/components/ShipmentTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plane, Ship, Truck, Activity, AlertTriangle, ShieldCheck, Package, CreditCard, Lightbulb, LogOut, ClipboardList } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Shipment, TransportMode } from "@/types/orchestra";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -69,6 +70,7 @@ export default function Dashboard() {
             <Link to="/legal" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
               LEGAL DB
             </Link>
+            <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={signOut} className="text-xs font-mono text-muted-foreground hover:text-foreground h-auto p-1">
               <LogOut size={12} />
             </Button>
