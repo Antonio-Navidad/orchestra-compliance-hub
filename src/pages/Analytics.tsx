@@ -150,8 +150,8 @@ export default function Analytics() {
       const existing = laneMap.get(lane) || { lane, shipments: 0, avgRisk: 0, totalExposure: 0, holds: 0 };
       existing.shipments++;
       existing.avgRisk += s.risk_score;
-      const adapter = getJurisdictionAdapter((s as any).jurisdiction_code || "US");
-      existing.totalExposure += (s.risk_score / 100) * s.declared_value * (adapter.penaltyPercent / 100);
+      const adapter = jurisdictionAdapters[(s as any).jurisdiction_code || "US"] || jurisdictionAdapters.US;
+      existing.totalExposure += (s.risk_score / 100) * s.declared_value * (adapter.avgPenaltyPercent / 100);
       if (s.status === "customs_hold") existing.holds++;
       laneMap.set(lane, existing);
     });
