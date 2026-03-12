@@ -58,6 +58,16 @@ export default function ShipmentDetail() {
     enabled: !!id,
   });
 
+  const { data: shipmentDocs = [] } = useQuery({
+    queryKey: ["shipment-docs", id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("shipment_documents" as any).select("*").eq("shipment_id", id).eq("is_current", true);
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!id,
+  });
+
   const invoice = invoices[0];
   const manifest = manifests[0];
   const mismatches = invoice && manifest ? compareInvoiceManifest(invoice, manifest) : [];
