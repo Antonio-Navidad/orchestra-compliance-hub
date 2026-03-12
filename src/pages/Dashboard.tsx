@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ShipmentTable } from "@/components/ShipmentTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plane, Ship, Truck, Activity, AlertTriangle, ShieldCheck, Package, CreditCard, Lightbulb, LogOut, ClipboardList } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Shipment, TransportMode } from "@/types/orchestra";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
