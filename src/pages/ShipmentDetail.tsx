@@ -16,6 +16,8 @@ import { Shipment, Invoice, Manifest, TransportMode } from "@/types/orchestra";
 import { ArrowLeft, FileText, AlertTriangle, TrendingDown, Zap, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BrokerSelector } from "@/components/BrokerSelector";
+import { JurisdictionSelector } from "@/components/JurisdictionSelector";
 
 export default function ShipmentDetail() {
   const { id } = useParams<{ id: string }>();
