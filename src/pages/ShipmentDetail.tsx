@@ -13,7 +13,9 @@ import { ExplainabilityDrawer } from "@/components/ExplainabilityDrawer";
 import { AuditTimeline } from "@/components/AuditTimeline";
 import { StatusWorkflow } from "@/components/StatusWorkflow";
 import { Shipment, Invoice, Manifest, TransportMode } from "@/types/orchestra";
-import { ArrowLeft, FileText, AlertTriangle, TrendingDown, Zap, Clock } from "lucide-react";
+import { ArrowLeft, FileText, AlertTriangle, TrendingDown, Zap, Clock, ClipboardCheck } from "lucide-react";
+import { PacketScoreCard } from "@/components/PacketScoreCard";
+import { computePacketScore } from "@/lib/packetScore";
 import { EscalationPanel } from "@/components/EscalationPanel";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -56,6 +58,16 @@ export default function ShipmentDetail() {
     enabled: !!id,
   });
 
+  const { data: shipmentDocs = [] } = useQuery({
+    queryKey: ["shipment-docs", id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("shipment_documents" as any).select("*").eq("shipment_id", id).eq("is_current", true);
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!id,
+  });
+
   const invoice = invoices[0];
   const manifest = manifests[0];
   const mismatches = invoice && manifest ? compareInvoiceManifest(invoice, manifest) : [];
@@ -80,6 +92,24 @@ export default function ShipmentDetail() {
   }
 
   const jurisdictionCode = (shipment as any).jurisdiction_code || "US";
+  
+  const uploadedDocTypes = shipmentDocs.map((d: any) => d.document_type);
+  const packetScore = computePacketScore(
+    uploadedDocTypes,
+    shipment.mode as TransportMode,
+    jurisdictionCode,
+    {
+      description: shipment.description,
+      quantity: undefined,
+      declared_value: shipment.declared_value,
+      hs_code: shipment.hs_code,
+      consignee: shipment.consignee,
+      shipper: (shipment as any).shipper,
+      assigned_broker: (shipment as any).assigned_broker,
+      coo_status: (shipment as any).coo_status,
+      origin_country: (shipment as any).origin_country,
+    }
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -159,6 +189,9 @@ export default function ShipmentDetail() {
             </TabsTrigger>
             <TabsTrigger value="exposure" className="font-mono text-xs">
               <TrendingDown size={12} className="mr-1" /> EXPOSURE
+            </TabsTrigger>
+            <TabsTrigger value="packet" className="font-mono text-xs">
+              <ClipboardCheck size={12} className="mr-1" /> PACKET
             </TabsTrigger>
             <TabsTrigger value="documents" className="font-mono text-xs">
               <FileText size={12} className="mr-1" /> DOCUMENTS
@@ -262,6 +295,10 @@ export default function ShipmentDetail() {
               declaredValue={shipment.declared_value}
               jurisdictionCode={jurisdictionCode}
             />
+          </TabsContent>
+
+          <TabsContent value="packet" className="mt-4">
+            <PacketScoreCard result={packetScore} />
           </TabsContent>
 
           <TabsContent value="documents" className="mt-4">

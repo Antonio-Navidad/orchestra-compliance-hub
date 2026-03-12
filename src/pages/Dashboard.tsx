@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ShipmentTable } from "@/components/ShipmentTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plane, Ship, Truck, Activity, AlertTriangle, ShieldCheck, Package, CreditCard, Lightbulb, LogOut, ClipboardList, BarChart3, Users } from "lucide-react";
+import { Plane, Ship, Truck, Activity, AlertTriangle, ShieldCheck, Package, CreditCard, Lightbulb, LogOut, ClipboardList, BarChart3, Users, Plus } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Shipment, TransportMode } from "@/types/orchestra";
 import { Link } from "react-router-dom";
@@ -55,6 +55,9 @@ export default function Dashboard() {
             </div>
           </div>
           <nav className="flex items-center gap-2 md:gap-4 flex-wrap">
+            <Link to="/intake" className="text-xs font-mono text-primary hover:text-primary/80 transition-colors flex items-center gap-1 border border-primary/30 rounded px-2 py-1">
+              <Plus size={12} /> NEW SHIPMENT
+            </Link>
             <Link to="/pricing" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
               <CreditCard size={12} /> PLANS
             </Link>

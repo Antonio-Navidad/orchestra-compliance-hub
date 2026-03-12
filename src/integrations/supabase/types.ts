@@ -309,6 +309,59 @@ export type Database = {
         }
         Relationships: []
       }
+      shipment_documents: {
+        Row: {
+          created_at: string
+          document_type: Database["public"]["Enums"]["document_type"]
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          is_current: boolean
+          notes: string | null
+          replaced_by: string | null
+          shipment_id: string
+          uploaded_by: string | null
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          document_type: Database["public"]["Enums"]["document_type"]
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          is_current?: boolean
+          notes?: string | null
+          replaced_by?: string | null
+          shipment_id: string
+          uploaded_by?: string | null
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          document_type?: Database["public"]["Enums"]["document_type"]
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          is_current?: boolean
+          notes?: string | null
+          replaced_by?: string | null
+          shipment_id?: string
+          uploaded_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipment_documents_replaced_by_fkey"
+            columns: ["replaced_by"]
+            isOneToOne: false
+            referencedRelation: "shipment_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shipment_events: {
         Row: {
           attribution: string | null
@@ -370,18 +423,33 @@ export type Database = {
           assigned_broker: string | null
           broker_id: string | null
           consignee: string
+          coo_status: string | null
           created_at: string
+          currency: string | null
           declared_value: number
           description: string
           destination_country: string | null
+          estimated_arrival: string | null
+          export_country: string | null
+          filing_readiness: string | null
+          filing_status: string | null
+          forwarder: string | null
           hs_code: string
           id: string
+          import_country: string | null
+          incoterm: string | null
           jurisdiction_code: string | null
           mode: Database["public"]["Enums"]["transport_mode"]
           origin_country: string | null
+          packet_score: number | null
+          planned_departure: string | null
+          port_of_entry: string | null
+          priority: string | null
+          quantity: number | null
           risk_notes: string | null
           risk_score: number
           shipment_id: string
+          shipper: string | null
           status: Database["public"]["Enums"]["shipment_status"]
           updated_at: string
         }
@@ -389,18 +457,33 @@ export type Database = {
           assigned_broker?: string | null
           broker_id?: string | null
           consignee: string
+          coo_status?: string | null
           created_at?: string
+          currency?: string | null
           declared_value?: number
           description: string
           destination_country?: string | null
+          estimated_arrival?: string | null
+          export_country?: string | null
+          filing_readiness?: string | null
+          filing_status?: string | null
+          forwarder?: string | null
           hs_code: string
           id?: string
+          import_country?: string | null
+          incoterm?: string | null
           jurisdiction_code?: string | null
           mode: Database["public"]["Enums"]["transport_mode"]
           origin_country?: string | null
+          packet_score?: number | null
+          planned_departure?: string | null
+          port_of_entry?: string | null
+          priority?: string | null
+          quantity?: number | null
           risk_notes?: string | null
           risk_score?: number
           shipment_id: string
+          shipper?: string | null
           status?: Database["public"]["Enums"]["shipment_status"]
           updated_at?: string
         }
@@ -408,18 +491,33 @@ export type Database = {
           assigned_broker?: string | null
           broker_id?: string | null
           consignee?: string
+          coo_status?: string | null
           created_at?: string
+          currency?: string | null
           declared_value?: number
           description?: string
           destination_country?: string | null
+          estimated_arrival?: string | null
+          export_country?: string | null
+          filing_readiness?: string | null
+          filing_status?: string | null
+          forwarder?: string | null
           hs_code?: string
           id?: string
+          import_country?: string | null
+          incoterm?: string | null
           jurisdiction_code?: string | null
           mode?: Database["public"]["Enums"]["transport_mode"]
           origin_country?: string | null
+          packet_score?: number | null
+          planned_departure?: string | null
+          port_of_entry?: string | null
+          priority?: string | null
+          quantity?: number | null
           risk_notes?: string | null
           risk_score?: number
           shipment_id?: string
+          shipper?: string | null
           status?: Database["public"]["Enums"]["shipment_status"]
           updated_at?: string
         }
@@ -473,6 +571,22 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "ops_manager" | "analyst" | "viewer"
+      document_type:
+        | "commercial_invoice"
+        | "packing_list"
+        | "bill_of_lading"
+        | "air_waybill"
+        | "certificate_of_origin"
+        | "dangerous_goods_declaration"
+        | "export_license"
+        | "import_permit"
+        | "phytosanitary_certificate"
+        | "fumigation_certificate"
+        | "insurance_certificate"
+        | "customs_declaration"
+        | "inspection_certificate"
+        | "multimodal_transport_doc"
+        | "other"
       shipment_status:
         | "in_transit"
         | "customs_hold"
@@ -617,6 +731,23 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "ops_manager", "analyst", "viewer"],
+      document_type: [
+        "commercial_invoice",
+        "packing_list",
+        "bill_of_lading",
+        "air_waybill",
+        "certificate_of_origin",
+        "dangerous_goods_declaration",
+        "export_license",
+        "import_permit",
+        "phytosanitary_certificate",
+        "fumigation_certificate",
+        "insurance_certificate",
+        "customs_declaration",
+        "inspection_certificate",
+        "multimodal_transport_doc",
+        "other",
+      ],
       shipment_status: [
         "in_transit",
         "customs_hold",
