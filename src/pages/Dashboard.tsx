@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ShipmentTable } from "@/components/ShipmentTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plane, Ship, Truck, Activity, AlertTriangle, ShieldCheck, Package, CreditCard, Lightbulb, LogOut, ClipboardList, BarChart3, Users } from "lucide-react";
+import { Plane, Ship, Truck, Activity, AlertTriangle, ShieldCheck, Package, CreditCard, Lightbulb, LogOut, ClipboardList, BarChart3, Users, Plus } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Shipment, TransportMode } from "@/types/orchestra";
 import { Link } from "react-router-dom";
