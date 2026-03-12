@@ -225,15 +225,82 @@ export type Database = {
         }
         Relationships: []
       }
+      shipment_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_internal: boolean
+          shipment_id: string
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          shipment_id: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_internal?: boolean
+          shipment_id?: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
+      shipment_events: {
+        Row: {
+          created_at: string
+          description: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          shipment_id: string
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          shipment_id: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          shipment_id?: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       shipments: {
         Row: {
+          assigned_broker: string | null
           consignee: string
           created_at: string
           declared_value: number
           description: string
+          destination_country: string | null
           hs_code: string
           id: string
+          jurisdiction_code: string | null
           mode: Database["public"]["Enums"]["transport_mode"]
+          origin_country: string | null
           risk_notes: string | null
           risk_score: number
           shipment_id: string
@@ -241,13 +308,17 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_broker?: string | null
           consignee: string
           created_at?: string
           declared_value?: number
           description: string
+          destination_country?: string | null
           hs_code: string
           id?: string
+          jurisdiction_code?: string | null
           mode: Database["public"]["Enums"]["transport_mode"]
+          origin_country?: string | null
           risk_notes?: string | null
           risk_score?: number
           shipment_id: string
@@ -255,13 +326,17 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_broker?: string | null
           consignee?: string
           created_at?: string
           declared_value?: number
           description?: string
+          destination_country?: string | null
           hs_code?: string
           id?: string
+          jurisdiction_code?: string | null
           mode?: Database["public"]["Enums"]["transport_mode"]
+          origin_country?: string | null
           risk_notes?: string | null
           risk_score?: number
           shipment_id?: string
@@ -278,7 +353,20 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      shipment_status: "in_transit" | "customs_hold" | "cleared" | "flagged"
+      shipment_status:
+        | "in_transit"
+        | "customs_hold"
+        | "cleared"
+        | "flagged"
+        | "new"
+        | "in_review"
+        | "waiting_docs"
+        | "sent_to_broker"
+        | "escalated"
+        | "corrected"
+        | "filed"
+        | "closed_avoided"
+        | "closed_incident"
       subscription_tier: "free" | "gold" | "black"
       transport_mode: "air" | "sea" | "land"
     }
@@ -408,7 +496,21 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      shipment_status: ["in_transit", "customs_hold", "cleared", "flagged"],
+      shipment_status: [
+        "in_transit",
+        "customs_hold",
+        "cleared",
+        "flagged",
+        "new",
+        "in_review",
+        "waiting_docs",
+        "sent_to_broker",
+        "escalated",
+        "corrected",
+        "filed",
+        "closed_avoided",
+        "closed_incident",
+      ],
       subscription_tier: ["free", "gold", "black"],
       transport_mode: ["air", "sea", "land"],
     },
