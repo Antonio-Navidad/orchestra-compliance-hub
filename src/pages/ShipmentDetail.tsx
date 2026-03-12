@@ -145,6 +145,15 @@ export default function ShipmentDetail() {
               shipmentId={shipment.shipment_id}
               currentCode={jurisdictionCode}
             />
+            <SendToBrokerPanel
+              shipmentId={shipment.shipment_id}
+              brokerId={(shipment as any).broker_id}
+              brokerName={(shipment as any).assigned_broker}
+              direction={(shipment as any).direction}
+              destinationCountry={(shipment as any).destination_country}
+              packetScore={packetScore.overallScore}
+              filingReadiness={(shipment as any).filing_readiness}
+            />
             <EscalationPanel
               shipmentId={shipment.shipment_id}
               brokerId={(shipment as any).broker_id}
