@@ -82,8 +82,8 @@ export default function Analytics() {
       const label = d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
       const existing = months.get(key) || { month: label, shipments: 0, exposure: 0, avoided: 0, critical: 0 };
       existing.shipments++;
-      const adapter = getJurisdictionAdapter((s as any).jurisdiction_code || "US");
-      const exp = (s.risk_score / 100) * s.declared_value * (adapter.penaltyPercent / 100);
+      const adapter = jurisdictionAdapters[(s as any).jurisdiction_code || "US"] || jurisdictionAdapters.US;
+      const exp = (s.risk_score / 100) * s.declared_value * (adapter.avgPenaltyPercent / 100);
       existing.exposure += exp;
       if (s.status === "cleared" || s.status === "corrected" || s.status === "closed_avoided") {
         existing.avoided += exp * 0.7;
