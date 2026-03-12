@@ -120,6 +120,9 @@ export default function Auth() {
                   <Button type="submit" className="w-full font-mono" disabled={loading}>
                     {loading ? "AUTHENTICATING..." : "ACCESS PLATFORM"} <ArrowRight size={14} />
                   </Button>
+                  <button type="button" onClick={handleForgotPassword} className="w-full text-xs text-primary hover:underline font-mono" disabled={loading}>
+                    FORGOT PASSWORD?
+                  </button>
                 </CardContent>
               </form>
             </TabsContent>
