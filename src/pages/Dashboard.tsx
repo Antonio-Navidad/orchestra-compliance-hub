@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ShipmentTable } from "@/components/ShipmentTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plane, Ship, Truck, Activity, AlertTriangle, ShieldCheck, Package, CreditCard, Lightbulb, LogOut } from "lucide-react";
+import { Plane, Ship, Truck, Activity, AlertTriangle, ShieldCheck, Package, CreditCard, Lightbulb, LogOut, ClipboardList } from "lucide-react";
 import { Shipment, TransportMode } from "@/types/orchestra";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -59,6 +59,9 @@ export default function Dashboard() {
             </Link>
             <Link to="/hints" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
               <Lightbulb size={12} /> GUIDE
+            </Link>
+            <Link to="/review" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+              <ClipboardList size={12} /> REVIEW QUEUE
             </Link>
             <Link to="/admin" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
               ADMIN

@@ -4,6 +4,7 @@ import { RiskBadge } from "@/components/RiskBadge";
 import { ModeIcon } from "@/components/ModeIcon";
 import { Shipment, TransportMode } from "@/types/orchestra";
 import { Badge } from "@/components/ui/badge";
+import { getStatusColor, getStatusLabel } from "@/components/StatusWorkflow";
 
 interface ShipmentTableProps {
   shipments: Shipment[];
@@ -13,13 +14,6 @@ interface ShipmentTableProps {
 export function ShipmentTable({ shipments, mode }: ShipmentTableProps) {
   const navigate = useNavigate();
   const filtered = mode ? shipments.filter(s => s.mode === mode) : shipments;
-
-  const statusColors: Record<string, string> = {
-    in_transit: 'bg-primary/20 text-primary border-primary/30',
-    customs_hold: 'bg-risk-medium/20 text-risk-medium border-risk-medium/30',
-    cleared: 'bg-risk-safe/20 text-risk-safe border-risk-safe/30',
-    flagged: 'bg-risk-critical/20 text-risk-critical border-risk-critical/30',
-  };
 
   return (
     <div className="rounded-lg border border-border overflow-hidden">
@@ -71,8 +65,8 @@ export function ShipmentTable({ shipments, mode }: ShipmentTableProps) {
                   <RiskBadge score={shipment.risk_score} size="sm" />
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline" className={`font-mono text-[10px] ${statusColors[shipment.status] || ''}`}>
-                    {shipment.status.replace('_', ' ').toUpperCase()}
+                  <Badge variant="outline" className={`font-mono text-[10px] ${getStatusColor(shipment.status)}`}>
+                    {getStatusLabel(shipment.status)}
                   </Badge>
                 </TableCell>
               </TableRow>

@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import ShipmentDetail from "./pages/ShipmentDetail";
 import AdminSettings from "./pages/AdminSettings";
 import LegalKnowledge from "./pages/LegalKnowledge";
+import ReviewQueue from "./pages/ReviewQueue";
 import Auth from "./pages/Auth";
 import Pricing from "./pages/Pricing";
 import Hints from "./pages/Hints";
@@ -40,6 +41,7 @@ const App = () => (
           <Route path="/shipment/:id" element={<ProtectedRoute><ShipmentDetail /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
           <Route path="/legal" element={<ProtectedRoute><LegalKnowledge /></ProtectedRoute>} />
+          <Route path="/review" element={<ProtectedRoute><ReviewQueue /></ProtectedRoute>} />
           <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
           <Route path="/hints" element={<ProtectedRoute><Hints /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
