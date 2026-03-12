@@ -15,6 +15,7 @@ import Hints from "./pages/Hints";
 import Analytics from "./pages/Analytics";
 import BrokerScorecard from "./pages/BrokerScorecard";
 import BrokerProfile from "./pages/BrokerProfile";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
