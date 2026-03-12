@@ -18,6 +18,7 @@ import BrokerProfile from "./pages/BrokerProfile";
 import ResetPassword from "./pages/ResetPassword";
 import ShipmentIntake from "./pages/ShipmentIntake";
 import AuditTrail from "./pages/AuditTrail";
+import JurisdictionSettings from "./pages/JurisdictionSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
