@@ -87,7 +87,7 @@ const tiers = [
       { name: "SOC 2 & custom SLA", included: true },
     ],
     missing: [],
-    cta: "Contact Sales",
+    cta: "Upgrade to Black",
     ctaVariant: "default" as const,
   },
 ];
