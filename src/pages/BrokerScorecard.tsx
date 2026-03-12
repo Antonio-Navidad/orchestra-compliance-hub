@@ -377,6 +377,16 @@ export default function BrokerScorecard() {
               </div>
             )}
           </TabsContent>
+
+          <TabsContent value="import" className="mt-4">
+            <div className="rounded-lg border border-border bg-card p-6">
+              <h3 className="font-mono text-xs text-muted-foreground mb-4">HISTORICAL DATA IMPORT / BACKFILL</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Upload CSV files with historical shipment and incident data. Broker names will be automatically normalized to canonical records.
+              </p>
+              <CsvImport onComplete={() => queryClient.invalidateQueries()} />
+            </div>
+          </TabsContent>
         </Tabs>
       </main>
     </div>
