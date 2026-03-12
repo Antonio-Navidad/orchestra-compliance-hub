@@ -140,6 +140,12 @@ export default function ShipmentDetail() {
             </button>
           </ExplainabilityDrawer>
           <div className="ml-auto flex items-center gap-3">
+            <Link
+              to={`/decision-twin/${shipment.shipment_id}`}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-primary/30 text-primary text-xs font-mono hover:bg-primary/10 transition-colors"
+            >
+              <Zap size={12} /> DECISION TWIN
+            </Link>
             <BrokerSelector
               shipmentId={shipment.shipment_id}
               currentBrokerId={(shipment as any).broker_id}
