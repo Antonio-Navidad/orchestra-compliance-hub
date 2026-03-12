@@ -1,7 +1,9 @@
-import { calculateExposure, jurisdictionAdapters } from "@/lib/jurisdictions";
+import { useState } from "react";
+import { calculateExposure, jurisdictionAdapters, memberStateOverlays, getEffectiveAdapter } from "@/lib/jurisdictions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, TrendingDown, AlertTriangle, Clock, Scale, ShieldAlert } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DollarSign, TrendingDown, AlertTriangle, Clock, Scale, ShieldAlert, Info } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 interface ExposurePanelProps {
@@ -11,8 +13,13 @@ interface ExposurePanelProps {
 }
 
 export function ExposurePanel({ riskScore, declaredValue, jurisdictionCode = "US" }: ExposurePanelProps) {
-  const exposure = calculateExposure(riskScore, declaredValue, jurisdictionCode);
-  const adapter = jurisdictionAdapters[jurisdictionCode] || jurisdictionAdapters.US;
+  const [memberState, setMemberState] = useState<string>("");
+  const isEU = jurisdictionCode === "EU";
+  const effectiveMemberState = isEU && memberState ? memberState : undefined;
+
+  const exposure = calculateExposure(riskScore, declaredValue, jurisdictionCode, effectiveMemberState);
+  const effective = getEffectiveAdapter(jurisdictionCode, effectiveMemberState);
+  const overlay = effective.appliedOverlay;
 
   const probabilities = [
     { label: "Hold Probability", value: exposure.holdProbability, icon: Clock },
@@ -30,6 +37,44 @@ export function ExposurePanel({ riskScore, declaredValue, jurisdictionCode = "US
 
   return (
     <div className="space-y-4">
+      {/* EU Member State Selector */}
+      {isEU && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              <Info size={14} className="text-primary" />
+              <span className="text-xs font-mono text-muted-foreground">EU MEMBER STATE OVERLAY</span>
+              <Select value={memberState} onValueChange={setMemberState}>
+                <SelectTrigger className="w-[180px] bg-secondary/50 text-xs font-mono h-8">
+                  <SelectValue placeholder="EU General" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">EU General (baseline)</SelectItem>
+                  {Object.values(memberStateOverlays).map((ms) => (
+                    <SelectItem key={ms.code} value={ms.code}>{ms.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Badge variant="outline" className="text-[9px] font-mono">
+                {exposure.logicLabel}
+              </Badge>
+            </div>
+            {overlay && (
+              <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px]">
+                <div><span className="text-muted-foreground">Authority:</span> <span className="font-mono">{overlay.customs_authority_name}</span></div>
+                <div><span className="text-muted-foreground">Penalty ×:</span> <span className="font-mono">{overlay.penalty_severity_multiplier}</span></div>
+                <div><span className="text-muted-foreground">Hold Risk ×:</span> <span className="font-mono">{overlay.member_state_hold_risk_multiplier}</span></div>
+                <div><span className="text-muted-foreground">Clearance:</span> <span className="font-mono">{overlay.local_clearance_time_baseline}d baseline</span></div>
+                <div><span className="text-muted-foreground">Enforcement:</span> <span className="font-mono">{overlay.member_state_enforcement_intensity_score}/100</span></div>
+                <div><span className="text-muted-foreground">Inspection ×:</span> <span className="font-mono">{overlay.inspection_probability_modifier}</span></div>
+                <div><span className="text-muted-foreground">SLA:</span> <span className="font-mono">{overlay.local_sla_baseline}h</span></div>
+                <div><span className="text-muted-foreground">Settlement:</span> <span className="font-mono">{(overlay.settlement_likelihood_factor * 100).toFixed(0)}%</span></div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Expected Loss & Avoided Exposure */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="border-risk-critical/30 risk-gradient-critical">
@@ -44,7 +89,7 @@ export function ExposurePanel({ riskScore, declaredValue, jurisdictionCode = "US
               ${exposure.totalExpectedLoss.toLocaleString()}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Jurisdiction: {adapter.name} · {exposure.expectedDelayDays} day expected delay
+              {exposure.logicLabel} · {exposure.expectedDelayDays} day expected delay
             </p>
           </CardContent>
         </Card>
@@ -61,7 +106,7 @@ export function ExposurePanel({ riskScore, declaredValue, jurisdictionCode = "US
               ${exposure.avoidedExposure.toLocaleString()}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              85% correction rate applied · Net risk: ${(exposure.totalExpectedLoss - exposure.avoidedExposure).toLocaleString()}
+              85% correction rate · Net: ${(exposure.totalExpectedLoss - exposure.avoidedExposure).toLocaleString()}
             </p>
           </CardContent>
         </Card>
