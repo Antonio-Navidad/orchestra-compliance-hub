@@ -116,53 +116,8 @@ export default function Dashboard() {
   const labels = viewLabels[dashboardView];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded bg-primary/20 flex items-center justify-center">
-              <Activity size={18} className="text-primary" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tight">ORCHESTRA</h1>
-              <p className="text-[10px] font-mono text-muted-foreground tracking-widest">LOGISTICS COMPLIANCE PLATFORM</p>
-            </div>
-          </div>
-          <nav className="flex items-center gap-2 md:gap-4 flex-wrap">
-            <Link to="/intake" className="text-xs font-mono text-primary hover:text-primary/80 transition-colors flex items-center gap-1 border border-primary/30 rounded px-2 py-1">
-              <Plus size={12} /> NEW SHIPMENT
-            </Link>
-            <Link to="/pricing" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-              <CreditCard size={12} /> PLANS
-            </Link>
-            <Link to="/hints" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-              <Lightbulb size={12} /> GUIDE
-            </Link>
-            <Link to="/review" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-              <ClipboardList size={12} /> REVIEW
-            </Link>
-            <Link to="/analytics" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-              <BarChart3 size={12} /> ROI
-            </Link>
-            <Link to="/brokers" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-              <Users size={12} /> BROKERS
-            </Link>
-            <Link to="/admin" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
-              ADMIN
-            </Link>
-            <Link to="/legal" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
-              LEGAL DB
-            </Link>
-            <ThemeToggle />
-            <Button variant="ghost" size="sm" onClick={signOut} className="text-xs font-mono text-muted-foreground hover:text-foreground h-auto p-1">
-              <LogOut size={12} />
-            </Button>
-          </nav>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-6 space-y-6">
+    <div className="bg-background">
+      <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Dashboard View Toggle */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
@@ -359,7 +314,7 @@ export default function Dashboard() {
             <ShipmentTable shipments={filteredByDirection as Shipment[]} mode="land" />
           </TabsContent>
         </Tabs>
-      </main>
+      </div>
     </div>
   );
 }

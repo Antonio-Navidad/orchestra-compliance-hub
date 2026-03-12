@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { AppLayout } from "@/components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import ShipmentDetail from "./pages/ShipmentDetail";
 import AdminSettings from "./pages/AdminSettings";
@@ -19,6 +20,8 @@ import ResetPassword from "./pages/ResetPassword";
 import ShipmentIntake from "./pages/ShipmentIntake";
 import AuditTrail from "./pages/AuditTrail";
 import JurisdictionSettings from "./pages/JurisdictionSettings";
+import ProductClassification from "./pages/ProductClassification";
+import DocumentValidator from "./pages/DocumentValidator";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,7 +36,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
   if (!user) return <Navigate to="/auth" replace />;
-  return <>{children}</>;
+  return <AppLayout>{children}</AppLayout>;
 }
 
 const App = () => (
@@ -58,6 +61,8 @@ const App = () => (
           <Route path="/audit-trail" element={<ProtectedRoute><AuditTrail /></ProtectedRoute>} />
           <Route path="/jurisdiction-settings" element={<ProtectedRoute><JurisdictionSettings /></ProtectedRoute>} />
           <Route path="/hints" element={<ProtectedRoute><Hints /></ProtectedRoute>} />
+          <Route path="/classify" element={<ProtectedRoute><ProductClassification /></ProtectedRoute>} />
+          <Route path="/validate-docs" element={<ProtectedRoute><DocumentValidator /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
