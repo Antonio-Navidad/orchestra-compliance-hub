@@ -62,7 +62,10 @@ export default function Dashboard() {
               <Lightbulb size={12} /> GUIDE
             </Link>
             <Link to="/review" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-              <ClipboardList size={12} /> REVIEW QUEUE
+              <ClipboardList size={12} /> REVIEW
+            </Link>
+            <Link to="/analytics" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+              <BarChart3 size={12} /> ROI
             </Link>
             <Link to="/admin" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
               ADMIN
