@@ -92,6 +92,24 @@ export default function ShipmentDetail() {
   }
 
   const jurisdictionCode = (shipment as any).jurisdiction_code || "US";
+  
+  const uploadedDocTypes = shipmentDocs.map((d: any) => d.document_type);
+  const packetScore = computePacketScore(
+    uploadedDocTypes,
+    shipment.mode as TransportMode,
+    jurisdictionCode,
+    {
+      description: shipment.description,
+      quantity: undefined,
+      declared_value: shipment.declared_value,
+      hs_code: shipment.hs_code,
+      consignee: shipment.consignee,
+      shipper: (shipment as any).shipper,
+      assigned_broker: (shipment as any).assigned_broker,
+      coo_status: (shipment as any).coo_status,
+      origin_country: (shipment as any).origin_country,
+    }
+  );
 
   return (
     <div className="min-h-screen bg-background">
