@@ -70,6 +70,7 @@ export default function Dashboard() {
             <Link to="/legal" className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
               LEGAL DB
             </Link>
+            <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={signOut} className="text-xs font-mono text-muted-foreground hover:text-foreground h-auto p-1">
               <LogOut size={12} />
             </Button>
