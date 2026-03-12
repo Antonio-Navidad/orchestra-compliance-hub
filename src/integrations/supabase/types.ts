@@ -187,6 +187,80 @@ export type Database = {
         }
         Relationships: []
       }
+      logic_audit_log: {
+        Row: {
+          action_type: string
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
+          broker_id: string | null
+          created_at: string
+          field_changed: string
+          id: string
+          jurisdiction: string | null
+          module: string
+          new_value: Json | null
+          old_value: Json | null
+          reason: string | null
+          requires_approval: boolean
+          rule_set: string | null
+          status: string
+          user_id: string
+          user_name: string | null
+          user_role: string | null
+        }
+        Insert: {
+          action_type: string
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          broker_id?: string | null
+          created_at?: string
+          field_changed: string
+          id?: string
+          jurisdiction?: string | null
+          module: string
+          new_value?: Json | null
+          old_value?: Json | null
+          reason?: string | null
+          requires_approval?: boolean
+          rule_set?: string | null
+          status?: string
+          user_id: string
+          user_name?: string | null
+          user_role?: string | null
+        }
+        Update: {
+          action_type?: string
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          broker_id?: string | null
+          created_at?: string
+          field_changed?: string
+          id?: string
+          jurisdiction?: string | null
+          module?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          reason?: string | null
+          requires_approval?: boolean
+          rule_set?: string | null
+          status?: string
+          user_id?: string
+          user_name?: string | null
+          user_role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logic_audit_log_broker_id_fkey"
+            columns: ["broker_id"]
+            isOneToOne: false
+            referencedRelation: "brokers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       manifests: {
         Row: {
           bill_of_lading: string | null

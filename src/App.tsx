@@ -17,6 +17,7 @@ import BrokerScorecard from "./pages/BrokerScorecard";
 import BrokerProfile from "./pages/BrokerProfile";
 import ResetPassword from "./pages/ResetPassword";
 import ShipmentIntake from "./pages/ShipmentIntake";
+import AuditTrail from "./pages/AuditTrail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,6 +54,7 @@ const App = () => (
           <Route path="/brokers" element={<ProtectedRoute><BrokerScorecard /></ProtectedRoute>} />
           <Route path="/broker/:id" element={<ProtectedRoute><BrokerProfile /></ProtectedRoute>} />
           <Route path="/intake" element={<ProtectedRoute><ShipmentIntake /></ProtectedRoute>} />
+          <Route path="/audit-trail" element={<ProtectedRoute><AuditTrail /></ProtectedRoute>} />
           <Route path="/hints" element={<ProtectedRoute><Hints /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
