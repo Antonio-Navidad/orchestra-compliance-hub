@@ -22,6 +22,7 @@ import AuditTrail from "./pages/AuditTrail";
 import JurisdictionSettings from "./pages/JurisdictionSettings";
 import ProductClassification from "./pages/ProductClassification";
 import DocumentValidator from "./pages/DocumentValidator";
+import DecisionTwin from "./pages/DecisionTwin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
