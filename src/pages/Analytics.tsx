@@ -51,8 +51,8 @@ export default function Analytics() {
     let totalExposure = 0;
     let totalAvoided = 0;
     shipments.forEach((s) => {
-      const adapter = getJurisdictionAdapter((s as any).jurisdiction_code || "US");
-      const exposure = (s.risk_score / 100) * s.declared_value * (adapter.penaltyPercent / 100);
+      const adapter = jurisdictionAdapters[(s as any).jurisdiction_code || "US"] || jurisdictionAdapters.US;
+      const exposure = (s.risk_score / 100) * s.declared_value * (adapter.avgPenaltyPercent / 100);
       totalExposure += exposure;
       if (s.status === "cleared" || s.status === "corrected" || s.status === "closed_avoided") {
         totalAvoided += exposure * 0.7;
