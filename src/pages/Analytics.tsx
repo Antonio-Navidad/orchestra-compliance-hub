@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { ArrowLeft, TrendingDown, Shield, AlertTriangle, DollarSign, BarChart3, Activity } from "lucide-react";
 import { Shipment } from "@/types/orchestra";
-import { getJurisdictionAdapter } from "@/lib/jurisdictions";
+import { jurisdictionAdapters } from "@/lib/jurisdictions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
