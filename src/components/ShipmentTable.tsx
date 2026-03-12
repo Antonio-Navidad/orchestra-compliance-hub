@@ -113,9 +113,22 @@ export function ShipmentTable({ shipments, mode }: ShipmentTableProps) {
                     <RiskBadge score={shipment.risk_score} size="sm" />
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={`font-mono text-[10px] ${getStatusColor(shipment.status)}`}>
-                      {getStatusLabel(shipment.status)}
-                    </Badge>
+                    {shipment.status === "waiting_docs" ? (
+                      <Badge
+                        variant="outline"
+                        className={`font-mono text-[10px] cursor-pointer hover:opacity-80 transition-opacity ${getStatusColor(shipment.status)}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/shipment/${shipment.shipment_id}?tab=documents`);
+                        }}
+                      >
+                        {getStatusLabel(shipment.status)}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className={`font-mono text-[10px] ${getStatusColor(shipment.status)}`}>
+                        {getStatusLabel(shipment.status)}
+                      </Badge>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

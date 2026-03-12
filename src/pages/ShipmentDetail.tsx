@@ -1,4 +1,5 @@
-import { useParams, Link } from "react-router-dom";
+import { useState } from "react";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { RiskBadge } from "@/components/RiskBadge";
@@ -25,6 +26,9 @@ import { SendToBrokerPanel } from "@/components/SendToBrokerPanel";
 
 export default function ShipmentDetail() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") || "overview";
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   const { data: shipment, isLoading } = useQuery({
     queryKey: ["shipment", id],
@@ -191,7 +195,7 @@ export default function ShipmentDetail() {
           </div>
         )}
 
-        <Tabs defaultValue="overview" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-secondary/50 border border-border flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="overview" className="font-mono text-xs">OVERVIEW</TabsTrigger>
             <TabsTrigger value="fix" className="font-mono text-xs">
