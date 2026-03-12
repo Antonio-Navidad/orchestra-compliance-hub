@@ -35,6 +35,57 @@ export type Database = {
         }
         Relationships: []
       }
+      brokers: {
+        Row: {
+          aliases: string[]
+          broker_type: string | null
+          canonical_name: string
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          internal_vendor_id: string | null
+          notes: string | null
+          office: string | null
+          region: string | null
+          updated_at: string
+          watchlist_tag: string | null
+        }
+        Insert: {
+          aliases?: string[]
+          broker_type?: string | null
+          canonical_name: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          internal_vendor_id?: string | null
+          notes?: string | null
+          office?: string | null
+          region?: string | null
+          updated_at?: string
+          watchlist_tag?: string | null
+        }
+        Update: {
+          aliases?: string[]
+          broker_type?: string | null
+          canonical_name?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          internal_vendor_id?: string | null
+          notes?: string | null
+          office?: string | null
+          region?: string | null
+          updated_at?: string
+          watchlist_tag?: string | null
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           created_at: string
@@ -257,9 +308,14 @@ export type Database = {
       }
       shipment_events: {
         Row: {
+          attribution: string | null
+          broker_id: string | null
+          confidence_level: number | null
           created_at: string
           description: string
           event_type: string
+          evidence_quality: string | null
+          evidence_reference: string | null
           id: string
           metadata: Json | null
           shipment_id: string
@@ -267,9 +323,14 @@ export type Database = {
           user_name: string | null
         }
         Insert: {
+          attribution?: string | null
+          broker_id?: string | null
+          confidence_level?: number | null
           created_at?: string
           description: string
           event_type: string
+          evidence_quality?: string | null
+          evidence_reference?: string | null
           id?: string
           metadata?: Json | null
           shipment_id: string
@@ -277,20 +338,34 @@ export type Database = {
           user_name?: string | null
         }
         Update: {
+          attribution?: string | null
+          broker_id?: string | null
+          confidence_level?: number | null
           created_at?: string
           description?: string
           event_type?: string
+          evidence_quality?: string | null
+          evidence_reference?: string | null
           id?: string
           metadata?: Json | null
           shipment_id?: string
           user_id?: string | null
           user_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "shipment_events_broker_id_fkey"
+            columns: ["broker_id"]
+            isOneToOne: false
+            referencedRelation: "brokers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shipments: {
         Row: {
           assigned_broker: string | null
+          broker_id: string | null
           consignee: string
           created_at: string
           declared_value: number
@@ -309,6 +384,7 @@ export type Database = {
         }
         Insert: {
           assigned_broker?: string | null
+          broker_id?: string | null
           consignee: string
           created_at?: string
           declared_value?: number
@@ -327,6 +403,7 @@ export type Database = {
         }
         Update: {
           assigned_broker?: string | null
+          broker_id?: string | null
           consignee?: string
           created_at?: string
           declared_value?: number
@@ -343,7 +420,15 @@ export type Database = {
           status?: Database["public"]["Enums"]["shipment_status"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "shipments_broker_id_fkey"
+            columns: ["broker_id"]
+            isOneToOne: false
+            referencedRelation: "brokers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
