@@ -114,6 +114,13 @@ export default function ShipmentDetail() {
               shipmentId={shipment.shipment_id}
               currentCode={jurisdictionCode}
             />
+            <EscalationPanel
+              shipmentId={shipment.shipment_id}
+              brokerId={(shipment as any).broker_id}
+              issueType={shipment.risk_score >= 60 ? "High risk shipment" : undefined}
+              issueDescription={shipment.risk_notes || undefined}
+              estimatedExposure={shipment.risk_score >= 60 ? Math.round(shipment.declared_value * 0.15) : undefined}
+            />
           </div>
         </div>
       </header>
