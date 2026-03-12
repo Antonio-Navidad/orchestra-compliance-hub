@@ -249,6 +249,16 @@ export default function ShipmentIntake() {
                   <Input value={form.shipment_id} onChange={e => updateField('shipment_id', e.target.value)} placeholder="ORC-XXX" className="font-mono" />
                 </div>
                 <div className="space-y-1.5">
+                  <Label className="text-xs font-mono">Direction *</Label>
+                  <Select value={form.direction} onValueChange={v => updateField('direction', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="inbound">↓ Inbound (Import)</SelectItem>
+                      <SelectItem value="outbound">↑ Outbound (Export)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
                   <Label className="text-xs font-mono">Mode *</Label>
                   <Select value={form.mode} onValueChange={v => updateField('mode', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
