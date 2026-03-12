@@ -65,8 +65,8 @@ export function ShipmentTable({ shipments, mode }: ShipmentTableProps) {
                   <RiskBadge score={shipment.risk_score} size="sm" />
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline" className={`font-mono text-[10px] ${statusColors[shipment.status] || ''}`}>
-                    {shipment.status.replace('_', ' ').toUpperCase()}
+                  <Badge variant="outline" className={`font-mono text-[10px] ${getStatusColor(shipment.status)}`}>
+                    {getStatusLabel(shipment.status)}
                   </Badge>
                 </TableCell>
               </TableRow>
