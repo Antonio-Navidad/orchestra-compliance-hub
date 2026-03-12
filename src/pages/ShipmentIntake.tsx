@@ -158,6 +158,7 @@ export default function ShipmentIntake() {
         hs_code: form.hs_code || '0000.00',
         declared_value: form.declared_value ? parseFloat(form.declared_value) : 0,
         status: 'new' as any,
+        direction: form.direction as any,
         origin_country: form.origin_country || null,
         destination_country: form.destination_country,
         jurisdiction_code: form.jurisdiction_code,
