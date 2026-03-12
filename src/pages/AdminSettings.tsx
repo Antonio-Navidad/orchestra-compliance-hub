@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Save, Shield, UserPlus, Trash2, Users, Ban, Search, Mail, History } from "lucide-react";
+import { ArrowLeft, Save, Shield, UserPlus, Trash2, Users, Ban, Search, Mail, History, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -183,6 +183,11 @@ export default function AdminSettings() {
             <TabsTrigger value="team" className="font-mono text-xs"><Users size={12} className="mr-1" /> TEAM</TabsTrigger>
             <TabsTrigger value="rules" className="font-mono text-xs"><Shield size={12} className="mr-1" /> AI RULES</TabsTrigger>
             <TabsTrigger value="integrations" className="font-mono text-xs">INTEGRATIONS</TabsTrigger>
+            <Link to="/jurisdiction-settings">
+              <Button variant="ghost" size="sm" className="font-mono text-xs h-8 gap-1">
+                <Globe size={12} /> JURISDICTIONS
+              </Button>
+            </Link>
             <Link to="/audit-trail">
               <Button variant="ghost" size="sm" className="font-mono text-xs h-8 gap-1">
                 <History size={12} /> AUDIT TRAIL
