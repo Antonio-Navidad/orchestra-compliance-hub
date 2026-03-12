@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BrokerSelector } from "@/components/BrokerSelector";
 import { JurisdictionSelector } from "@/components/JurisdictionSelector";
+import { SendToBrokerPanel } from "@/components/SendToBrokerPanel";
 
 export default function ShipmentDetail() {
   const { id } = useParams<{ id: string }>();
