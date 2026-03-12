@@ -131,8 +131,8 @@ export default function Analytics() {
       const broker = (s as any).assigned_broker || "Unassigned";
       const existing = brokerMap.get(broker) || { broker, shipments: 0, exposure: 0, holds: 0, errors: 0 };
       existing.shipments++;
-      const adapter = getJurisdictionAdapter((s as any).jurisdiction_code || "US");
-      existing.exposure += (s.risk_score / 100) * s.declared_value * (adapter.penaltyPercent / 100);
+      const adapter = jurisdictionAdapters[(s as any).jurisdiction_code || "US"] || jurisdictionAdapters.US;
+      existing.exposure += (s.risk_score / 100) * s.declared_value * (adapter.avgPenaltyPercent / 100);
       if (s.status === "customs_hold") existing.holds++;
       if (s.risk_score >= 60) existing.errors++;
       brokerMap.set(broker, existing);
