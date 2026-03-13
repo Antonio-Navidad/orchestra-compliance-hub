@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -10,10 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
-  Map, Eye, EyeOff, Shield, Ship, Plane, Truck, Layers,
-  AlertTriangle, Cloud, Zap, Plus, Save, Navigation, Lock, X,
-  ChevronRight, Globe, Anchor, MapPin
+  Eye, EyeOff, Shield, Ship, Plane, Truck, Layers,
+  AlertTriangle, Cloud, Zap, Plus, Save, Lock, X,
+  ChevronRight
 } from "lucide-react";
+import CreatorMap from "@/components/CreatorMap";
 
 interface RouteWaypoint {
   id: string;
