@@ -5,6 +5,7 @@ import {
   HUBS, SEA_ROUTES, AIR_ROUTES, LAND_ROUTES, OPERATION_CONDOR,
   OVERLAY_ZONES, routesToGeoJSON, hubsToGeoJSON, zonesToGeoJSON,
 } from "@/lib/creatorMapData";
+import { type HandoffCheckpoint, checkpointsToGeoJSON, checkpointsToFlowGeoJSON } from "@/lib/handoffData";
 import { AlertTriangle } from "lucide-react";
 
 // Free dark vector tiles from CartoCDN (no API key needed)
