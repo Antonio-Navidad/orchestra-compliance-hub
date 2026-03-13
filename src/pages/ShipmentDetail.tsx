@@ -220,6 +220,11 @@ export default function ShipmentDetail() {
             <TabsTrigger value="audit" className="font-mono text-xs">
               <Clock size={12} className="mr-1" /> AUDIT TRAIL
             </TabsTrigger>
+            {(shipment.status === "cleared" || shipment.status === "closed_avoided" || shipment.status === "closed_incident") && (
+              <TabsTrigger value="outcome" className="font-mono text-xs">
+                <BarChart3 size={12} className="mr-1" /> OUTCOME
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="overview" className="mt-4 space-y-6">
