@@ -4,6 +4,7 @@ import {
   Search, Eye, ShoppingCart, Radio, Zap, ShieldCheck,
   CreditCard, Lightbulb, Fingerprint, Truck, Plane, Ship,
   AlertTriangle, Bell, GitBranch, Box, Route, Layers,
+  HelpCircle,
 } from "lucide-react";
 import type { WorkspacePurpose } from "@/hooks/useWorkspacePurpose";
 
