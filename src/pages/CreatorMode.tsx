@@ -342,7 +342,17 @@ export default function CreatorMode() {
         </div>
 
         {/* Main Map Area */}
-        <div className="flex-1 relative bg-background overflow-hidden">
+        <div className={`flex-1 relative bg-background overflow-hidden ${isFullscreen ? 'w-full' : ''}`}>
+          {isFullscreen && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="absolute top-3 right-3 z-10 h-8 gap-1.5 text-xs font-mono bg-card/80 backdrop-blur-sm border-border"
+              onClick={() => setIsFullscreen(false)}
+            >
+              <Minimize2 size={14} /> Exit Fullscreen
+            </Button>
+          )}
           <CreatorMap
             layers={layers}
             overlays={overlays}
