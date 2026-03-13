@@ -28,6 +28,7 @@ const aiNav = [
   { title: "Decision Twin", url: "/decision-twin", icon: Zap },
   { title: "Creator Mode", url: "/creator-mode", icon: Eye },
   { title: "Seller Mode", url: "/seller-mode", icon: ShoppingCart },
+  { title: "Teams / Enterprise", url: "/teams", icon: Users },
   { title: "Team Chat", url: "/team-chat", icon: Users },
 ];
 

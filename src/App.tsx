@@ -28,6 +28,7 @@ import TeamChat from "./pages/TeamChat";
 import DianCompliance from "./pages/DianCompliance";
 import CreatorMode from "./pages/CreatorMode";
 import MicroSellerMode from "./pages/MicroSellerMode";
+import TeamsBlackTier from "./pages/TeamsBlackTier";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
