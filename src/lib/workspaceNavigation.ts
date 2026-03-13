@@ -209,6 +209,7 @@ const ENTERPRISE_NAV: NavGroup[] = [
       { title: "Admin Settings", url: "/admin", icon: Settings },
       { title: "Jurisdictions", url: "/jurisdiction-settings", icon: ShieldCheck },
       { title: "Pricing", url: "/pricing", icon: CreditCard },
+      { title: "Guide", url: "/guide", icon: HelpCircle },
     ],
   },
 ];
