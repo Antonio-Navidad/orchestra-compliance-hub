@@ -183,6 +183,7 @@ export default function CreatorMode() {
               <TabsContent value="new-route" className="flex-1 overflow-hidden mt-0">
                 <NewRouteBuilder
                   onRouteChange={setNewRouteData}
+                  onRouteGenerate={setNewRouteData}
                   onClose={() => setActiveTab("map")}
                 />
               </TabsContent>
@@ -378,6 +379,7 @@ export default function CreatorMode() {
               checkpoints={handoff.checkpoints}
               onCheckpointClick={handoff.openCheckpoint}
               showDebug={false}
+              userRoute={newRouteData}
             />
           </div>
 
