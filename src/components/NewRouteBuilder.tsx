@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HUBS, type LogisticsHub } from "@/lib/creatorMapData";
+import { generateNetworkRoute, type RoutedPath } from "@/lib/maritimeRouting";
 
 export type SegmentMode = "land" | "sea" | "air" | "multimodal";
 
