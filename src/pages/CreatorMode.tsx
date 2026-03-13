@@ -183,6 +183,7 @@ export default function CreatorMode() {
               <TabsContent value="new-route" className="flex-1 overflow-hidden mt-0">
                 <NewRouteBuilder
                   onRouteChange={setNewRouteData}
+                  onRouteGenerate={setNewRouteData}
                   onClose={() => setActiveTab("map")}
                 />
               </TabsContent>
