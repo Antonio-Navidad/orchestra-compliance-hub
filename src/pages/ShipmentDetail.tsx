@@ -188,7 +188,7 @@ export default function ShipmentDetail() {
 
         {/* Risk Banner */}
         {shipment.risk_score >= 60 && (
-          <div className={`rounded-lg border p-4 ${getRiskBgClass(shipment.risk_score)} ${
+          <div className={`rounded-lg border p-4 ${getRiskBgClass(getRiskLevel(shipment.risk_score))} ${
             shipment.risk_score >= 85 ? 'border-risk-critical/30' : 'border-risk-medium/30'
           }`}>
             <div className="flex items-start gap-3">
