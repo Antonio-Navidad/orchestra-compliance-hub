@@ -1,6 +1,7 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ChatDrawer } from "@/components/ChatDrawer";
+import { GlobalTopBar } from "@/components/GlobalTopBar";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,6 +12,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <header className="h-10 flex items-center justify-between border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50 px-2">
             <SidebarTrigger className="text-muted-foreground" />
             <div className="flex items-center gap-1">
+              <GlobalTopBar />
               <ChatDrawer />
             </div>
           </header>
