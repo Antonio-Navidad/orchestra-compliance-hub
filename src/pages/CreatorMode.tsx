@@ -140,7 +140,6 @@ export default function CreatorMode() {
           <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setIsFullscreen(f => !f)} title={isFullscreen ? "Exit fullscreen" : "Fullscreen map"}>
             {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
           </Button>
-          </Button>
         </div>
       </div>
 
