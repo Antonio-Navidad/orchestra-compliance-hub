@@ -218,6 +218,9 @@ export default function ShipmentDetail() {
             <TabsTrigger value="documents" className="font-mono text-xs">
               <FileText size={12} className="mr-1" /> DOCUMENTS
             </TabsTrigger>
+            <TabsTrigger value="eta" className="font-mono text-xs">
+              <Navigation size={12} className="mr-1" /> ETA
+            </TabsTrigger>
             <TabsTrigger value="audit" className="font-mono text-xs">
               <Clock size={12} className="mr-1" /> AUDIT TRAIL
             </TabsTrigger>
