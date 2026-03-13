@@ -13,8 +13,9 @@ import { FixNowPanel } from "@/components/FixNowPanel";
 import { ExplainabilityDrawer } from "@/components/ExplainabilityDrawer";
 import { AuditTimeline } from "@/components/AuditTimeline";
 import { StatusWorkflow } from "@/components/StatusWorkflow";
+import { OutcomeRecorder } from "@/components/OutcomeRecorder";
 import { Shipment, Invoice, Manifest, TransportMode } from "@/types/orchestra";
-import { ArrowLeft, FileText, AlertTriangle, TrendingDown, Zap, Clock, ClipboardCheck, Send } from "lucide-react";
+import { ArrowLeft, FileText, AlertTriangle, TrendingDown, Zap, Clock, ClipboardCheck, Send, BarChart3 } from "lucide-react";
 import { PacketScoreCard } from "@/components/PacketScoreCard";
 import { computePacketScore } from "@/lib/packetScore";
 import { EscalationPanel } from "@/components/EscalationPanel";
@@ -219,6 +220,11 @@ export default function ShipmentDetail() {
             <TabsTrigger value="audit" className="font-mono text-xs">
               <Clock size={12} className="mr-1" /> AUDIT TRAIL
             </TabsTrigger>
+            {(shipment.status === "cleared" || shipment.status === "closed_avoided" || shipment.status === "closed_incident") && (
+              <TabsTrigger value="outcome" className="font-mono text-xs">
+                <BarChart3 size={12} className="mr-1" /> OUTCOME
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="overview" className="mt-4 space-y-6">
@@ -328,6 +334,15 @@ export default function ShipmentDetail() {
           <TabsContent value="audit" className="mt-4">
             <AuditTimeline shipmentId={shipment.shipment_id} />
           </TabsContent>
+
+          {(shipment.status === "cleared" || shipment.status === "closed_avoided" || shipment.status === "closed_incident") && (
+            <TabsContent value="outcome" className="mt-4">
+              <OutcomeRecorder
+                shipmentId={shipment.shipment_id}
+                workspaceId={(shipment as any).workspace_id}
+              />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
     </div>
