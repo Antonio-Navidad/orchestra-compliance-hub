@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.dian-compliance]
 verify_jwt = false
+
+[functions.notify]
+verify_jwt = false
