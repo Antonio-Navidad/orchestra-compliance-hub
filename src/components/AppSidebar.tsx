@@ -2,7 +2,7 @@ import {
   Activity, Package, FileText, BarChart3, Users, Plus, CreditCard,
   Lightbulb, ClipboardList, Settings, Scale, BookOpen, Map,
   Search, LogOut, ArrowDownToLine, ArrowUpFromLine, Layers,
-  Fingerprint, Zap, ShieldCheck
+  Fingerprint, Zap, ShieldCheck, Eye
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
