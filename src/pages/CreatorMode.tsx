@@ -36,7 +36,7 @@ interface RouteWaypoint {
 }
 
 export default function CreatorMode() {
-  const [layers, setLayers] = useState({ sea: true, air: false, land: true, combined: false });
+  const [layers, setLayers] = useState({ sea: false, air: false, land: false, combined: false });
   const [overlays, setOverlays] = useState({ weather: true, military: false, congestion: true, warnings: true });
   const [sensitivity, setSensitivity] = useState("medium");
   const [hideCounterparties, setHideCounterparties] = useState(true);
