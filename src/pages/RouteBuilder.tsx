@@ -271,6 +271,11 @@ export default function RouteBuilder() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label className="text-xs font-mono">Shipment ID (optional)</Label>
+              <Input placeholder="e.g. SHP-001" value={shipmentId} onChange={(e) => setShipmentId(e.target.value)} className="text-sm" />
+            </div>
+
             <Button onClick={handlePlan} disabled={loading} className="w-full font-mono">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2" />}
               {loading ? "PLANNING ROUTES..." : "AI ROUTE PLAN"}

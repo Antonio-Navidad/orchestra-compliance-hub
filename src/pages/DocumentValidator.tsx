@@ -143,7 +143,11 @@ export default function DocumentValidator() {
                 <div>
                   <label className="text-xs font-mono text-muted-foreground mb-1 block">Declared Value</label>
                   <Input value={declaredValue} onChange={(e) => setDeclaredValue(e.target.value)} placeholder="$25,000" />
-                </div>
+               </div>
+              </div>
+              <div>
+                <label className="text-xs font-mono text-muted-foreground mb-1 block">Shipment ID (optional)</label>
+                <Input value={shipmentId} onChange={(e) => setShipmentId(e.target.value)} placeholder="e.g. SHP-001" />
               </div>
             </CardContent>
           </Card>

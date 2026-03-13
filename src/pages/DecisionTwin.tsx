@@ -101,6 +101,7 @@ export default function DecisionTwin() {
   const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DecisionTwinResult | null>(null);
+  const { currentWorkspace } = useWorkspace();
 
   const { data: shipment } = useQuery({
     queryKey: ["shipment", id],
@@ -142,12 +143,80 @@ export default function DecisionTwin() {
     enabled: !!id,
   });
 
+  // Load existing Decision Twin from DB
+  const { data: existingTwin } = useQuery({
+    queryKey: ["decision-twin-record", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("decision_twins")
+        .select("*, decision_scenarios(*)")
+        .eq("shipment_id", id!)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  // Hydrate result from persisted twin on mount
+  useEffect(() => {
+    if (existingTwin && !result) {
+      const scenarios = ((existingTwin as any).decision_scenarios || [])
+        .sort((a: any, b: any) => (a.rank || 0) - (b.rank || 0))
+        .map((s: any) => ({
+          label: s.label,
+          rank: s.rank || 1,
+          routeSummary: s.route_summary || "",
+          landedCost: s.projected_cost?.display || "N/A",
+          arrivalWindow: s.projected_eta?.display || "N/A",
+          holdProbability: Math.round((s.hold_probability || 0) * 100),
+          docRisk: s.doc_risk_score >= 0.7 ? "high" : s.doc_risk_score >= 0.4 ? "medium" : "low",
+          complianceRisk: s.compliance_risk_score >= 0.7 ? "high" : s.compliance_risk_score >= 0.4 ? "medium" : "low",
+          complexityScore: Math.round((s.complexity_score || 0.5) * 10),
+          explanation: s.rank_explanation || "",
+        }));
+
+      setResult({
+        readinessScore: Math.round((existingTwin.readiness_score || 0) * 100),
+        readinessState: existingTwin.readiness_state || "proceed_with_caution",
+        clearanceProbability: Math.round((existingTwin.clearance_probability || 0) * 100),
+        delayProbability: Math.round((existingTwin.delay_probability || 0) * 100),
+        holdProbability: Math.round((existingTwin.hold_probability || 0) * 100),
+        predictedLandedCost: (existingTwin.landed_cost_range as any)?.display || "N/A",
+        predictedArrival: (existingTwin.eta_range as any)?.display || "N/A",
+        etaConfidence: Math.round((existingTwin.confidence || 0) * 100),
+        mostLikelyFailurePoint: existingTwin.top_failure_point || "Unknown",
+        topRecommendation: ((existingTwin.prescriptive_actions as any[]) || [])[0]?.action || "Run analysis for recommendations",
+        bestAlternate: ((existingTwin.prescriptive_actions as any[]) || [])[1]?.action || "N/A",
+        reasoning: existingTwin.explanation || "",
+        scenarios,
+        corrections: ((existingTwin.prescriptive_actions as any[]) || []).map((a: any, i: number) => ({
+          priority: a.priority || i + 1,
+          action: a.action || "",
+          impact: a.impact || "",
+          category: a.category || "compliance",
+        })),
+        riskFactors: [],
+        confidenceDrivers: [],
+      });
+    }
+  }, [existingTwin]);
+
   const runAnalysis = async () => {
     if (!shipment) return;
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("decision-twin", {
-        body: { shipment, invoices, manifests, documents: docs, mode: "enterprise" },
+        body: {
+          shipment,
+          invoices,
+          manifests,
+          documents: docs,
+          mode: "enterprise",
+          workspaceId: currentWorkspace?.id,
+        },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
