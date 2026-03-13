@@ -43,6 +43,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </main>
             </div>
           </div>
+          <OnboardingTour />
         </SidebarProvider>
       </ViewModeContext.Provider>
     </WorkspaceContext.Provider>

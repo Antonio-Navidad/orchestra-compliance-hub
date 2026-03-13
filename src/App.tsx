@@ -111,6 +111,7 @@ function WorkspacePurposeWrapper() {
           <Route path="/watch-mode" element={<PurposeGate><WatchMode /></PurposeGate>} />
           <Route path="/seller-mode" element={<PurposeGate><MicroSellerMode /></PurposeGate>} />
           <Route path="/teams" element={<PurposeGate><TeamsBlackTier /></PurposeGate>} />
+          <Route path="/guide" element={<PurposeGate><GuidePage /></PurposeGate>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
