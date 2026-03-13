@@ -163,6 +163,7 @@ const OPERATIONS_NAV: NavGroup[] = [
       { title: "Team Chat", url: "/team-chat", icon: Users },
       { title: "Analytics", url: "/analytics", icon: BarChart3 },
       { title: "Admin", url: "/admin", icon: Settings },
+      { title: "Guide", url: "/guide", icon: HelpCircle },
     ],
   },
 ];
