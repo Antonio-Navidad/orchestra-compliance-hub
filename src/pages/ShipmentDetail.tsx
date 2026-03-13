@@ -343,7 +343,6 @@ export default function ShipmentDetail() {
               />
             </TabsContent>
           )}
-          </TabsContent>
         </Tabs>
       </main>
     </div>
