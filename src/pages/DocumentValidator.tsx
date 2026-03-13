@@ -66,6 +66,8 @@ export default function DocumentValidator() {
     setDocuments(documents.filter(d => d.id !== id));
   };
 
+  const [shipmentId, setShipmentId] = useState("");
+
   const handleValidate = async () => {
     if (documents.length === 0) {
       toast.error("Add at least one document to validate");
@@ -75,7 +77,7 @@ export default function DocumentValidator() {
     setResult(null);
     try {
       const { data, error } = await supabase.functions.invoke("validate-documents", {
-        body: { documents, shipmentMode, originCountry, destinationCountry, hsCode, declaredValue },
+        body: { documents, shipmentMode, originCountry, destinationCountry, hsCode, declaredValue, shipmentId: shipmentId || undefined },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
