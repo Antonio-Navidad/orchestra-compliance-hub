@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.make-callback]
 verify_jwt = false
+
+[functions.make-admin]
+verify_jwt = false
