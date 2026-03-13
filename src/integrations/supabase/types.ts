@@ -933,6 +933,184 @@ export type Database = {
           },
         ]
       }
+      handoff_checkpoints: {
+        Row: {
+          actual_arrival: string | null
+          address_or_region: string | null
+          checkpoint_name: string
+          checkpoint_type: Database["public"]["Enums"]["checkpoint_type"]
+          created_at: string
+          created_by: string | null
+          handoff_status: Database["public"]["Enums"]["handoff_status"]
+          id: string
+          incident_flag: boolean
+          incident_notes: string | null
+          incident_type: string | null
+          latitude: number | null
+          longitude: number | null
+          next_checkpoint_id: string | null
+          planned_arrival: string | null
+          product_condition:
+            | Database["public"]["Enums"]["condition_status"]
+            | null
+          quality_notes: string | null
+          quantity_expected: number | null
+          quantity_received: number | null
+          receiver_contact: string | null
+          receiver_name: string | null
+          receiver_team: string | null
+          route_id: string | null
+          sender_contact: string | null
+          sender_name: string | null
+          sender_team: string | null
+          sequence_number: number
+          shipment_id: string
+          updated_at: string
+          verified_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          actual_arrival?: string | null
+          address_or_region?: string | null
+          checkpoint_name: string
+          checkpoint_type?: Database["public"]["Enums"]["checkpoint_type"]
+          created_at?: string
+          created_by?: string | null
+          handoff_status?: Database["public"]["Enums"]["handoff_status"]
+          id?: string
+          incident_flag?: boolean
+          incident_notes?: string | null
+          incident_type?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          next_checkpoint_id?: string | null
+          planned_arrival?: string | null
+          product_condition?:
+            | Database["public"]["Enums"]["condition_status"]
+            | null
+          quality_notes?: string | null
+          quantity_expected?: number | null
+          quantity_received?: number | null
+          receiver_contact?: string | null
+          receiver_name?: string | null
+          receiver_team?: string | null
+          route_id?: string | null
+          sender_contact?: string | null
+          sender_name?: string | null
+          sender_team?: string | null
+          sequence_number?: number
+          shipment_id: string
+          updated_at?: string
+          verified_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          actual_arrival?: string | null
+          address_or_region?: string | null
+          checkpoint_name?: string
+          checkpoint_type?: Database["public"]["Enums"]["checkpoint_type"]
+          created_at?: string
+          created_by?: string | null
+          handoff_status?: Database["public"]["Enums"]["handoff_status"]
+          id?: string
+          incident_flag?: boolean
+          incident_notes?: string | null
+          incident_type?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          next_checkpoint_id?: string | null
+          planned_arrival?: string | null
+          product_condition?:
+            | Database["public"]["Enums"]["condition_status"]
+            | null
+          quality_notes?: string | null
+          quantity_expected?: number | null
+          quantity_received?: number | null
+          receiver_contact?: string | null
+          receiver_name?: string | null
+          receiver_team?: string | null
+          route_id?: string | null
+          sender_contact?: string | null
+          sender_name?: string | null
+          sender_team?: string | null
+          sequence_number?: number
+          shipment_id?: string
+          updated_at?: string
+          verified_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "handoff_checkpoints_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      handoff_verifications: {
+        Row: {
+          accepted: boolean
+          checkpoint_id: string
+          condition_status:
+            | Database["public"]["Enums"]["condition_status"]
+            | null
+          created_at: string
+          discrepancy_notes: string | null
+          id: string
+          notes: string | null
+          photo_urls: string[] | null
+          quality_status: string | null
+          quantity_confirmed: number | null
+          role: string
+          verified_by: string | null
+          verified_by_name: string | null
+        }
+        Insert: {
+          accepted?: boolean
+          checkpoint_id: string
+          condition_status?:
+            | Database["public"]["Enums"]["condition_status"]
+            | null
+          created_at?: string
+          discrepancy_notes?: string | null
+          id?: string
+          notes?: string | null
+          photo_urls?: string[] | null
+          quality_status?: string | null
+          quantity_confirmed?: number | null
+          role?: string
+          verified_by?: string | null
+          verified_by_name?: string | null
+        }
+        Update: {
+          accepted?: boolean
+          checkpoint_id?: string
+          condition_status?:
+            | Database["public"]["Enums"]["condition_status"]
+            | null
+          created_at?: string
+          discrepancy_notes?: string | null
+          id?: string
+          notes?: string | null
+          photo_urls?: string[] | null
+          quality_status?: string | null
+          quantity_confirmed?: number | null
+          role?: string
+          verified_by?: string | null
+          verified_by_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "handoff_verifications_checkpoint_id_fkey"
+            columns: ["checkpoint_id"]
+            isOneToOne: false
+            referencedRelation: "handoff_checkpoints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       idempotency_keys: {
         Row: {
           created_at: string
@@ -2761,6 +2939,28 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "ops_manager" | "analyst" | "viewer"
+      checkpoint_type:
+        | "factory_release"
+        | "warehouse_transfer"
+        | "port_handoff"
+        | "airport_handoff"
+        | "customs_checkpoint"
+        | "cross_dock"
+        | "inland_carrier_transfer"
+        | "bonded_warehouse"
+        | "distributor_transfer"
+        | "final_consignee_delivery"
+      condition_status:
+        | "intact"
+        | "minor_damage"
+        | "major_damage"
+        | "seal_broken"
+        | "packaging_compromised"
+        | "temperature_concern"
+        | "quantity_mismatch"
+        | "wrong_goods_suspected"
+        | "rejected"
+        | "accepted_with_notes"
       document_type:
         | "commercial_invoice"
         | "packing_list"
@@ -2777,6 +2977,14 @@ export type Database = {
         | "inspection_certificate"
         | "multimodal_transport_doc"
         | "other"
+      handoff_status:
+        | "pending"
+        | "upcoming"
+        | "awaiting_sender"
+        | "awaiting_receiver"
+        | "verified"
+        | "issue_flagged"
+        | "completed"
       shipment_direction: "inbound" | "outbound"
       shipment_status:
         | "in_transit"
@@ -2922,6 +3130,30 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "ops_manager", "analyst", "viewer"],
+      checkpoint_type: [
+        "factory_release",
+        "warehouse_transfer",
+        "port_handoff",
+        "airport_handoff",
+        "customs_checkpoint",
+        "cross_dock",
+        "inland_carrier_transfer",
+        "bonded_warehouse",
+        "distributor_transfer",
+        "final_consignee_delivery",
+      ],
+      condition_status: [
+        "intact",
+        "minor_damage",
+        "major_damage",
+        "seal_broken",
+        "packaging_compromised",
+        "temperature_concern",
+        "quantity_mismatch",
+        "wrong_goods_suspected",
+        "rejected",
+        "accepted_with_notes",
+      ],
       document_type: [
         "commercial_invoice",
         "packing_list",
@@ -2938,6 +3170,15 @@ export const Constants = {
         "inspection_certificate",
         "multimodal_transport_doc",
         "other",
+      ],
+      handoff_status: [
+        "pending",
+        "upcoming",
+        "awaiting_sender",
+        "awaiting_receiver",
+        "verified",
+        "issue_flagged",
+        "completed",
       ],
       shipment_direction: ["inbound", "outbound"],
       shipment_status: [

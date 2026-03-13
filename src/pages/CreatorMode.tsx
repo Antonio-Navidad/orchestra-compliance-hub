@@ -11,9 +11,12 @@ import { toast } from "sonner";
 import {
   Eye, EyeOff, Shield, Ship, Plane, Truck, Layers,
   AlertTriangle, Cloud, Zap, Plus, Save, Lock, X,
-  ChevronRight
+  ChevronRight, Link2,
 } from "lucide-react";
 import CreatorMap from "@/components/CreatorMap";
+import { CheckpointList } from "@/components/handoff/CheckpointList";
+import { CheckpointDrawer } from "@/components/handoff/CheckpointDrawer";
+import { useHandoffCheckpoints } from "@/hooks/useHandoffCheckpoints";
 
 interface RouteWaypoint {
   id: string;
@@ -50,6 +53,8 @@ export default function CreatorMode() {
   const [savedProfiles, setSavedProfiles] = useState<RouteProfile[]>([]);
   const [activeTab, setActiveTab] = useState("map");
 
+  const handoff = useHandoffCheckpoints('SH-2026-CONDOR');
+
   const toggleLayer = (key: keyof typeof layers) => setLayers(p => ({ ...p, [key]: !p[key] }));
   const toggleOverlay = (key: keyof typeof overlays) => setOverlays(p => ({ ...p, [key]: !p[key] }));
 
@@ -82,16 +87,24 @@ export default function CreatorMode() {
     toast.success("Route profile saved privately");
   };
 
-  const riskColor = (level: string) => {
-    if (level === "high") return "text-destructive";
-    if (level === "caution") return "text-[hsl(var(--risk-medium))]";
-    return "text-[hsl(var(--risk-safe))]";
-  };
-
   const riskBg = (level: string) => {
     if (level === "high") return "bg-destructive/20 border-destructive/40";
     if (level === "caution") return "bg-[hsl(var(--risk-medium))]/10 border-[hsl(var(--risk-medium))]/30";
     return "bg-[hsl(var(--risk-safe))]/10 border-[hsl(var(--risk-safe))]/30";
+  };
+
+  const handleAddCheckpoint = () => {
+    handoff.addCheckpoint({
+      name: `Checkpoint ${handoff.checkpoints.length + 1}`,
+      type: 'warehouse_transfer',
+      lat: 20 + Math.random() * 20,
+      lng: -50 + Math.random() * 80,
+      address: 'New checkpoint location',
+      sender: { name: 'TBD', team: 'TBD', contact: '' },
+      receiver: { name: 'TBD', team: 'TBD', contact: '' },
+      quantity_expected: 100,
+    });
+    toast.success("Checkpoint added");
   };
 
   return (
@@ -106,6 +119,12 @@ export default function CreatorMode() {
           <Badge variant="outline" className="text-[10px] font-mono border-primary/30 text-primary">
             PRIVACY-CENTRIC
           </Badge>
+          {handoff.checkpoints.length > 0 && (
+            <Badge variant="outline" className="text-[10px] font-mono border-[hsl(var(--risk-medium))]/30 text-[hsl(var(--risk-medium))]">
+              <Link2 size={10} className="mr-1" />
+              {handoff.completedCount}/{handoff.checkpoints.length} CUSTODY
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Input
@@ -127,7 +146,13 @@ export default function CreatorMode() {
             <TabsList className="w-full rounded-none border-b border-border bg-transparent h-9">
               <TabsTrigger value="map" className="text-[10px] font-mono flex-1">LAYERS</TabsTrigger>
               <TabsTrigger value="route" className="text-[10px] font-mono flex-1">ROUTE</TabsTrigger>
-              <TabsTrigger value="privacy" className="text-[10px] font-mono flex-1">PRIVACY</TabsTrigger>
+              <TabsTrigger value="custody" className="text-[10px] font-mono flex-1 relative">
+                CUSTODY
+                {handoff.checkpoints.some(c => c.status.startsWith('awaiting')) && (
+                  <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-[hsl(var(--risk-medium))]" />
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="privacy" className="text-[10px] font-mono flex-1">PRIV</TabsTrigger>
             </TabsList>
 
             <TabsContent value="map" className="flex-1 overflow-y-auto p-3 space-y-4 mt-0">
@@ -237,6 +262,18 @@ export default function CreatorMode() {
               </Button>
             </TabsContent>
 
+            <TabsContent value="custody" className="flex-1 overflow-hidden mt-0">
+              <CheckpointList
+                checkpoints={handoff.checkpoints}
+                selectedId={handoff.selectedId}
+                progress={handoff.progress}
+                completedCount={handoff.completedCount}
+                currentCustodian={handoff.currentCustodian}
+                onSelect={handoff.openCheckpoint}
+                onAdd={handleAddCheckpoint}
+              />
+            </TabsContent>
+
             <TabsContent value="privacy" className="flex-1 overflow-y-auto p-3 space-y-4 mt-0">
               <div className="space-y-3">
                 <p className="text-[10px] font-mono text-muted-foreground tracking-wider">PRIVACY CONTROLS</p>
@@ -307,7 +344,19 @@ export default function CreatorMode() {
             overlays={overlays}
             sensitivity={sensitivity}
             hideCounterparties={hideCounterparties}
+            checkpoints={handoff.checkpoints}
+            onCheckpointClick={handoff.openCheckpoint}
           />
+
+          {/* Checkpoint Drawer */}
+          {handoff.drawerOpen && handoff.selected && (
+            <CheckpointDrawer
+              checkpoint={handoff.selected}
+              onClose={handoff.closeDrawer}
+              onSenderVerify={handoff.submitSenderVerification}
+              onReceiverVerify={handoff.submitReceiverVerification}
+            />
+          )}
 
           {/* Bottom route summary */}
           <div className="absolute bottom-0 left-0 right-0 bg-card/90 backdrop-blur border-t border-border p-3">
@@ -322,8 +371,8 @@ export default function CreatorMode() {
                   <p className="text-xs font-mono">{waypoints.length} ({waypoints.filter(w => w.hidden).length} masked)</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-mono text-muted-foreground">LAYERS</p>
-                  <p className="text-xs font-mono">{Object.entries(layers).filter(([, v]) => v).map(([k]) => k).join(", ") || "none"}</p>
+                  <p className="text-[10px] font-mono text-muted-foreground">CUSTODY</p>
+                  <p className="text-xs font-mono">{handoff.completedCount}/{handoff.checkpoints.length} verified</p>
                 </div>
                 <div>
                   <p className="text-[10px] font-mono text-muted-foreground">SENSITIVITY</p>
