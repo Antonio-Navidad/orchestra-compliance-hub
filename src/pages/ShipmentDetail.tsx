@@ -7,7 +7,7 @@ import { ModeIcon } from "@/components/ModeIcon";
 import { ComparisonView } from "@/components/ComparisonView";
 import { ModeCompliancePanel } from "@/components/ModeCompliancePanel";
 import { PdfUpload } from "@/components/PdfUpload";
-import { compareInvoiceManifest, getRiskBgClass } from "@/lib/compliance";
+import { compareInvoiceManifest, getRiskBgClass, getRiskLevel } from "@/lib/compliance";
 import { ExposurePanel } from "@/components/ExposurePanel";
 import { FixNowPanel } from "@/components/FixNowPanel";
 import { ExplainabilityDrawer } from "@/components/ExplainabilityDrawer";
