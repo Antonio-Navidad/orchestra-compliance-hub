@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HUBS, type LogisticsHub } from "@/lib/creatorMapData";
+import { generateNetworkRoute, type RoutedPath } from "@/lib/maritimeRouting";
 
 export type SegmentMode = "land" | "sea" | "air" | "multimodal";
 
@@ -45,6 +46,7 @@ export interface NewRouteData {
   status: "draft" | "saved";
   routeState: RouteState;
   feasibilityMessage?: string;
+  networkRoute?: RoutedPath; // Network-routed path for realistic rendering
 }
 
 const MODE_CONFIG: Record<SegmentMode, { icon: any; label: string; color: string }> = {
@@ -325,15 +327,41 @@ export function NewRouteBuilder({ onRouteChange, onRouteGenerate, onClose }: New
     if (!canGenerate) return;
     updateRoute(prev => ({ ...prev, routeState: "generating" }));
 
-    // Simulate brief generation delay then mark rendered
+    // Use network routing engine
     setTimeout(() => {
+      const seg = route.segments[0];
+      if (!seg.from.lat || !seg.from.lng || !seg.to.lat || !seg.to.lng) return;
+
+      const networkResult = generateNetworkRoute(
+        seg.from.lat, seg.from.lng,
+        seg.to.lat, seg.to.lng,
+        seg.mode,
+        seg.from.resolvedName || seg.from.name,
+        seg.to.resolvedName || seg.to.name,
+      );
+
+      if (!networkResult.feasible) {
+        updateRoute(prev => ({
+          ...prev,
+          routeState: "invalid" as RouteState,
+          feasibilityMessage: networkResult.message,
+          networkRoute: undefined,
+        }));
+        toast.error(networkResult.message || "Route not feasible");
+        return;
+      }
+
       updateRoute(prev => {
-        const updated = { ...prev, routeState: "rendered" as RouteState };
+        const updated = {
+          ...prev,
+          routeState: "rendered" as RouteState,
+          networkRoute: networkResult,
+        };
         onRouteGenerate?.(updated);
         return updated;
       });
-      toast.success("Route generated and rendered on map");
-    }, 800);
+      toast.success(`Route generated: ${networkResult.waypoints.length} waypoints, ~${networkResult.totalDistanceKm.toLocaleString()} km`);
+    }, 300);
   };
 
   const handleFixFeasibility = (segId: string, mode: SegmentMode) => {
@@ -598,9 +626,63 @@ export function NewRouteBuilder({ onRouteChange, onRouteGenerate, onClose }: New
         </div>
 
         {/* Feasibility warning */}
-        {!feasibility.feasible && allPointsConfirmed && (
-          <div className="p-1.5 rounded bg-[hsl(var(--risk-critical))]/5 border border-[hsl(var(--risk-critical))]/20">
+        {!feasibility.feasible && allPointsConfirmed && feasibility.suggestedMode && (
+          <div className="p-1.5 rounded bg-[hsl(var(--risk-critical))]/5 border border-[hsl(var(--risk-critical))]/20 space-y-1">
             <p className="text-[9px] text-[hsl(var(--risk-critical))] font-mono">⚠ {feasibility.message}</p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 text-[10px] font-mono border-[hsl(var(--risk-medium))]/30 text-[hsl(var(--risk-medium))]"
+              onClick={() => handleFixFeasibility(route.segments[0].id, feasibility.suggestedMode!)}
+            >
+              Switch to {MODE_CONFIG[feasibility.suggestedMode].label}
+            </Button>
+          </div>
+        )}
+
+        {/* Invalid route from network engine */}
+        {route.routeState === "invalid" && route.feasibilityMessage && (
+          <div className="p-2 rounded bg-[hsl(var(--risk-critical))]/5 border border-[hsl(var(--risk-critical))]/20 space-y-1.5">
+            <p className="text-[9px] text-[hsl(var(--risk-critical))] font-mono">⚠ {route.feasibilityMessage}</p>
+            {route.feasibilityMessage.toLowerCase().includes("multimodal") ? (
+              <Button
+                size="sm" variant="outline"
+                className="h-6 text-[10px] font-mono border-[hsl(var(--glow-amber))]/30 text-[hsl(var(--glow-amber))]"
+                onClick={() => updateSegmentMode(route.segments[0].id, "multimodal")}
+              >
+                <Layers size={10} className="mr-1" /> Switch to Multimodal
+              </Button>
+            ) : route.feasibilityMessage.toLowerCase().includes("sea") ? (
+              <Button
+                size="sm" variant="outline"
+                className="h-6 text-[10px] font-mono border-primary/30 text-primary"
+                onClick={() => updateSegmentMode(route.segments[0].id, "sea")}
+              >
+                <Ship size={10} className="mr-1" /> Switch to Sea
+              </Button>
+            ) : null}
+          </div>
+        )}
+
+        {/* Network route summary */}
+        {route.routeState === "rendered" && route.networkRoute?.feasible && (
+          <div className="p-2 rounded bg-[hsl(var(--risk-safe))]/5 border border-[hsl(var(--risk-safe))]/20 space-y-1">
+            <p className="text-[10px] font-mono text-[hsl(var(--risk-safe))] font-bold">✓ ROUTE RENDERED</p>
+            <p className="text-[9px] font-mono text-muted-foreground">
+              {route.networkRoute.waypoints.filter(w => w.type !== "ocean_wp").length} waypoints • ~{route.networkRoute.totalDistanceKm.toLocaleString()} km
+            </p>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {route.networkRoute.segments
+                .filter((s, i, arr) => i === 0 || s.mode !== arr[i - 1].mode)
+                .map((s, i) => {
+                  const MIcon = MODE_CONFIG[s.mode]?.icon || Layers;
+                  return (
+                    <Badge key={i} variant="outline" className={cn("text-[8px] font-mono gap-1", MODE_CONFIG[s.mode]?.color)}>
+                      <MIcon size={8} /> {s.mode}
+                    </Badge>
+                  );
+                })}
+            </div>
           </div>
         )}
 
@@ -617,6 +699,8 @@ export function NewRouteBuilder({ onRouteChange, onRouteGenerate, onClose }: New
             <><Loader2 size={14} className="animate-spin" /> Generating Route...</>
           ) : route.routeState === "rendered" ? (
             <><Check size={14} /> Route Rendered — Regenerate</>
+          ) : route.routeState === "invalid" ? (
+            <><AlertTriangle size={14} /> Fix Mode & Retry</>
           ) : (
             <><Zap size={14} /> Generate Route</>
           )}

@@ -341,129 +341,144 @@ export default function CreatorMap({ layers, overlays, sensitivity, hideCounterp
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
 
-    // Build GeoJSON from user route
     const modeColors: Record<string, string> = {
       sea: "#3b82f6", air: "#a855f7", land: "#22c55e", multimodal: "#f59e0b",
     };
 
-    if (!userRoute || userRoute.routeState !== "rendered") {
-      // Remove user route layers if they exist
-      ["user-route-line", "user-route-glow", "user-route-points"].forEach(id => {
-        if (map.getLayer(id)) map.removeLayer(id);
+    // Clean up existing user route layers
+    const layerIds = ["user-route-labels", "user-route-points", "user-route-transfers"];
+    // Remove dynamic segment layers
+    const style = map.getStyle();
+    if (style?.layers) {
+      style.layers.forEach(l => {
+        if (l.id.startsWith("user-seg-")) layerIds.push(l.id);
       });
-      if (map.getSource("user-route")) map.removeSource("user-route");
-      if (map.getSource("user-route-points")) map.removeSource("user-route-points");
-      return;
+    }
+    layerIds.forEach(id => { if (map.getLayer(id)) map.removeLayer(id); });
+
+    // Remove old sources
+    ["user-route-points", "user-route-transfers"].forEach(id => {
+      if (map.getSource(id)) map.removeSource(id);
+    });
+    if (style?.sources) {
+      Object.keys(style.sources).forEach(id => {
+        if (id.startsWith("user-seg-") && map.getSource(id)) map.removeSource(id);
+      });
     }
 
-    // Build line features per segment
-    const lineFeatures: GeoJSON.Feature[] = [];
-    const pointFeatures: GeoJSON.Feature[] = [];
+    if (!userRoute || userRoute.routeState !== "rendered") return;
+
     const bounds = new maplibregl.LngLatBounds();
 
-    userRoute.segments.forEach(seg => {
-      if (!seg.from.lat || !seg.from.lng || !seg.to.lat || !seg.to.lng) return;
-      const from: [number, number] = [seg.from.lng, seg.from.lat];
-      const to: [number, number] = [seg.to.lng, seg.to.lat];
+    // Use network route if available (realistic corridors)
+    if (userRoute.networkRoute && userRoute.networkRoute.feasible) {
+      const nr = userRoute.networkRoute;
 
-      // Generate arc points for visual appeal
-      const pts: [number, number][] = [];
-      const numPts = 40;
-      for (let i = 0; i <= numPts; i++) {
-        const t = i / numPts;
-        const lng = from[0] + (to[0] - from[0]) * t;
-        const lat = from[1] + (to[1] - from[1]) * t;
-        const curve = Math.sin(t * Math.PI) * (Math.abs(to[0] - from[0]) * 0.06);
-        pts.push([lng, lat + curve]);
+      // Add per-segment sources and layers with mode-specific colors
+      nr.segments.forEach((seg, i) => {
+        const srcId = `user-seg-${i}`;
+        const color = modeColors[seg.mode] || "#3b82f6";
+
+        map.addSource(srcId, {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            properties: {},
+            geometry: { type: "LineString", coordinates: seg.coordinates },
+          },
+        });
+
+        // Glow
+        map.addLayer({
+          id: `user-seg-glow-${i}`, type: "line", source: srcId,
+          paint: { "line-color": color, "line-width": 8, "line-opacity": 0.2, "line-blur": 5 },
+        });
+
+        // Line with mode-specific dash
+        const dashArray = seg.mode === "air" ? [3, 6] : seg.mode === "sea" ? [6, 4] : [1, 0];
+        map.addLayer({
+          id: `user-seg-line-${i}`, type: "line", source: srcId,
+          paint: { "line-color": color, "line-width": 3, "line-opacity": 0.9, "line-dasharray": dashArray },
+        });
+
+        seg.coordinates.forEach(c => bounds.extend(c as [number, number]));
+      });
+
+      // Build waypoint features
+      const pointFeatures: GeoJSON.Feature[] = [];
+      const transferFeatures: GeoJSON.Feature[] = [];
+
+      nr.waypoints.forEach(wp => {
+        const feat: GeoJSON.Feature = {
+          type: "Feature",
+          properties: { name: wp.name, wpType: wp.type, isTransfer: wp.isTransfer },
+          geometry: { type: "Point", coordinates: [wp.lng, wp.lat] },
+        };
+        if (wp.isTransfer) transferFeatures.push(feat);
+        pointFeatures.push(feat);
+        bounds.extend([wp.lng, wp.lat]);
+      });
+
+      // Waypoint markers
+      map.addSource("user-route-points", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: pointFeatures },
+      });
+      map.addLayer({
+        id: "user-route-points", type: "circle", source: "user-route-points",
+        paint: {
+          "circle-radius": ["case", ["get", "isTransfer"], 6, 7],
+          "circle-color": ["case", ["get", "isTransfer"], "#f59e0b", "#f59e0b"],
+          "circle-stroke-color": ["case", ["get", "isTransfer"], "#ffffff", "#ffffff"],
+          "circle-stroke-width": 2,
+          "circle-opacity": 0.9,
+        },
+      });
+
+      // Transfer nodes (mode-switch points) - diamond shape via larger ring
+      if (transferFeatures.length > 0) {
+        map.addSource("user-route-transfers", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: transferFeatures },
+        });
+        map.addLayer({
+          id: "user-route-transfers", type: "circle", source: "user-route-transfers",
+          paint: {
+            "circle-radius": 10,
+            "circle-color": "transparent",
+            "circle-stroke-color": "#f59e0b",
+            "circle-stroke-width": 2,
+            "circle-stroke-opacity": 0.8,
+          },
+        });
       }
 
-      lineFeatures.push({
-        type: "Feature",
-        properties: { mode: seg.mode, color: modeColors[seg.mode] || "#3b82f6" },
-        geometry: { type: "LineString", coordinates: pts },
+      // Labels for significant waypoints (skip ocean_wp)
+      map.addLayer({
+        id: "user-route-labels", type: "symbol", source: "user-route-points",
+        filter: ["!=", ["get", "wpType"], "ocean_wp"],
+        layout: {
+          "text-field": ["get", "name"],
+          "text-font": ["Open Sans Regular"],
+          "text-size": 10,
+          "text-offset": [0, 1.5],
+          "text-anchor": "top",
+          "text-optional": true,
+        },
+        paint: {
+          "text-color": "#f59e0b",
+          "text-halo-color": "rgba(10, 15, 30, 0.9)",
+          "text-halo-width": 1.5,
+        },
       });
-
-      bounds.extend(from);
-      bounds.extend(to);
-    });
-
-    // Build point features
-    const allPts = userRoute.segments.reduce<{ name: string; lng: number; lat: number; type: string }[]>((acc, seg, i) => {
-      if (i === 0 && seg.from.lat && seg.from.lng) acc.push({ name: seg.from.resolvedName || seg.from.name, lng: seg.from.lng, lat: seg.from.lat, type: seg.from.type });
-      if (seg.to.lat && seg.to.lng) acc.push({ name: seg.to.resolvedName || seg.to.name, lng: seg.to.lng, lat: seg.to.lat, type: seg.to.type });
-      return acc;
-    }, []);
-
-    allPts.forEach(p => {
-      pointFeatures.push({
-        type: "Feature",
-        properties: { name: p.name, type: p.type },
-        geometry: { type: "Point", coordinates: [p.lng, p.lat] },
-      });
-    });
-
-    // Remove existing layers
-    ["user-route-labels", "user-route-points", "user-route-line", "user-route-glow"].forEach(id => {
-      if (map.getLayer(id)) map.removeLayer(id);
-    });
-    if (map.getSource("user-route")) map.removeSource("user-route");
-    if (map.getSource("user-route-points")) map.removeSource("user-route-points");
-
-    // Add sources
-    map.addSource("user-route", {
-      type: "geojson",
-      data: { type: "FeatureCollection", features: lineFeatures },
-    });
-    map.addSource("user-route-points", {
-      type: "geojson",
-      data: { type: "FeatureCollection", features: pointFeatures },
-    });
-
-    // Add layers
-    map.addLayer({
-      id: "user-route-glow", type: "line", source: "user-route",
-      paint: {
-        "line-color": ["get", "color"],
-        "line-width": 8,
-        "line-opacity": 0.2,
-        "line-blur": 5,
-      },
-    });
-    map.addLayer({
-      id: "user-route-line", type: "line", source: "user-route",
-      paint: {
-        "line-color": ["get", "color"],
-        "line-width": 3,
-        "line-opacity": 0.9,
-        "line-dasharray": [4, 3],
-      },
-    });
-    map.addLayer({
-      id: "user-route-points", type: "circle", source: "user-route-points",
-      paint: {
-        "circle-radius": 7,
-        "circle-color": "#f59e0b",
-        "circle-stroke-color": "#ffffff",
-        "circle-stroke-width": 2,
-        "circle-opacity": 0.9,
-      },
-    });
-    map.addLayer({
-      id: "user-route-labels", type: "symbol", source: "user-route-points",
-      layout: {
-        "text-field": ["get", "name"],
-        "text-font": ["Open Sans Regular"],
-        "text-size": 11,
-        "text-offset": [0, 1.5],
-        "text-anchor": "top",
-        "text-optional": true,
-      },
-      paint: {
-        "text-color": "#f59e0b",
-        "text-halo-color": "rgba(10, 15, 30, 0.9)",
-        "text-halo-width": 1.5,
-      },
-    });
+    } else {
+      // Fallback: simple rendering for non-network routes (shouldn't happen often)
+      const seg = userRoute.segments[0];
+      if (seg?.from.lat && seg?.from.lng && seg?.to.lat && seg?.to.lng) {
+        bounds.extend([seg.from.lng, seg.from.lat]);
+        bounds.extend([seg.to.lng, seg.to.lat]);
+      }
+    }
 
     // Fit bounds
     if (!bounds.isEmpty()) {
