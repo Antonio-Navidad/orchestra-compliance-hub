@@ -62,20 +62,43 @@ interface CreatorMapProps {
   hideCounterparties: boolean;
   checkpoints?: HandoffCheckpoint[];
   onCheckpointClick?: (id: string) => void;
+  showDebug?: boolean;
 }
 
-export default function CreatorMap({ layers, overlays, sensitivity, hideCounterparties, checkpoints = [], onCheckpointClick }: CreatorMapProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+interface DebugDims {
+  region: string;
+  mount: string;
+  canvas: string;
+}
+
+export default function CreatorMap({ layers, overlays, sensitivity, hideCounterparties, checkpoints = [], onCheckpointClick, showDebug = true }: CreatorMapProps) {
+  const mapMountRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [debugDims, setDebugDims] = useState<DebugDims>({ region: "", mount: "", canvas: "" });
+  const regionRef = useRef<HTMLDivElement>(null);
 
-  // Build the map once
+  // Debug dimension reporter
+  const updateDebugDims = useCallback(() => {
+    const regionEl = regionRef.current;
+    const mountEl = mapMountRef.current;
+    const canvasEl = mountEl?.querySelector("canvas");
+    setDebugDims({
+      region: regionEl ? `${regionEl.offsetWidth}×${regionEl.offsetHeight}` : "N/A",
+      mount: mountEl ? `${mountEl.offsetWidth}×${mountEl.offsetHeight}` : "N/A",
+      canvas: canvasEl ? `${(canvasEl as HTMLCanvasElement).offsetWidth}×${(canvasEl as HTMLCanvasElement).offsetHeight}` : "N/A",
+    });
+  }, []);
+
+  // Build the map once, with proper lifecycle
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!mapMountRef.current) return;
+
+    const container = mapMountRef.current;
 
     const map = new maplibregl.Map({
-      container: containerRef.current,
+      container,
       style: DARK_STYLE,
       center: [30, 20],
       zoom: 2,
@@ -89,8 +112,26 @@ export default function CreatorMap({ layers, overlays, sensitivity, hideCounterp
 
     map.on("error", () => setLoadError(true));
 
+    // Force resize after mount stabilization
+    requestAnimationFrame(() => {
+      map.resize();
+    });
+
+    // ResizeObserver for ongoing layout changes
+    const resizeObserver = new ResizeObserver(() => {
+      map.resize();
+      updateDebugDims();
+    });
+    resizeObserver.observe(container);
+
     map.on("load", () => {
       mapRef.current = map;
+
+      // Force another resize after load
+      requestAnimationFrame(() => {
+        map.resize();
+        updateDebugDims();
+      });
 
       // ── Add data sources ───────────────────────────────
       map.addSource("sea-routes", { type: "geojson", data: routesToGeoJSON(SEA_ROUTES) });
@@ -110,78 +151,30 @@ export default function CreatorMap({ layers, overlays, sensitivity, hideCounterp
       map.addSource("warning-zones", { type: "geojson", data: zonesToGeoJSON(warningZones) });
 
       // ── OVERLAY LAYERS (behind routes) ─────────────────
-      map.addLayer({
-        id: "weather-fill", type: "fill", source: "weather-zones",
-        paint: { "fill-color": "#3b82f6", "fill-opacity": 0.12 },
-      });
-      map.addLayer({
-        id: "weather-border", type: "line", source: "weather-zones",
-        paint: { "line-color": "#3b82f6", "line-width": 1, "line-opacity": 0.4, "line-dasharray": [3, 3] },
-      });
-      map.addLayer({
-        id: "congestion-fill", type: "fill", source: "congestion-zones",
-        paint: { "fill-color": "#eab308", "fill-opacity": 0.10 },
-      });
-      map.addLayer({
-        id: "congestion-border", type: "line", source: "congestion-zones",
-        paint: { "line-color": "#eab308", "line-width": 1, "line-opacity": 0.4, "line-dasharray": [3, 3] },
-      });
-      map.addLayer({
-        id: "military-fill", type: "fill", source: "military-zones",
-        paint: { "fill-color": "#f97316", "fill-opacity": 0.10 },
-      });
-      map.addLayer({
-        id: "military-border", type: "line", source: "military-zones",
-        paint: { "line-color": "#f97316", "line-width": 1.5, "line-opacity": 0.5, "line-dasharray": [4, 2] },
-      });
-      map.addLayer({
-        id: "warning-fill", type: "fill", source: "warning-zones",
-        paint: { "fill-color": "#ef4444", "fill-opacity": 0.10 },
-      });
-      map.addLayer({
-        id: "warning-border", type: "line", source: "warning-zones",
-        paint: { "line-color": "#ef4444", "line-width": 1.5, "line-opacity": 0.5, "line-dasharray": [2, 2] },
-      });
+      map.addLayer({ id: "weather-fill", type: "fill", source: "weather-zones", paint: { "fill-color": "#3b82f6", "fill-opacity": 0.12 } });
+      map.addLayer({ id: "weather-border", type: "line", source: "weather-zones", paint: { "line-color": "#3b82f6", "line-width": 1, "line-opacity": 0.4, "line-dasharray": [3, 3] } });
+      map.addLayer({ id: "congestion-fill", type: "fill", source: "congestion-zones", paint: { "fill-color": "#eab308", "fill-opacity": 0.10 } });
+      map.addLayer({ id: "congestion-border", type: "line", source: "congestion-zones", paint: { "line-color": "#eab308", "line-width": 1, "line-opacity": 0.4, "line-dasharray": [3, 3] } });
+      map.addLayer({ id: "military-fill", type: "fill", source: "military-zones", paint: { "fill-color": "#f97316", "fill-opacity": 0.10 } });
+      map.addLayer({ id: "military-border", type: "line", source: "military-zones", paint: { "line-color": "#f97316", "line-width": 1.5, "line-opacity": 0.5, "line-dasharray": [4, 2] } });
+      map.addLayer({ id: "warning-fill", type: "fill", source: "warning-zones", paint: { "fill-color": "#ef4444", "fill-opacity": 0.10 } });
+      map.addLayer({ id: "warning-border", type: "line", source: "warning-zones", paint: { "line-color": "#ef4444", "line-width": 1.5, "line-opacity": 0.5, "line-dasharray": [2, 2] } });
 
       // ── SEA ROUTE LAYERS ──────────────────────────────
-      map.addLayer({
-        id: "sea-glow", type: "line", source: "sea-routes",
-        paint: { "line-color": "#3b82f6", "line-width": 6, "line-opacity": 0.15, "line-blur": 4 },
-      });
-      map.addLayer({
-        id: "sea-line", type: "line", source: "sea-routes",
-        paint: { "line-color": "#3b82f6", "line-width": 2, "line-opacity": 0.7, "line-dasharray": [6, 4] },
-      });
+      map.addLayer({ id: "sea-glow", type: "line", source: "sea-routes", paint: { "line-color": "#3b82f6", "line-width": 6, "line-opacity": 0.15, "line-blur": 4 } });
+      map.addLayer({ id: "sea-line", type: "line", source: "sea-routes", paint: { "line-color": "#3b82f6", "line-width": 2, "line-opacity": 0.7, "line-dasharray": [6, 4] } });
 
       // ── AIR ROUTE LAYERS ──────────────────────────────
-      map.addLayer({
-        id: "air-glow", type: "line", source: "air-routes",
-        paint: { "line-color": "#a855f7", "line-width": 5, "line-opacity": 0.12, "line-blur": 4 },
-      });
-      map.addLayer({
-        id: "air-line", type: "line", source: "air-routes",
-        paint: { "line-color": "#a855f7", "line-width": 1.5, "line-opacity": 0.7, "line-dasharray": [3, 6] },
-      });
+      map.addLayer({ id: "air-glow", type: "line", source: "air-routes", paint: { "line-color": "#a855f7", "line-width": 5, "line-opacity": 0.12, "line-blur": 4 } });
+      map.addLayer({ id: "air-line", type: "line", source: "air-routes", paint: { "line-color": "#a855f7", "line-width": 1.5, "line-opacity": 0.7, "line-dasharray": [3, 6] } });
 
       // ── LAND ROUTE LAYERS ─────────────────────────────
-      map.addLayer({
-        id: "land-glow", type: "line", source: "land-routes",
-        paint: { "line-color": "#22c55e", "line-width": 5, "line-opacity": 0.12, "line-blur": 3 },
-      });
-      map.addLayer({
-        id: "land-line", type: "line", source: "land-routes",
-        paint: { "line-color": "#22c55e", "line-width": 2, "line-opacity": 0.7 },
-      });
+      map.addLayer({ id: "land-glow", type: "line", source: "land-routes", paint: { "line-color": "#22c55e", "line-width": 5, "line-opacity": 0.12, "line-blur": 3 } });
+      map.addLayer({ id: "land-line", type: "line", source: "land-routes", paint: { "line-color": "#22c55e", "line-width": 2, "line-opacity": 0.7 } });
 
       // ── CONDOR ROUTE (combined) ───────────────────────
-      map.addLayer({
-        id: "condor-glow", type: "line", source: "condor-routes",
-        paint: { "line-color": "#f59e0b", "line-width": 8, "line-opacity": 0.15, "line-blur": 5 },
-      });
-      map.addLayer({
-        id: "condor-line", type: "line", source: "condor-routes",
-        paint: { "line-color": "#f59e0b", "line-width": 2.5, "line-opacity": 0.85, "line-dasharray": [4, 2] },
-      });
+      map.addLayer({ id: "condor-glow", type: "line", source: "condor-routes", paint: { "line-color": "#f59e0b", "line-width": 8, "line-opacity": 0.15, "line-blur": 5 } });
+      map.addLayer({ id: "condor-line", type: "line", source: "condor-routes", paint: { "line-color": "#f59e0b", "line-width": 2.5, "line-opacity": 0.85, "line-dasharray": [4, 2] } });
 
       // ── HUB MARKERS ──────────────────────────────────
       map.addLayer({
@@ -189,13 +182,7 @@ export default function CreatorMap({ layers, overlays, sensitivity, hideCounterp
         paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 2, 5, 6, 9, 10, 14],
           "circle-color": "transparent",
-          "circle-stroke-color": [
-            "match", ["get", "type"],
-            "port", "#3b82f6",
-            "airport", "#a855f7",
-            "hub", "#f59e0b",
-            "#3b82f6"
-          ],
+          "circle-stroke-color": ["match", ["get", "type"], "port", "#3b82f6", "airport", "#a855f7", "hub", "#f59e0b", "#3b82f6"],
           "circle-stroke-width": 1.5,
           "circle-stroke-opacity": 0.6,
         },
@@ -204,13 +191,7 @@ export default function CreatorMap({ layers, overlays, sensitivity, hideCounterp
         id: "hub-inner", type: "circle", source: "hubs",
         paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 2, 2.5, 6, 4.5, 10, 7],
-          "circle-color": [
-            "match", ["get", "type"],
-            "port", "#3b82f6",
-            "airport", "#a855f7",
-            "hub", "#f59e0b",
-            "#3b82f6"
-          ],
+          "circle-color": ["match", ["get", "type"], "port", "#3b82f6", "airport", "#a855f7", "hub", "#f59e0b", "#3b82f6"],
           "circle-opacity": 0.85,
         },
       });
@@ -235,23 +216,13 @@ export default function CreatorMap({ layers, overlays, sensitivity, hideCounterp
       map.addSource("checkpoints", { type: "geojson", data: checkpointsToGeoJSON([]) });
       map.addSource("checkpoint-flow", { type: "geojson", data: checkpointsToFlowGeoJSON([]) });
 
-      map.addLayer({
-        id: "checkpoint-flow-line", type: "line", source: "checkpoint-flow",
-        paint: { "line-color": "#f59e0b", "line-width": 2, "line-opacity": 0.4, "line-dasharray": [3, 3] },
-      });
+      map.addLayer({ id: "checkpoint-flow-line", type: "line", source: "checkpoint-flow", paint: { "line-color": "#f59e0b", "line-width": 2, "line-opacity": 0.4, "line-dasharray": [3, 3] } });
       map.addLayer({
         id: "checkpoint-ring", type: "circle", source: "checkpoints",
         paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 2, 7, 6, 12, 10, 16],
           "circle-color": "transparent",
-          "circle-stroke-color": [
-            "match", ["get", "status"],
-            "completed", "#22c55e", "verified", "#22c55e",
-            "issue_flagged", "#ef4444",
-            "awaiting_sender", "#eab308", "awaiting_receiver", "#eab308",
-            "upcoming", "#3b82f6",
-            "#64748b"
-          ],
+          "circle-stroke-color": ["match", ["get", "status"], "completed", "#22c55e", "verified", "#22c55e", "issue_flagged", "#ef4444", "awaiting_sender", "#eab308", "awaiting_receiver", "#eab308", "upcoming", "#3b82f6", "#64748b"],
           "circle-stroke-width": 2,
           "circle-stroke-opacity": 0.7,
         },
@@ -260,14 +231,7 @@ export default function CreatorMap({ layers, overlays, sensitivity, hideCounterp
         id: "checkpoint-dot", type: "circle", source: "checkpoints",
         paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 2, 3, 6, 5, 10, 8],
-          "circle-color": [
-            "match", ["get", "status"],
-            "completed", "#22c55e", "verified", "#22c55e",
-            "issue_flagged", "#ef4444",
-            "awaiting_sender", "#eab308", "awaiting_receiver", "#eab308",
-            "upcoming", "#3b82f6",
-            "#64748b"
-          ],
+          "circle-color": ["match", ["get", "status"], "completed", "#22c55e", "verified", "#22c55e", "issue_flagged", "#ef4444", "awaiting_sender", "#eab308", "awaiting_receiver", "#eab308", "upcoming", "#3b82f6", "#64748b"],
           "circle-opacity": 0.9,
         },
       });
@@ -321,7 +285,10 @@ export default function CreatorMap({ layers, overlays, sensitivity, hideCounterp
       setMapLoaded(true);
     });
 
-    return () => { map.remove(); };
+    return () => {
+      resizeObserver.disconnect();
+      map.remove();
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── TOGGLE VISIBILITY reactively ──────────────────────────
@@ -369,7 +336,7 @@ export default function CreatorMap({ layers, overlays, sensitivity, hideCounterp
 
   if (loadError) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-background gap-3">
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-background gap-3">
         <AlertTriangle className="h-10 w-10 text-muted-foreground/40" />
         <p className="text-xs font-mono text-muted-foreground">MAP TILES FAILED TO LOAD</p>
         <p className="text-[10px] text-muted-foreground/60">Check your connection and try refreshing</p>
@@ -378,6 +345,18 @@ export default function CreatorMap({ layers, overlays, sensitivity, hideCounterp
   }
 
   return (
-    <div ref={containerRef} className="absolute inset-0" style={{ background: "hsl(222, 47%, 4%)" }} />
+    <div ref={regionRef} className="absolute inset-0">
+      {/* Map canvas mount point — absolute inset-0 fills entire region */}
+      <div ref={mapMountRef} className="absolute inset-0" style={{ background: "hsl(222, 47%, 4%)" }} />
+
+      {/* Debug overlay */}
+      {showDebug && (
+        <div className="absolute top-2 left-2 z-30 bg-black/80 text-[10px] font-mono text-green-400 p-2 rounded space-y-0.5 pointer-events-none">
+          <div>region: {debugDims.region}</div>
+          <div>mount: {debugDims.mount}</div>
+          <div>canvas: {debugDims.canvas}</div>
+        </div>
+      )}
+    </div>
   );
 }
