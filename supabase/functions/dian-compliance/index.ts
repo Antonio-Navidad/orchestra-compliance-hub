@@ -12,6 +12,12 @@ serve(async (req) => {
   try {
     const { shipments, userRole, workspaceId } = await req.json();
 
+    if (!shipments?.length) {
+      return new Response(JSON.stringify({ error: "No shipments provided" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -30,7 +36,9 @@ Focus on:
 - Common rejection/hold reasons at Colombian ports
 - Importer/exporter profile completeness
 - Peso/USD conversion issues
-- Sanctioned entity screening (consignee, shipper, exporter names)`;
+- Sanctioned entity screening (consignee, shipper, exporter names)
+
+IMPORTANT: Return confidence as a decimal between 0.0 and 1.0 (not a percentage).`;
 
     const userPrompt = `Analyze these shipments for Colombia/DIAN compliance:\n${JSON.stringify(shipments, null, 2)}`;
 
@@ -66,7 +74,7 @@ Focus on:
                       description: { type: "string" },
                       recommendation: { type: "string" },
                       dian_reference: { type: "string" },
-                      confidence: { type: "number" },
+                      confidence: { type: "number", description: "Confidence between 0.0 and 1.0" },
                       entity_name: { type: "string", description: "Name of matched sanctioned entity, if applicable" },
                     },
                     required: ["shipment_id", "category", "severity", "title", "description", "recommendation", "confidence"],
@@ -106,65 +114,134 @@ Focus on:
 
     const result = JSON.parse(toolCall.function.arguments);
 
-    // --- Persist findings to compliance_checks and sanctions_alerts ---
+    // --- Persist findings ---
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    if (result.issues?.length) {
-      // Group issues by shipment_id
-      const issuesByShipment = new Map<string, typeof result.issues>();
-      for (const issue of result.issues) {
-        if (!issue.shipment_id) continue;
-        if (!issuesByShipment.has(issue.shipment_id)) {
-          issuesByShipment.set(issue.shipment_id, []);
-        }
-        issuesByShipment.get(issue.shipment_id)!.push(issue);
+    const now = new Date().toISOString();
+    const allShipmentIds = shipments.map((s: any) => s.shipment_id).filter(Boolean);
+
+    // Normalize confidence: if AI returns > 1, treat as percentage
+    const normalizeConfidence = (c: number | undefined | null): number | null => {
+      if (c == null) return null;
+      return c > 1 ? c / 100 : c;
+    };
+
+    // Group issues by shipment_id
+    const issuesByShipment = new Map<string, any[]>();
+    for (const issue of result.issues || []) {
+      if (!issue.shipment_id) continue;
+      if (!issuesByShipment.has(issue.shipment_id)) {
+        issuesByShipment.set(issue.shipment_id, []);
+      }
+      issuesByShipment.get(issue.shipment_id)!.push(issue);
+    }
+
+    const persistenceErrors: string[] = [];
+
+    // Persist compliance checks for ALL analyzed shipments (including cleared ones)
+    for (const shipmentId of allShipmentIds) {
+      const issues = issuesByShipment.get(shipmentId) || [];
+      const hasCritical = issues.some((i: any) => i.severity === "critical");
+      const hasHigh = issues.some((i: any) => i.severity === "high");
+      const hasMedium = issues.some((i: any) => i.severity === "medium");
+
+      let status: string;
+      let severity: string;
+      if (hasCritical) {
+        status = "blocked";
+        severity = "critical";
+      } else if (hasHigh) {
+        status = "caution";
+        severity = "high";
+      } else if (hasMedium) {
+        status = "caution";
+        severity = "warning";
+      } else if (issues.length > 0) {
+        status = "cleared";
+        severity = "info";
+      } else {
+        status = "cleared";
+        severity = "info";
       }
 
-      for (const [shipmentId, issues] of issuesByShipment) {
-        // Determine overall severity for this shipment
-        const hasCritical = issues.some((i: any) => i.severity === "critical");
-        const hasHigh = issues.some((i: any) => i.severity === "high");
-        const overallSeverity = hasCritical ? "critical" : hasHigh ? "high" : "warning";
-        const overallStatus = hasCritical ? "blocked" : hasHigh ? "caution" : "cleared";
+      const { error: checkErr } = await adminClient
+        .from("compliance_checks")
+        .insert({
+          shipment_id: shipmentId,
+          workspace_id: workspaceId || null,
+          check_type: "dian_compliance",
+          severity,
+          status,
+          findings: issues.length > 0 ? issues : [{ note: "No DIAN compliance issues found" }],
+          source_freshness: now,
+          checked_at: now,
+        });
 
-        // Insert compliance_check record
-        const { error: checkErr } = await adminClient
-          .from("compliance_checks")
+      if (checkErr) {
+        console.error("Failed to persist compliance check for", shipmentId, checkErr);
+        persistenceErrors.push(`compliance_check:${shipmentId}`);
+      }
+
+      // Persist sanctions alerts for any sanctions matches
+      const sanctionsIssues = issues.filter((i: any) => i.category === "sanctions_match" && i.entity_name);
+      for (const si of sanctionsIssues) {
+        const { error: sanctionErr } = await adminClient
+          .from("sanctions_alerts")
           .insert({
             shipment_id: shipmentId,
             workspace_id: workspaceId || null,
-            check_type: "dian_compliance",
-            severity: overallSeverity,
-            status: overallStatus,
-            findings: issues,
-            source_freshness: new Date().toISOString(),
-            checked_at: new Date().toISOString(),
+            entity_name: si.entity_name,
+            match_type: "ai_screening",
+            match_confidence: normalizeConfidence(si.confidence),
+            list_source: "DIAN/Colombia AI screening",
+            list_freshness: now,
+            status: "open",
           });
 
-        if (checkErr) console.error("Failed to persist compliance check:", checkErr);
-
-        // Insert sanctions_alerts for any sanctions matches
-        const sanctionsIssues = issues.filter((i: any) => i.category === "sanctions_match" && i.entity_name);
-        for (const si of sanctionsIssues) {
-          const { error: sanctionErr } = await adminClient
-            .from("sanctions_alerts")
-            .insert({
-              shipment_id: shipmentId,
-              workspace_id: workspaceId || null,
-              entity_name: si.entity_name,
-              match_type: "ai_screening",
-              match_confidence: si.confidence ? si.confidence / 100 : null,
-              list_source: "DIAN/Colombia AI screening",
-              list_freshness: new Date().toISOString(),
-              status: "open",
-            });
-
-          if (sanctionErr) console.error("Failed to persist sanctions alert:", sanctionErr);
+        if (sanctionErr) {
+          console.error("Failed to persist sanctions alert for", shipmentId, si.entity_name, sanctionErr);
+          persistenceErrors.push(`sanctions_alert:${shipmentId}:${si.entity_name}`);
         }
       }
+
+      // Record audit event for this compliance check
+      const { error: eventErr } = await adminClient
+        .from("shipment_events")
+        .insert({
+          shipment_id: shipmentId,
+          event_type: "compliance_check",
+          description: `DIAN compliance check completed: ${status} (${issues.length} issue${issues.length !== 1 ? "s" : ""})`,
+          attribution: "system",
+          confidence_level: normalizeConfidence(
+            issues.length > 0
+              ? issues.reduce((sum: number, i: any) => sum + (i.confidence || 0), 0) / issues.length
+              : 1.0
+          ),
+          evidence_quality: "ai_generated",
+          evidence_reference: "dian-compliance edge function",
+          metadata: {
+            check_type: "dian_compliance",
+            status,
+            severity,
+            issue_count: issues.length,
+            sanctions_matches: sanctionsIssues.length,
+          },
+        });
+
+      if (eventErr) {
+        console.error("Failed to persist shipment event for", shipmentId, eventErr);
+      }
     }
+
+    // Attach persistence metadata to response
+    result._persistence = {
+      compliance_checks_created: allShipmentIds.length,
+      sanctions_alerts_created: (result.issues || []).filter((i: any) => i.category === "sanctions_match" && i.entity_name).length,
+      audit_events_created: allShipmentIds.length,
+      errors: persistenceErrors.length > 0 ? persistenceErrors : undefined,
+    };
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
