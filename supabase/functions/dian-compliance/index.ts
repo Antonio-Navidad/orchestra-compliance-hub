@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,7 +10,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { shipments, userRole } = await req.json();
+    const { shipments, userRole, workspaceId } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -28,7 +29,8 @@ Focus on:
 - Certificate of origin requirements for trade agreements (TLC)
 - Common rejection/hold reasons at Colombian ports
 - Importer/exporter profile completeness
-- Peso/USD conversion issues`;
+- Peso/USD conversion issues
+- Sanctioned entity screening (consignee, shipper, exporter names)`;
 
     const userPrompt = `Analyze these shipments for Colombia/DIAN compliance:\n${JSON.stringify(shipments, null, 2)}`;
 
@@ -58,13 +60,14 @@ Focus on:
                     type: "object",
                     properties: {
                       shipment_id: { type: "string" },
-                      category: { type: "string", enum: ["likely_hold", "likely_rejection", "missing_fields", "valuation_mismatch", "packet_inconsistency", "tariff_error", "certificate_missing", "iva_issue"] },
+                      category: { type: "string", enum: ["likely_hold", "likely_rejection", "missing_fields", "valuation_mismatch", "packet_inconsistency", "tariff_error", "certificate_missing", "iva_issue", "sanctions_match"] },
                       severity: { type: "string", enum: ["critical", "high", "medium", "low"] },
                       title: { type: "string" },
                       description: { type: "string" },
                       recommendation: { type: "string" },
                       dian_reference: { type: "string" },
                       confidence: { type: "number" },
+                      entity_name: { type: "string", description: "Name of matched sanctioned entity, if applicable" },
                     },
                     required: ["shipment_id", "category", "severity", "title", "description", "recommendation", "confidence"],
                   },
@@ -92,6 +95,8 @@ Focus on:
     if (!response.ok) {
       if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const t = await response.text();
+      console.error("AI gateway error:", response.status, t);
       throw new Error("AI gateway error");
     }
 
@@ -99,7 +104,69 @@ Focus on:
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) throw new Error("No analysis returned");
 
-    return new Response(toolCall.function.arguments, {
+    const result = JSON.parse(toolCall.function.arguments);
+
+    // --- Persist findings to compliance_checks and sanctions_alerts ---
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    if (result.issues?.length) {
+      // Group issues by shipment_id
+      const issuesByShipment = new Map<string, typeof result.issues>();
+      for (const issue of result.issues) {
+        if (!issue.shipment_id) continue;
+        if (!issuesByShipment.has(issue.shipment_id)) {
+          issuesByShipment.set(issue.shipment_id, []);
+        }
+        issuesByShipment.get(issue.shipment_id)!.push(issue);
+      }
+
+      for (const [shipmentId, issues] of issuesByShipment) {
+        // Determine overall severity for this shipment
+        const hasCritical = issues.some((i: any) => i.severity === "critical");
+        const hasHigh = issues.some((i: any) => i.severity === "high");
+        const overallSeverity = hasCritical ? "critical" : hasHigh ? "high" : "warning";
+        const overallStatus = hasCritical ? "blocked" : hasHigh ? "caution" : "cleared";
+
+        // Insert compliance_check record
+        const { error: checkErr } = await adminClient
+          .from("compliance_checks")
+          .insert({
+            shipment_id: shipmentId,
+            workspace_id: workspaceId || null,
+            check_type: "dian_compliance",
+            severity: overallSeverity,
+            status: overallStatus,
+            findings: issues,
+            source_freshness: new Date().toISOString(),
+            checked_at: new Date().toISOString(),
+          });
+
+        if (checkErr) console.error("Failed to persist compliance check:", checkErr);
+
+        // Insert sanctions_alerts for any sanctions matches
+        const sanctionsIssues = issues.filter((i: any) => i.category === "sanctions_match" && i.entity_name);
+        for (const si of sanctionsIssues) {
+          const { error: sanctionErr } = await adminClient
+            .from("sanctions_alerts")
+            .insert({
+              shipment_id: shipmentId,
+              workspace_id: workspaceId || null,
+              entity_name: si.entity_name,
+              match_type: "ai_screening",
+              match_confidence: si.confidence ? si.confidence / 100 : null,
+              list_source: "DIAN/Colombia AI screening",
+              list_freshness: new Date().toISOString(),
+              status: "open",
+            });
+
+          if (sanctionErr) console.error("Failed to persist sanctions alert:", sanctionErr);
+        }
+      }
+    }
+
+    return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
