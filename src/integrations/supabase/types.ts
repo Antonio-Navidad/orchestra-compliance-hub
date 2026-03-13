@@ -86,6 +86,83 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_channels: {
+        Row: {
+          channel_type: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_archived: boolean
+          name: string
+          shipment_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          channel_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_archived?: boolean
+          name: string
+          shipment_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          channel_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_archived?: boolean
+          name?: string
+          shipment_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          channel_id: string
+          content: string
+          created_at: string
+          id: string
+          is_pinned: boolean
+          mentions: string[]
+          metadata: Json | null
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          channel_id: string
+          content: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          mentions?: string[]
+          metadata?: Json | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          channel_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          mentions?: string[]
+          metadata?: Json | null
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "chat_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           created_at: string
