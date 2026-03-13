@@ -345,13 +345,25 @@ export default function CreatorMap({ layers, overlays, sensitivity, hideCounterp
   useEffect(() => { setVisibility(["military-fill", "military-border"], overlays.military); }, [overlays.military, setVisibility]);
   useEffect(() => { setVisibility(["warning-fill", "warning-border"], overlays.warnings); }, [overlays.warnings, setVisibility]);
 
+  // Update checkpoints reactively
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    const cpSrc = map.getSource("checkpoints") as maplibregl.GeoJSONSource;
+    const flowSrc = map.getSource("checkpoint-flow") as maplibregl.GeoJSONSource;
+    if (cpSrc) cpSrc.setData(checkpointsToGeoJSON(checkpoints));
+    if (flowSrc) flowSrc.setData(checkpointsToFlowGeoJSON(checkpoints));
+  }, [checkpoints, mapLoaded]);
+
   // Privacy: adjust label visibility based on sensitivity
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
     if (map.getLayer("hub-labels")) {
-      const size = sensitivity === "high" ? 0 : sensitivity === "medium" ? 9 : 11;
       map.setPaintProperty("hub-labels", "text-opacity", sensitivity === "high" ? 0.3 : 1);
+    }
+    if (map.getLayer("checkpoint-labels")) {
+      map.setPaintProperty("checkpoint-labels", "text-opacity", sensitivity === "high" ? 0 : 1);
     }
   }, [sensitivity, mapLoaded]);
 
