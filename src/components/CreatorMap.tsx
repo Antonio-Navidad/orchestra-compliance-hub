@@ -7,6 +7,7 @@ import {
 } from "@/lib/creatorMapData";
 import { type HandoffCheckpoint, checkpointsToGeoJSON, checkpointsToFlowGeoJSON } from "@/lib/handoffData";
 import { AlertTriangle } from "lucide-react";
+import type { NewRouteData } from "@/components/NewRouteBuilder";
 
 // Free dark vector tiles from CartoCDN (no API key needed)
 const DARK_STYLE: maplibregl.StyleSpecification = {
