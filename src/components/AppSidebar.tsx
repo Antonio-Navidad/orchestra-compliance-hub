@@ -1,12 +1,9 @@
-import {
-  Activity, Package, FileText, BarChart3, Users, Plus, CreditCard,
-  Lightbulb, ClipboardList, Settings, Scale, BookOpen, Map,
-  Search, LogOut, ArrowDownToLine, ArrowUpFromLine, Layers,
-  Fingerprint, Zap, ShieldCheck, Eye, ShoppingCart, Radio
-} from "lucide-react";
+import { Activity, LogOut, Repeat } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useWorkspacePurpose, WORKSPACE_PURPOSES } from "@/hooks/useWorkspacePurpose";
+import { getNavigationForPurpose } from "@/lib/workspaceNavigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
@@ -15,76 +12,17 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 
-const mainNav = [
-  { title: "Dashboard", url: "/", icon: Activity },
-  { title: "New Shipment", url: "/intake", icon: Plus },
-  { title: "Review Queue", url: "/review", icon: ClipboardList },
-];
-
-const aiNav = [
-  { title: "Classify Product", url: "/classify", icon: Search },
-  { title: "Validate Documents", url: "/validate-docs", icon: FileText },
-  { title: "Route Builder", url: "/route-builder", icon: Map },
-  { title: "Decision Twin", url: "/decision-twin", icon: Zap },
-  { title: "Creator Mode", url: "/creator-mode", icon: Eye },
-  { title: "Watch Mode", url: "/watch-mode", icon: Radio },
-  { title: "Seller Mode", url: "/seller-mode", icon: ShoppingCart },
-  { title: "Teams / Enterprise", url: "/teams", icon: Users },
-  { title: "Team Chat", url: "/team-chat", icon: Users },
-];
-
-const complianceNav = [
-  { title: "DIAN / Colombia", url: "/dian-compliance", icon: Fingerprint },
-];
-
-const insightsNav = [
-  { title: "Analytics / ROI", url: "/analytics", icon: BarChart3 },
-  { title: "Broker Scorecard", url: "/brokers", icon: Users },
-  { title: "Legal Knowledge", url: "/legal", icon: BookOpen },
-  { title: "Audit Trail", url: "/audit-trail", icon: Scale },
-];
-
-const settingsNav = [
-  { title: "Admin Settings", url: "/admin", icon: Settings },
-  { title: "Jurisdictions", url: "/jurisdiction-settings", icon: ShieldCheck },
-  { title: "Plans & Billing", url: "/pricing", icon: CreditCard },
-  { title: "Guide", url: "/hints", icon: Lightbulb },
-];
-
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { signOut } = useAuth();
+  const { purpose, clearPurpose } = useWorkspacePurpose();
+
+  const navGroups = getNavigationForPurpose(purpose);
+  const currentPurpose = WORKSPACE_PURPOSES.find(p => p.id === purpose);
 
   const isActive = (path: string) => location.pathname === path;
-
-  const renderGroup = (label: string, items: typeof mainNav) => (
-    <SidebarGroup>
-      <SidebarGroupLabel className="text-[10px] tracking-widest font-mono text-muted-foreground/60">
-        {label}
-      </SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.url}>
-              <SidebarMenuButton asChild isActive={isActive(item.url)}>
-                <NavLink
-                  to={item.url}
-                  end={item.url === "/"}
-                  className="hover:bg-sidebar-accent/50"
-                  activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                >
-                  <item.icon className="h-4 w-4" />
-                  {!collapsed && <span className="text-xs font-mono">{item.title}</span>}
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
-  );
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -94,35 +32,72 @@ export function AppSidebar() {
             <Activity size={14} className="text-primary" />
           </div>
           {!collapsed && (
-            <div>
+            <div className="min-w-0">
               <h1 className="text-sm font-bold tracking-tight">ORCHESTRA</h1>
-              <p className="text-[8px] font-mono text-muted-foreground tracking-widest">AI LOGISTICS PLATFORM</p>
+              {currentPurpose && (
+                <p className="text-[9px] font-mono text-primary/70 tracking-wider truncate">
+                  {currentPurpose.icon} {currentPurpose.label.toUpperCase()}
+                </p>
+              )}
             </div>
           )}
         </div>
       </SidebarHeader>
 
       <SidebarContent className="px-1">
-        {renderGroup("OPERATIONS", mainNav)}
-        {renderGroup("AI ENGINES", aiNav)}
-        {renderGroup("COMPLIANCE", complianceNav)}
-        {renderGroup("INSIGHTS", insightsNav)}
-        {renderGroup("SETTINGS", settingsNav)}
+        {navGroups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel className="text-[10px] tracking-widest font-mono text-muted-foreground/60">
+              {group.label}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => (
+                  <SidebarMenuItem key={item.url + item.title}>
+                    <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                      <NavLink
+                        to={item.url}
+                        end={item.url === "/"}
+                        className="hover:bg-sidebar-accent/50"
+                        activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {!collapsed && <span className="text-xs font-mono">{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
       <SidebarFooter className="p-2 border-t border-sidebar-border">
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
+        <div className="flex flex-col gap-1">
           {!collapsed && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={signOut}
-              className="text-xs font-mono text-muted-foreground hover:text-foreground h-auto p-1 ml-auto"
+              onClick={clearPurpose}
+              className="text-[10px] font-mono text-muted-foreground hover:text-foreground h-auto p-1 justify-start"
             >
-              <LogOut size={12} className="mr-1" /> Sign Out
+              <Repeat size={10} className="mr-1" /> Switch Workspace
             </Button>
           )}
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            {!collapsed && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={signOut}
+                className="text-xs font-mono text-muted-foreground hover:text-foreground h-auto p-1 ml-auto"
+              >
+                <LogOut size={12} className="mr-1" /> Sign Out
+              </Button>
+            )}
+          </div>
         </div>
       </SidebarFooter>
     </Sidebar>

@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { WorkspacePurposeContext, useWorkspacePurposeState, useWorkspacePurpose } from "@/hooks/useWorkspacePurpose";
 import { AppLayout } from "@/components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import ShipmentDetail from "./pages/ShipmentDetail";
@@ -30,6 +31,8 @@ import CreatorMode from "./pages/CreatorMode";
 import MicroSellerMode from "./pages/MicroSellerMode";
 import TeamsBlackTier from "./pages/TeamsBlackTier";
 import WatchMode from "./pages/WatchMode";
+import PurposeSelector from "./pages/PurposeSelector";
+import WorkspaceHome from "./pages/WorkspaceHome";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,44 +50,87 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <AppLayout>{children}</AppLayout>;
 }
 
+function PurposeGate({ children }: { children: React.ReactNode }) {
+  const { hasPurpose } = useWorkspacePurpose();
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground font-mono text-sm animate-pulse">INITIALIZING ORCHESTRA...</div>
+      </div>
+    );
+  }
+  if (!user) return <Navigate to="/auth" replace />;
+  if (!hasPurpose) return <Navigate to="/welcome" replace />;
+  return <AppLayout>{children}</AppLayout>;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <WorkspacePurposeWrapper />
+    </TooltipProvider>
+  </QueryClientProvider>
+);
+
+function WorkspacePurposeWrapper() {
+  const purposeState = useWorkspacePurposeState();
+
+  return (
+    <WorkspacePurposeContext.Provider value={purposeState}>
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/shipment/:id" element={<ProtectedRoute><ShipmentDetail /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
-          <Route path="/legal" element={<ProtectedRoute><LegalKnowledge /></ProtectedRoute>} />
-          <Route path="/review" element={<ProtectedRoute><ReviewQueue /></ProtectedRoute>} />
-          <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
-          <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-          <Route path="/brokers" element={<ProtectedRoute><BrokerScorecard /></ProtectedRoute>} />
-          <Route path="/broker/:id" element={<ProtectedRoute><BrokerProfile /></ProtectedRoute>} />
-          <Route path="/intake" element={<ProtectedRoute><ShipmentIntake /></ProtectedRoute>} />
-          <Route path="/audit-trail" element={<ProtectedRoute><AuditTrail /></ProtectedRoute>} />
-          <Route path="/jurisdiction-settings" element={<ProtectedRoute><JurisdictionSettings /></ProtectedRoute>} />
-          <Route path="/hints" element={<ProtectedRoute><Hints /></ProtectedRoute>} />
-          <Route path="/classify" element={<ProtectedRoute><ProductClassification /></ProtectedRoute>} />
-          <Route path="/validate-docs" element={<ProtectedRoute><DocumentValidator /></ProtectedRoute>} />
-          <Route path="/route-builder" element={<ProtectedRoute><RouteBuilder /></ProtectedRoute>} />
-          <Route path="/team-chat" element={<ProtectedRoute><TeamChat /></ProtectedRoute>} />
-          <Route path="/dian-compliance" element={<ProtectedRoute><DianCompliance /></ProtectedRoute>} />
-          <Route path="/decision-twin" element={<ProtectedRoute><DecisionTwin /></ProtectedRoute>} />
-          <Route path="/decision-twin/:id" element={<ProtectedRoute><DecisionTwin /></ProtectedRoute>} />
-          <Route path="/creator-mode" element={<ProtectedRoute><CreatorMode /></ProtectedRoute>} />
-          <Route path="/watch-mode" element={<ProtectedRoute><WatchMode /></ProtectedRoute>} />
-          <Route path="/seller-mode" element={<ProtectedRoute><MicroSellerMode /></ProtectedRoute>} />
-          <Route path="/teams" element={<ProtectedRoute><TeamsBlackTier /></ProtectedRoute>} />
+          <Route path="/welcome" element={<WelcomeGate />} />
+          <Route path="/" element={<PurposeGate><WorkspaceHome /></PurposeGate>} />
+          <Route path="/dashboard" element={<PurposeGate><Dashboard /></PurposeGate>} />
+          <Route path="/shipment/:id" element={<PurposeGate><ShipmentDetail /></PurposeGate>} />
+          <Route path="/admin" element={<PurposeGate><AdminSettings /></PurposeGate>} />
+          <Route path="/legal" element={<PurposeGate><LegalKnowledge /></PurposeGate>} />
+          <Route path="/review" element={<PurposeGate><ReviewQueue /></PurposeGate>} />
+          <Route path="/pricing" element={<PurposeGate><Pricing /></PurposeGate>} />
+          <Route path="/analytics" element={<PurposeGate><Analytics /></PurposeGate>} />
+          <Route path="/brokers" element={<PurposeGate><BrokerScorecard /></PurposeGate>} />
+          <Route path="/broker/:id" element={<PurposeGate><BrokerProfile /></PurposeGate>} />
+          <Route path="/intake" element={<PurposeGate><ShipmentIntake /></PurposeGate>} />
+          <Route path="/audit-trail" element={<PurposeGate><AuditTrail /></PurposeGate>} />
+          <Route path="/jurisdiction-settings" element={<PurposeGate><JurisdictionSettings /></PurposeGate>} />
+          <Route path="/hints" element={<PurposeGate><Hints /></PurposeGate>} />
+          <Route path="/classify" element={<PurposeGate><ProductClassification /></PurposeGate>} />
+          <Route path="/validate-docs" element={<PurposeGate><DocumentValidator /></PurposeGate>} />
+          <Route path="/route-builder" element={<PurposeGate><RouteBuilder /></PurposeGate>} />
+          <Route path="/team-chat" element={<PurposeGate><TeamChat /></PurposeGate>} />
+          <Route path="/dian-compliance" element={<PurposeGate><DianCompliance /></PurposeGate>} />
+          <Route path="/decision-twin" element={<PurposeGate><DecisionTwin /></PurposeGate>} />
+          <Route path="/decision-twin/:id" element={<PurposeGate><DecisionTwin /></PurposeGate>} />
+          <Route path="/creator-mode" element={<PurposeGate><CreatorMode /></PurposeGate>} />
+          <Route path="/watch-mode" element={<PurposeGate><WatchMode /></PurposeGate>} />
+          <Route path="/seller-mode" element={<PurposeGate><MicroSellerMode /></PurposeGate>} />
+          <Route path="/teams" element={<PurposeGate><TeamsBlackTier /></PurposeGate>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+    </WorkspacePurposeContext.Provider>
+  );
+}
+
+function WelcomeGate() {
+  const { user, loading } = useAuth();
+  const { hasPurpose } = useWorkspacePurpose();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground font-mono text-sm animate-pulse">INITIALIZING ORCHESTRA...</div>
+      </div>
+    );
+  }
+  if (!user) return <Navigate to="/auth" replace />;
+  if (hasPurpose) return <Navigate to="/" replace />;
+  return <PurposeSelector />;
+}
 
 export default App;
