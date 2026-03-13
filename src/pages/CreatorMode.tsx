@@ -379,6 +379,7 @@ export default function CreatorMode() {
               checkpoints={handoff.checkpoints}
               onCheckpointClick={handoff.openCheckpoint}
               showDebug={false}
+              userRoute={newRouteData}
             />
           </div>
 
