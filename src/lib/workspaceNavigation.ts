@@ -48,7 +48,7 @@ const MARKETPLACE_NAV: NavGroup[] = [
     items: [
       { title: "Analytics", url: "/analytics", icon: BarChart3 },
       { title: "Pricing", url: "/pricing", icon: CreditCard },
-      { title: "Guide", url: "/hints", icon: Lightbulb },
+      { title: "Guide", url: "/guide", icon: HelpCircle },
     ],
   },
 ];
