@@ -2264,6 +2264,86 @@ export type Database = {
           },
         ]
       }
+      saved_routes: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          destination_lat: number | null
+          destination_lng: number | null
+          destination_name: string | null
+          id: string
+          is_template: boolean
+          mode: string
+          name: string
+          network_route: Json | null
+          notes: string | null
+          origin_lat: number | null
+          origin_lng: number | null
+          origin_name: string | null
+          segments: Json
+          sensitivity: string | null
+          status: string
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          destination_lat?: number | null
+          destination_lng?: number | null
+          destination_name?: string | null
+          id?: string
+          is_template?: boolean
+          mode?: string
+          name?: string
+          network_route?: Json | null
+          notes?: string | null
+          origin_lat?: number | null
+          origin_lng?: number | null
+          origin_name?: string | null
+          segments?: Json
+          sensitivity?: string | null
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          destination_lat?: number | null
+          destination_lng?: number | null
+          destination_name?: string | null
+          id?: string
+          is_template?: boolean
+          mode?: string
+          name?: string
+          network_route?: Json | null
+          notes?: string | null
+          origin_lat?: number | null
+          origin_lng?: number | null
+          origin_name?: string | null
+          segments?: Json
+          sensitivity?: string | null
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_routes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shipment_comments: {
         Row: {
           content: string
