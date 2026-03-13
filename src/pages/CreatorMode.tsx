@@ -145,7 +145,7 @@ export default function CreatorMode() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel — Controls */}
-        <div className="w-72 border-r border-border bg-card/30 overflow-y-auto flex-shrink-0">
+        <div className={`w-72 border-r border-border bg-card/30 overflow-y-auto flex-shrink-0 ${isFullscreen ? 'hidden' : ''}`}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
             <TabsList className="w-full rounded-none border-b border-border bg-transparent h-9">
               <TabsTrigger value="map" className="text-[10px] font-mono flex-1">LAYERS</TabsTrigger>
