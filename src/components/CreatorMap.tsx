@@ -74,7 +74,7 @@ interface DebugDims {
   canvas: string;
 }
 
-export default function CreatorMap({ layers, overlays, sensitivity, hideCounterparties, checkpoints = [], onCheckpointClick, showDebug = true }: CreatorMapProps) {
+export default function CreatorMap({ layers, overlays, sensitivity, hideCounterparties, checkpoints = [], onCheckpointClick, showDebug = true, userRoute }: CreatorMapProps) {
   const mapMountRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [loadError, setLoadError] = useState(false);
