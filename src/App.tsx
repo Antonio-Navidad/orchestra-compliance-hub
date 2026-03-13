@@ -34,6 +34,7 @@ import WatchMode from "./pages/WatchMode";
 import PurposeSelector from "./pages/PurposeSelector";
 import WorkspaceHome from "./pages/WorkspaceHome";
 import NotFound from "./pages/NotFound";
+import GuidePage from "./pages/GuidePage";
 
 const queryClient = new QueryClient();
 
