@@ -580,6 +580,47 @@ export type Database = {
           },
         ]
       }
+      escalation_rules: {
+        Row: {
+          created_at: string | null
+          enabled: boolean | null
+          escalate_channel: string
+          escalate_to_role: string
+          event_type: string
+          id: string
+          unread_threshold_minutes: number
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          enabled?: boolean | null
+          escalate_channel?: string
+          escalate_to_role?: string
+          event_type: string
+          id?: string
+          unread_threshold_minutes?: number
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          enabled?: boolean | null
+          escalate_channel?: string
+          escalate_to_role?: string
+          event_type?: string
+          id?: string
+          unread_threshold_minutes?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escalation_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eta_predictions: {
         Row: {
           confidence: number | null
@@ -872,6 +913,47 @@ export type Database = {
           },
         ]
       }
+      notification_delivery_log: {
+        Row: {
+          attempt_number: number
+          channel: string
+          created_at: string | null
+          delivered_at: string | null
+          error_message: string | null
+          id: string
+          notification_id: string
+          status: string
+        }
+        Insert: {
+          attempt_number?: number
+          channel?: string
+          created_at?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          notification_id: string
+          status?: string
+        }
+        Update: {
+          attempt_number?: number
+          channel?: string
+          created_at?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          notification_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_delivery_log_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           channel_preferences: Json | null
@@ -1011,6 +1093,65 @@ export type Database = {
           },
           {
             foreignKeyName: "outcome_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      override_events: {
+        Row: {
+          created_at: string | null
+          entity_id: string
+          entity_type: string
+          field_overridden: string
+          id: string
+          original_value: Json | null
+          outcome_success: boolean | null
+          override_value: Json | null
+          reason: string | null
+          user_id: string
+          validated: boolean | null
+          validated_at: string | null
+          validated_by: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id: string
+          entity_type: string
+          field_overridden: string
+          id?: string
+          original_value?: Json | null
+          outcome_success?: boolean | null
+          override_value?: Json | null
+          reason?: string | null
+          user_id: string
+          validated?: boolean | null
+          validated_at?: string | null
+          validated_by?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          field_overridden?: string
+          id?: string
+          original_value?: Json | null
+          outcome_success?: boolean | null
+          override_value?: Json | null
+          reason?: string | null
+          user_id?: string
+          validated?: boolean | null
+          validated_at?: string | null
+          validated_by?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "override_events_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
