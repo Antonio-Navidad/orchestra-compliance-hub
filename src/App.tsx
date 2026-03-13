@@ -27,6 +27,7 @@ import RouteBuilder from "./pages/RouteBuilder";
 import TeamChat from "./pages/TeamChat";
 import DianCompliance from "./pages/DianCompliance";
 import CreatorMode from "./pages/CreatorMode";
+import MicroSellerMode from "./pages/MicroSellerMode";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
