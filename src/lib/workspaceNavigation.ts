@@ -84,6 +84,7 @@ const COMPLIANCE_NAV: NavGroup[] = [
     items: [
       { title: "Jurisdictions", url: "/jurisdiction-settings", icon: ShieldCheck },
       { title: "Admin", url: "/admin", icon: Settings },
+      { title: "Guide", url: "/guide", icon: HelpCircle },
     ],
   },
 ];
