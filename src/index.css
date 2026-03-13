@@ -155,3 +155,45 @@
     );
   }
 }
+
+/* MapLibre / Orchestra popup styles */
+.maplibregl-popup-content {
+  background: hsl(222 40% 9% / 0.95) !important;
+  color: hsl(210 20% 90%) !important;
+  border: 1px solid hsl(222 25% 16%) !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 24px hsl(210 100% 56% / 0.08) !important;
+}
+.maplibregl-popup-tip {
+  border-top-color: hsl(222 40% 9% / 0.95) !important;
+}
+.maplibregl-ctrl-group {
+  background: hsl(222 40% 9% / 0.9) !important;
+  border: 1px solid hsl(222 25% 16%) !important;
+  border-radius: 6px !important;
+}
+.maplibregl-ctrl-group button {
+  background: transparent !important;
+  border-color: hsl(222 25% 16%) !important;
+}
+.maplibregl-ctrl-group button + button {
+  border-top-color: hsl(222 25% 16%) !important;
+}
+.maplibregl-ctrl-group button:hover {
+  background: hsl(222 30% 14%) !important;
+}
+.maplibregl-ctrl-group button span {
+  filter: invert(0.7) !important;
+}
+.maplibregl-ctrl-attrib {
+  background: transparent !important;
+  color: hsl(215 15% 35%) !important;
+  font-size: 9px !important;
+}
+.maplibregl-ctrl-attrib a {
+  color: hsl(215 15% 45%) !important;
+}
