@@ -1,12 +1,14 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Upload, Link as LinkIcon, AlertTriangle, CheckCircle, FileText, Loader2, Info, ShieldAlert } from "lucide-react";
+import { Search, Upload, Link as LinkIcon, AlertTriangle, CheckCircle, FileText, Loader2, Info, ShieldAlert, History } from "lucide-react";
 import { toast } from "sonner";
 
 interface ClassificationResult {
@@ -21,6 +23,7 @@ interface ClassificationResult {
   restrictedFlags?: string[];
   warnings?: string[];
   missingInfo?: string[];
+  classificationId?: string;
 }
 
 export default function ProductClassification() {
@@ -34,6 +37,21 @@ export default function ProductClassification() {
   const [destinationCountry, setDestinationCountry] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ClassificationResult | null>(null);
+  const { currentWorkspace } = useWorkspace();
+
+  // Load recent classifications from DB
+  const { data: recentClassifications = [] } = useQuery({
+    queryKey: ["recent-classifications"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_classifications")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const handleClassify = async () => {
     if (!title && !description && !productUrl) {
