@@ -128,7 +128,11 @@ export default function Dashboard() {
   return (
     <div className="bg-background">
       <div className="container mx-auto px-4 py-6 space-y-6">
-        {/* Dashboard View Toggle */}
+        {/* Start New Workflow Strip */}
+        <StartNewWorkflow
+          filter={["New Shipment", "New Route", "New Compliance Review", "New Watchlist", "Decision Twin"]}
+          variant="strip"
+        />
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h2 className="font-mono text-sm font-bold">{labels.title}</h2>

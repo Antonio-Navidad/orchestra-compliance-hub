@@ -32,6 +32,11 @@ export default function WatchMode() {
           )}
         </div>
         <div className="flex items-center gap-3">
+          <Link to="/intake">
+            <Button variant="outline" size="sm" className="h-7 text-[10px] font-mono gap-1">
+              <Plus size={11} /> Add Shipment
+            </Button>
+          </Link>
           <div className="flex items-center gap-1.5">
             {privacyMode ? <EyeOff size={12} className="text-primary" /> : <Eye size={12} className="text-muted-foreground" />}
             <span className="text-[10px] font-mono text-muted-foreground">Privacy</span>
