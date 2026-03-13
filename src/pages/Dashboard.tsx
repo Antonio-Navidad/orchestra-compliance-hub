@@ -3,17 +3,19 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ShipmentTable } from "@/components/ShipmentTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plane, Ship, Truck, Activity, AlertTriangle, ShieldCheck, Package, CreditCard, Lightbulb, LogOut, ClipboardList, BarChart3, Users, Plus, ArrowDownToLine, ArrowUpFromLine, Layers, FileWarning, ClipboardCheck, TrendingDown } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { Plane, Ship, Truck, AlertTriangle, ShieldCheck, Package, Layers, FileWarning, ClipboardCheck, TrendingDown, ClipboardList, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { Shipment, TransportMode } from "@/types/orchestra";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { detectShipmentIssues, getIssueFrame, type DirectionContext, type IssueType } from "@/lib/issueFraming";
+import { detectShipmentIssues, getIssueFrame, type DirectionContext } from "@/lib/issueFraming";
 import { StartNewWorkflow } from "@/components/StartNewWorkflow";
+import { RiskBadge } from "@/components/RiskBadge";
+import { RiskDot } from "@/components/RiskDot";
+import { StatusBadge } from "@/components/StatusBadge";
+import { getRiskLevel } from "@/lib/compliance";
 
 type DashboardView = 'inbound' | 'outbound' | 'combined';
 
@@ -34,17 +36,14 @@ export default function Dashboard() {
     },
   });
 
-  // Filter shipments by direction
   const filteredByDirection = dashboardView === 'combined'
     ? shipments
     : shipments.filter(s => (s as any).direction === dashboardView);
 
-  // Filter by mode
   const filteredShipments = activeMode === 'all'
     ? filteredByDirection
     : filteredByDirection.filter(s => s.mode === activeMode);
 
-  // KPIs
   const inboundShipments = shipments.filter(s => (s as any).direction === 'inbound' || !(s as any).direction);
   const outboundShipments = shipments.filter(s => (s as any).direction === 'outbound');
 
@@ -66,7 +65,6 @@ export default function Dashboard() {
     totalExposure: directionShipments.filter(s => s.risk_score >= 60).reduce((sum, s) => sum + Math.round(s.declared_value * 0.15), 0),
   };
 
-  // Detect issues for display
   const issueContext: DirectionContext = dashboardView === 'combined' ? 'combined' : dashboardView;
   const shipmentIssues = directionShipments
     .filter(s => s.risk_score >= 40 || (s as any).filing_readiness === 'not_ready')
@@ -86,7 +84,6 @@ export default function Dashboard() {
     }))
     .filter(si => si.issues.length > 0);
 
-  // View-specific labels
   const viewLabels = {
     inbound: {
       title: 'IMPORTER DASHBOARD',
@@ -157,37 +154,46 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* KPI Stats */}
+        {/* ═══ KPI Stats with Bold Risk Colors ═══ */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <div className="rounded-lg border border-border bg-card p-4 glow-blue">
+          {/* Total Shipments — primary blue */}
+          <div className="rounded-lg border border-primary/30 bg-card p-4 shadow-[0_0_15px_-3px_hsl(var(--primary)/0.15)]">
             <div className="flex items-center justify-between mb-2">
               <span className="font-mono text-[10px] text-muted-foreground tracking-wider">{labels.kpiPrefix} SHIPMENTS</span>
               <Package size={14} className="text-primary" />
             </div>
             <p className="text-2xl font-bold font-mono text-primary">{isLoading ? '—' : stats.total}</p>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4">
+
+          {/* Under Review — yellow/orange */}
+          <div className="rounded-lg border border-risk-medium/40 bg-risk-medium/5 p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="font-mono text-[10px] text-muted-foreground tracking-wider">UNDER REVIEW</span>
               <ClipboardList size={14} className="text-risk-medium" />
             </div>
             <p className="text-2xl font-bold font-mono text-risk-medium">{isLoading ? '—' : stats.underReview}</p>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4">
+
+          {/* Hold Risk — red/critical */}
+          <div className="rounded-lg border border-risk-critical/40 bg-risk-critical/5 p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="font-mono text-[10px] text-muted-foreground tracking-wider">{labels.holdLabel}</span>
-              <AlertTriangle size={14} className="text-risk-critical" />
+              <AlertTriangle size={14} className="text-risk-critical animate-pulse" />
             </div>
             <p className="text-2xl font-bold font-mono text-risk-critical">{isLoading ? '—' : stats.holdRisk}</p>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4">
+
+          {/* Not Ready — orange/high */}
+          <div className="rounded-lg border border-risk-high/40 bg-risk-high/5 p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="font-mono text-[10px] text-muted-foreground tracking-wider">{labels.readyLabel}</span>
               <FileWarning size={14} className="text-risk-high" />
             </div>
             <p className="text-2xl font-bold font-mono text-risk-high">{isLoading ? '—' : stats.notBrokerReady}</p>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4">
+
+          {/* Cleared — green/safe */}
+          <div className="rounded-lg border border-risk-safe/40 bg-risk-safe/5 p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="font-mono text-[10px] text-muted-foreground tracking-wider">CLEARED</span>
               <ShieldCheck size={14} className="text-risk-safe" />
@@ -196,7 +202,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Second KPI Row: Packet Score + Exposure */}
+        {/* Second KPI Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Card>
             <CardContent className="pt-4">
@@ -215,7 +221,7 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-risk-critical/20">
             <CardContent className="pt-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-mono text-[10px] text-muted-foreground tracking-wider">{labels.exposureLabel}</span>
@@ -248,48 +254,58 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Active Issues */}
+        {/* ═══ Active Issues — Bold Andon Cards ═══ */}
         {shipmentIssues.length > 0 && (
           <div className="space-y-3">
             <h3 className="font-mono text-xs text-muted-foreground tracking-wider flex items-center gap-2">
-              <AlertTriangle size={14} /> ACTIVE ISSUES
-              <Badge variant="outline" className="font-mono text-[10px]">{shipmentIssues.reduce((c, si) => c + si.issues.length, 0)}</Badge>
+              <AlertTriangle size={14} className="text-risk-critical" /> ACTIVE ISSUES
+              <Badge variant="destructive" className="font-mono text-[10px] px-1.5 py-0">
+                {shipmentIssues.reduce((c, si) => c + si.issues.length, 0)}
+              </Badge>
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {shipmentIssues.slice(0, 6).map(({ shipment: s, issues }) => (
-                <Link key={s.id} to={`/shipment/${s.shipment_id}`} className="block">
-                  <div className="rounded-lg border border-border bg-card p-3 hover:border-primary/30 transition-colors">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="font-mono text-xs font-bold">{s.shipment_id}</span>
-                      {dashboardView === 'combined' && (
-                        <Badge variant="outline" className="text-[9px] font-mono px-1.5 py-0">
-                          {(s as any).direction === 'outbound' ? '↑ OUT' : '↓ IN'}
-                        </Badge>
-                      )}
-                      <span className={`text-[10px] font-mono ml-auto ${s.risk_score >= 85 ? 'text-risk-critical' : 'text-risk-medium'}`}>
-                        RISK {s.risk_score}
-                      </span>
-                    </div>
-                    {issues.slice(0, 2).map(issue => {
-                      const frame = getIssueFrame(issue, issueContext);
-                      return (
-                        <div key={issue} className="mb-1">
-                          <p className="text-xs font-semibold text-foreground">{frame.label}</p>
-                          <p className="text-[10px] text-muted-foreground">{frame.explanation}</p>
+              {shipmentIssues.slice(0, 6).map(({ shipment: s, issues }) => {
+                const severity = getRiskLevel(s.risk_score);
+                const borderColor = severity === 'critical' ? 'border-l-risk-critical' :
+                  severity === 'high' ? 'border-l-risk-high' :
+                  severity === 'medium' ? 'border-l-risk-medium' : 'border-l-risk-safe';
+                return (
+                  <Link key={s.id} to={`/shipment/${s.shipment_id}`} className="block">
+                    <div className={`rounded-lg border border-border bg-card p-3 hover:border-primary/30 transition-colors border-l-[3px] ${borderColor}`}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <RiskDot score={s.risk_score} size="md" />
+                        <span className="font-mono text-xs font-bold">{s.shipment_id}</span>
+                        <StatusBadge status={s.status} size="sm" />
+                        {dashboardView === 'combined' && (
+                          <Badge variant="outline" className="text-[9px] font-mono px-1.5 py-0">
+                            {(s as any).direction === 'outbound' ? '↑ OUT' : '↓ IN'}
+                          </Badge>
+                        )}
+                        <div className="ml-auto">
+                          <RiskBadge score={s.risk_score} size="sm" />
                         </div>
-                      );
-                    })}
-                    {issues.length > 2 && (
-                      <p className="text-[10px] text-muted-foreground">+{issues.length - 2} more issues</p>
-                    )}
-                  </div>
-                </Link>
-              ))}
+                      </div>
+                      {issues.slice(0, 2).map(issue => {
+                        const frame = getIssueFrame(issue, issueContext);
+                        return (
+                          <div key={issue} className="mb-1">
+                            <p className="text-xs font-semibold text-foreground">{frame.label}</p>
+                            <p className="text-[10px] text-muted-foreground">{frame.explanation}</p>
+                          </div>
+                        );
+                      })}
+                      {issues.length > 2 && (
+                        <p className="text-[10px] text-muted-foreground">+{issues.length - 2} more issues</p>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* Shipment Table with Mode Tabs */}
+        {/* ═══ Shipment Table with Mode Tabs ═══ */}
         <Tabs value={activeMode} onValueChange={setActiveMode}>
           <TabsList className="bg-secondary/50 border border-border">
             <TabsTrigger value="all" className="font-mono text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
