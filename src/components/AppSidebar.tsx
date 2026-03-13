@@ -26,6 +26,7 @@ const aiNav = [
   { title: "Validate Documents", url: "/validate-docs", icon: FileText },
   { title: "Route Builder", url: "/route-builder", icon: Map },
   { title: "Decision Twin", url: "/decision-twin", icon: Zap },
+  { title: "Creator Mode", url: "/creator-mode", icon: Eye },
   { title: "Team Chat", url: "/team-chat", icon: Users },
 ];
 

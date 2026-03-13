@@ -73,6 +73,7 @@ const App = () => (
           <Route path="/dian-compliance" element={<ProtectedRoute><DianCompliance /></ProtectedRoute>} />
           <Route path="/decision-twin" element={<ProtectedRoute><DecisionTwin /></ProtectedRoute>} />
           <Route path="/decision-twin/:id" element={<ProtectedRoute><DecisionTwin /></ProtectedRoute>} />
+          <Route path="/creator-mode" element={<ProtectedRoute><CreatorMode /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
