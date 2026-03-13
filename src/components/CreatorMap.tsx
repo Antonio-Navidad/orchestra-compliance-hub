@@ -65,6 +65,7 @@ interface CreatorMapProps {
   checkpoints?: HandoffCheckpoint[];
   onCheckpointClick?: (id: string) => void;
   showDebug?: boolean;
+  userRoute?: NewRouteData | null;
 }
 
 interface DebugDims {
