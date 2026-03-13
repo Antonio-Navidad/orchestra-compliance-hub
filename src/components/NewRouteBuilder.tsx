@@ -46,6 +46,7 @@ export interface NewRouteData {
   status: "draft" | "saved";
   routeState: RouteState;
   feasibilityMessage?: string;
+  networkRoute?: RoutedPath; // Network-routed path for realistic rendering
 }
 
 const MODE_CONFIG: Record<SegmentMode, { icon: any; label: string; color: string }> = {
