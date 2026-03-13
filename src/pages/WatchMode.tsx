@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Radio, Eye, EyeOff } from "lucide-react";
+import { Radio, Eye, EyeOff, Plus } from "lucide-react";
 import { useWatchMode } from "@/hooks/useWatchMode";
 import WatchMap from "@/components/watch/WatchMap";
 import { WatchSidebar } from "@/components/watch/WatchSidebar";
 import { ShipmentDetailPanel } from "@/components/watch/ShipmentDetailPanel";
+import { Link } from "react-router-dom";
 
 export default function WatchMode() {
   const wm = useWatchMode();
