@@ -109,9 +109,9 @@ export default function CreatorMode() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-2.5rem)]">
+    <div className={`flex flex-col ${isFullscreen ? 'fixed inset-0 z-[100]' : 'h-[calc(100vh-2.5rem)]'}`}>
       {/* Top Bar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50">
+      <div className={`flex items-center justify-between px-4 py-2 border-b border-border bg-card/50 ${isFullscreen ? 'absolute top-0 left-0 right-0 z-10 bg-card/80 backdrop-blur-sm' : ''}`}>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Lock size={14} className="text-primary" />
