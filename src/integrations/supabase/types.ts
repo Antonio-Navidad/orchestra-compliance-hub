@@ -1731,6 +1731,18 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      trigger_notify: {
+        Args: {
+          _body?: string
+          _event_type: string
+          _link?: string
+          _severity: string
+          _shipment_id?: string
+          _title: string
+          _workspace_id?: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "ops_manager" | "analyst" | "viewer"
