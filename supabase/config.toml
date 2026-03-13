@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.decision-twin]
 verify_jwt = false
+
+[functions.route-builder]
+verify_jwt = false
