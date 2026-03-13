@@ -28,6 +28,7 @@ import TeamChat from "./pages/TeamChat";
 import DianCompliance from "./pages/DianCompliance";
 import CreatorMode from "./pages/CreatorMode";
 import MicroSellerMode from "./pages/MicroSellerMode";
+import TeamsBlackTier from "./pages/TeamsBlackTier";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -76,6 +77,7 @@ const App = () => (
           <Route path="/decision-twin/:id" element={<ProtectedRoute><DecisionTwin /></ProtectedRoute>} />
           <Route path="/creator-mode" element={<ProtectedRoute><CreatorMode /></ProtectedRoute>} />
           <Route path="/seller-mode" element={<ProtectedRoute><MicroSellerMode /></ProtectedRoute>} />
+          <Route path="/teams" element={<ProtectedRoute><TeamsBlackTier /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
