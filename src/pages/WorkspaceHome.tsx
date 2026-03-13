@@ -80,8 +80,8 @@ export default function WorkspaceHome() {
   });
 
   const activeCount = shipments.filter(s => s.status === "in_transit" || s.status === "customs_hold").length;
-  const pendingCount = shipments.filter(s => s.status === "pending" || s.status === "docs_review").length;
-  const clearedCount = shipments.filter(s => s.status === "delivered").length;
+  const pendingCount = shipments.filter(s => s.status === "new" || s.status === "waiting_docs").length;
+  const clearedCount = shipments.filter(s => s.status === "cleared").length;
   const totalCount = shipments.length;
 
   const kpiValues = [
