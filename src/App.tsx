@@ -29,6 +29,7 @@ import DianCompliance from "./pages/DianCompliance";
 import CreatorMode from "./pages/CreatorMode";
 import MicroSellerMode from "./pages/MicroSellerMode";
 import TeamsBlackTier from "./pages/TeamsBlackTier";
+import WatchMode from "./pages/WatchMode";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
