@@ -48,6 +48,7 @@ export default function CreatorMode() {
   const [sensitivity, setSensitivity] = useState("medium");
   const [hideCounterparties, setHideCounterparties] = useState(true);
   const [waypoints, setWaypoints] = useState<RouteWaypoint[]>(MOCK_WAYPOINTS);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [privateLabel, setPrivateLabel] = useState("Operation Condor");
   const [routeNotes, setRouteNotes] = useState("");
   const [savedProfiles, setSavedProfiles] = useState<RouteProfile[]>([]);
