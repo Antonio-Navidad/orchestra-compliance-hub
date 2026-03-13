@@ -7,7 +7,7 @@ import { ModeIcon } from "@/components/ModeIcon";
 import { ComparisonView } from "@/components/ComparisonView";
 import { ModeCompliancePanel } from "@/components/ModeCompliancePanel";
 import { PdfUpload } from "@/components/PdfUpload";
-import { compareInvoiceManifest, getRiskBgClass } from "@/lib/compliance";
+import { compareInvoiceManifest, getRiskBgClass, getRiskLevel } from "@/lib/compliance";
 import { ExposurePanel } from "@/components/ExposurePanel";
 import { FixNowPanel } from "@/components/FixNowPanel";
 import { ExplainabilityDrawer } from "@/components/ExplainabilityDrawer";
@@ -188,7 +188,7 @@ export default function ShipmentDetail() {
 
         {/* Risk Banner */}
         {shipment.risk_score >= 60 && (
-          <div className={`rounded-lg border p-4 ${getRiskBgClass(shipment.risk_score)} ${
+          <div className={`rounded-lg border p-4 ${getRiskBgClass(getRiskLevel(shipment.risk_score))} ${
             shipment.risk_score >= 85 ? 'border-risk-critical/30' : 'border-risk-medium/30'
           }`}>
             <div className="flex items-start gap-3">

@@ -2,10 +2,11 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RiskBadge } from "@/components/RiskBadge";
+import { RiskDot } from "@/components/RiskDot";
+import { StatusBadge } from "@/components/StatusBadge";
 import { ModeIcon } from "@/components/ModeIcon";
 import { Shipment, TransportMode } from "@/types/orchestra";
-import { Badge } from "@/components/ui/badge";
-import { getStatusColor, getStatusLabel } from "@/components/StatusWorkflow";
+import { getScoreBorderClass } from "@/lib/compliance";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowUpDown } from "lucide-react";
 
@@ -74,7 +75,7 @@ export function ShipmentTable({ shipments, mode }: ShipmentTableProps) {
               <TableHead className="font-mono text-xs text-muted-foreground">DESCRIPTION</TableHead>
               <TableHead className="font-mono text-xs text-muted-foreground">HS CODE</TableHead>
               <TableHead className="font-mono text-xs text-muted-foreground text-right">DECLARED VALUE</TableHead>
-              <TableHead className="font-mono text-xs text-muted-foreground text-center">RISK SCORE</TableHead>
+              <TableHead className="font-mono text-xs text-muted-foreground text-center">RISK</TableHead>
               <TableHead className="font-mono text-xs text-muted-foreground">STATUS</TableHead>
             </TableRow>
           </TableHeader>
@@ -89,22 +90,12 @@ export function ShipmentTable({ shipments, mode }: ShipmentTableProps) {
               sorted.map((shipment) => (
                 <TableRow
                   key={shipment.id}
-                  className={`cursor-pointer hover:bg-accent/50 transition-colors border-l-[3px] ${
-                    shipment.risk_score >= 85 ? 'border-l-risk-critical' :
-                    shipment.risk_score >= 60 ? 'border-l-risk-high' :
-                    shipment.risk_score >= 40 ? 'border-l-risk-medium' :
-                    'border-l-risk-safe'
-                  }`}
+                  className={`cursor-pointer hover:bg-accent/50 transition-colors border-l-[3px] ${getScoreBorderClass(shipment.risk_score)}`}
                   onClick={() => navigate(`/shipment/${shipment.shipment_id}`)}
                 >
                   <TableCell className="font-mono text-sm font-semibold text-primary">
                     <div className="flex items-center gap-2">
-                      <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${
-                        shipment.risk_score >= 85 ? 'bg-risk-critical animate-pulse' :
-                        shipment.risk_score >= 60 ? 'bg-risk-high' :
-                        shipment.risk_score >= 40 ? 'bg-risk-medium' :
-                        'bg-risk-safe'
-                      }`} />
+                      <RiskDot score={shipment.risk_score} />
                       {shipment.shipment_id}
                     </div>
                   </TableCell>
@@ -126,22 +117,13 @@ export function ShipmentTable({ shipments, mode }: ShipmentTableProps) {
                     <RiskBadge score={shipment.risk_score} size="sm" />
                   </TableCell>
                   <TableCell>
-                    {shipment.status === "waiting_docs" ? (
-                      <Badge
-                        variant="outline"
-                        className={`font-mono text-[10px] cursor-pointer hover:opacity-80 transition-opacity ${getStatusColor(shipment.status)}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/shipment/${shipment.shipment_id}?tab=documents`);
-                        }}
-                      >
-                        {getStatusLabel(shipment.status)}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className={`font-mono text-[10px] ${getStatusColor(shipment.status)}`}>
-                        {getStatusLabel(shipment.status)}
-                      </Badge>
-                    )}
+                    <StatusBadge
+                      status={shipment.status}
+                      onClick={shipment.status === "waiting_docs" ? (e) => {
+                        e.stopPropagation();
+                        navigate(`/shipment/${shipment.shipment_id}?tab=documents`);
+                      } : undefined}
+                    />
                   </TableCell>
                 </TableRow>
               ))

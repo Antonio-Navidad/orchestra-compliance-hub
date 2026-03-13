@@ -2,28 +2,29 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { StatusBadge } from "@/components/StatusBadge";
+import { getStatusBadgeClass } from "@/lib/compliance";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
 import { ArrowRight } from "lucide-react";
 
 const ALL_STATUSES = [
-  { value: "new", label: "NEW", color: "bg-primary/20 text-primary border-primary/30" },
-  { value: "in_transit", label: "IN TRANSIT", color: "bg-primary/20 text-primary border-primary/30" },
-  { value: "in_review", label: "IN REVIEW", color: "bg-risk-medium/20 text-risk-medium border-risk-medium/30" },
-  { value: "waiting_docs", label: "WAITING ON DOCS", color: "bg-risk-medium/20 text-risk-medium border-risk-medium/30" },
-  { value: "sent_to_broker", label: "SENT TO BROKER", color: "bg-primary/20 text-primary border-primary/30" },
-  { value: "customs_hold", label: "CUSTOMS HOLD", color: "bg-risk-critical/20 text-risk-critical border-risk-critical/30" },
-  { value: "flagged", label: "FLAGGED", color: "bg-risk-critical/20 text-risk-critical border-risk-critical/30" },
-  { value: "escalated", label: "ESCALATED", color: "bg-risk-critical/20 text-risk-critical border-risk-critical/30" },
-  { value: "corrected", label: "CORRECTED", color: "bg-risk-safe/20 text-risk-safe border-risk-safe/30" },
-  { value: "filed", label: "FILED", color: "bg-primary/20 text-primary border-primary/30" },
-  { value: "cleared", label: "CLEARED", color: "bg-risk-safe/20 text-risk-safe border-risk-safe/30" },
-  { value: "closed_avoided", label: "CLOSED — LOSS AVOIDED", color: "bg-risk-safe/20 text-risk-safe border-risk-safe/30" },
-  { value: "closed_incident", label: "CLOSED — INCIDENT", color: "bg-risk-critical/20 text-risk-critical border-risk-critical/30" },
+  { value: "new", label: "NEW" },
+  { value: "in_transit", label: "IN TRANSIT" },
+  { value: "in_review", label: "IN REVIEW" },
+  { value: "waiting_docs", label: "WAITING ON DOCS" },
+  { value: "sent_to_broker", label: "SENT TO BROKER" },
+  { value: "customs_hold", label: "CUSTOMS HOLD" },
+  { value: "flagged", label: "FLAGGED" },
+  { value: "escalated", label: "ESCALATED" },
+  { value: "corrected", label: "CORRECTED" },
+  { value: "filed", label: "FILED" },
+  { value: "cleared", label: "CLEARED" },
+  { value: "closed_avoided", label: "CLOSED — LOSS AVOIDED" },
+  { value: "closed_incident", label: "CLOSED — INCIDENT" },
 ];
 
 interface StatusWorkflowProps {
@@ -36,8 +37,6 @@ export function StatusWorkflow({ shipmentId, currentStatus }: StatusWorkflowProp
   const queryClient = useQueryClient();
   const [newStatus, setNewStatus] = useState(currentStatus);
   const [updating, setUpdating] = useState(false);
-
-  const current = ALL_STATUSES.find(s => s.value === currentStatus);
 
   const handleUpdate = async () => {
     if (newStatus === currentStatus) return;
@@ -68,9 +67,7 @@ export function StatusWorkflow({ shipmentId, currentStatus }: StatusWorkflowProp
 
   return (
     <div className="flex items-center gap-3 flex-wrap">
-      <Badge variant="outline" className={`font-mono text-[10px] ${current?.color || ""}`}>
-        {current?.label || currentStatus.replace(/_/g, " ").toUpperCase()}
-      </Badge>
+      <StatusBadge status={currentStatus} size="sm" />
       <ArrowRight size={14} className="text-muted-foreground" />
       <Select value={newStatus} onValueChange={setNewStatus}>
         <SelectTrigger className="w-[200px] h-8 text-xs font-mono bg-secondary/30 border-border">
@@ -96,12 +93,14 @@ export function StatusWorkflow({ shipmentId, currentStatus }: StatusWorkflowProp
   );
 }
 
+// Keep backwards-compatible exports for any remaining consumers
 export function getStatusColor(status: string): string {
-  return ALL_STATUSES.find(s => s.value === status)?.color || "";
+  return getStatusBadgeClass(status);
 }
 
 export function getStatusLabel(status: string): string {
-  return ALL_STATUSES.find(s => s.value === status)?.label || status.replace(/_/g, " ").toUpperCase();
+  const found = ALL_STATUSES.find(s => s.value === status);
+  return found?.label || status.replace(/_/g, " ").toUpperCase();
 }
 
 export { ALL_STATUSES };
