@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -7,17 +7,24 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Eye, EyeOff, Shield, Ship, Plane, Truck, Layers,
   AlertTriangle, Cloud, Zap, Plus, Save, Lock, X, Maximize2, Minimize2,
-  ChevronRight, Link2, Route,
+  ChevronRight, Link2, Route, Eraser, RotateCcw, Clock, Archive,
 } from "lucide-react";
 import CreatorMap from "@/components/CreatorMap";
 import { CheckpointList } from "@/components/handoff/CheckpointList";
 import { CheckpointDrawer } from "@/components/handoff/CheckpointDrawer";
 import { useHandoffCheckpoints } from "@/hooks/useHandoffCheckpoints";
 import { NewRouteBuilder, type NewRouteData } from "@/components/NewRouteBuilder";
+import { RouteHistoryPanel } from "@/components/RouteHistoryPanel";
+import { RouteReviewDrawer } from "@/components/RouteReviewDrawer";
+import { useRouteLibrary, type SavedRoute } from "@/hooks/useRouteLibrary";
 
 interface RouteWaypoint {
   id: string;
@@ -28,74 +35,110 @@ interface RouteWaypoint {
   notes: string;
 }
 
-interface RouteProfile {
-  id: string;
-  name: string;
-  waypoints: RouteWaypoint[];
-  mode: string;
-  sensitivity: string;
-}
-
-const MOCK_WAYPOINTS: RouteWaypoint[] = [
-  { id: "1", label: "Warehouse Alpha", type: "origin", riskLevel: "safe", hidden: false, notes: "" },
-  { id: "2", label: "Port Transit X", type: "transit", riskLevel: "caution", hidden: true, notes: "High traffic zone" },
-  { id: "3", label: "Relay Point R7", type: "handoff", riskLevel: "safe", hidden: true, notes: "" },
-  { id: "4", label: "Destination Hub", type: "destination", riskLevel: "safe", hidden: false, notes: "" },
-];
-
 export default function CreatorMode() {
   const [layers, setLayers] = useState({ sea: true, air: false, land: true, combined: false });
   const [overlays, setOverlays] = useState({ weather: true, military: false, congestion: true, warnings: true });
   const [sensitivity, setSensitivity] = useState("medium");
   const [hideCounterparties, setHideCounterparties] = useState(true);
-  const [waypoints, setWaypoints] = useState<RouteWaypoint[]>(MOCK_WAYPOINTS);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [privateLabel, setPrivateLabel] = useState("Operation Condor");
   const [routeNotes, setRouteNotes] = useState("");
-  const [savedProfiles, setSavedProfiles] = useState<RouteProfile[]>([]);
   const [activeTab, setActiveTab] = useState("new-route");
   const [newRouteData, setNewRouteData] = useState<NewRouteData | null>(null);
-  const [showNewRoute, setShowNewRoute] = useState(true);
+  const [routeBuilderKey, setRouteBuilderKey] = useState(0); // force remount on reset
+
+  // Route lifecycle
+  const library = useRouteLibrary();
+  const [reviewRoute, setReviewRoute] = useState<SavedRoute | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    type: "clear" | "reset" | "delete";
+    routeId?: string;
+  } | null>(null);
 
   const handoff = useHandoffCheckpoints('SH-2026-CONDOR');
 
   const toggleLayer = (key: keyof typeof layers) => setLayers(p => ({ ...p, [key]: !p[key] }));
   const toggleOverlay = (key: keyof typeof overlays) => setOverlays(p => ({ ...p, [key]: !p[key] }));
 
-  const updateWaypoint = (id: string, field: keyof RouteWaypoint, value: any) => {
-    setWaypoints(prev => prev.map(w => w.id === id ? { ...w, [field]: value } : w));
-  };
+  // ── Route lifecycle actions ───────────────────────────────
+  const handleClearRoute = useCallback(() => {
+    if (newRouteData?.routeState === "rendered" || newRouteData?.routeState === "ready") {
+      setConfirmAction({ type: "clear" });
+    } else {
+      doClearRoute();
+    }
+  }, [newRouteData]);
 
-  const addWaypoint = () => {
-    setWaypoints(prev => [...prev, {
-      id: crypto.randomUUID(),
-      label: `Waypoint ${prev.length + 1}`,
-      type: "transit",
-      riskLevel: "safe",
-      hidden: true,
-      notes: "",
-    }]);
-  };
+  const doClearRoute = useCallback(() => {
+    setNewRouteData(null);
+    setConfirmAction(null);
+    toast.success("Route cleared from map");
+  }, []);
 
-  const removeWaypoint = (id: string) => setWaypoints(prev => prev.filter(w => w.id !== id));
+  const handleResetPlanner = useCallback(() => {
+    if (newRouteData && (newRouteData.routeState !== "draft" || newRouteData.name)) {
+      setConfirmAction({ type: "reset" });
+    } else {
+      doResetPlanner();
+    }
+  }, [newRouteData]);
 
-  const saveProfile = () => {
-    const profile: RouteProfile = {
-      id: crypto.randomUUID(),
-      name: privateLabel || "Unnamed Route",
-      waypoints,
-      mode: Object.entries(layers).filter(([, v]) => v).map(([k]) => k).join("+"),
-      sensitivity,
+  const doResetPlanner = useCallback(() => {
+    setNewRouteData(null);
+    setRouteBuilderKey(k => k + 1);
+    setPrivateLabel("");
+    setRouteNotes("");
+    setConfirmAction(null);
+    toast.success("Route planner reset");
+  }, []);
+
+  const handleSaveBeforeAction = useCallback(async () => {
+    if (newRouteData) {
+      await library.saveRoute(newRouteData, routeNotes, sensitivity);
+    }
+    if (confirmAction?.type === "clear") doClearRoute();
+    else if (confirmAction?.type === "reset") doResetPlanner();
+    setConfirmAction(null);
+  }, [newRouteData, confirmAction, routeNotes, sensitivity, library, doClearRoute, doResetPlanner]);
+
+  const handleSaveRoute = useCallback(async () => {
+    if (!newRouteData) {
+      toast.error("No route to save");
+      return;
+    }
+    await library.saveRoute(newRouteData, routeNotes, sensitivity);
+  }, [newRouteData, routeNotes, sensitivity, library]);
+
+  const handleLoadRoute = useCallback((route: SavedRoute) => {
+    // Reconstruct NewRouteData from saved route
+    const loaded: NewRouteData = {
+      id: route.id,
+      name: route.name,
+      isTemplate: route.is_template,
+      segments: Array.isArray(route.segments) ? route.segments : [],
+      status: "draft",
+      routeState: route.network_route ? "rendered" : "draft",
+      networkRoute: route.network_route || undefined,
     };
-    setSavedProfiles(prev => [...prev, profile]);
-    toast.success("Route profile saved privately");
-  };
+    setNewRouteData(loaded);
+    setPrivateLabel(route.name);
+    setRouteNotes(route.notes || "");
+    setSensitivity(route.sensitivity || "medium");
+    setActiveTab("new-route");
+    setReviewRoute(null);
+    toast.success(`Loaded "${route.name}" into planner`);
+  }, []);
 
-  const riskBg = (level: string) => {
-    if (level === "high") return "bg-destructive/20 border-destructive/40";
-    if (level === "caution") return "bg-[hsl(var(--risk-medium))]/10 border-[hsl(var(--risk-medium))]/30";
-    return "bg-[hsl(var(--risk-safe))]/10 border-[hsl(var(--risk-safe))]/30";
-  };
+  const handleDeleteRoute = useCallback((id: string) => {
+    setConfirmAction({ type: "delete", routeId: id });
+  }, []);
+
+  const doDeleteRoute = useCallback(() => {
+    if (confirmAction?.routeId) {
+      library.softDelete(confirmAction.routeId);
+    }
+    setConfirmAction(null);
+  }, [confirmAction, library]);
 
   const handleAddCheckpoint = () => {
     handoff.addCheckpoint({
@@ -110,6 +153,14 @@ export default function CreatorMode() {
     });
     toast.success("Checkpoint added");
   };
+
+  const riskBg = (level: string) => {
+    if (level === "high") return "bg-destructive/20 border-destructive/40";
+    if (level === "caution") return "bg-[hsl(var(--risk-medium))]/10 border-[hsl(var(--risk-medium))]/30";
+    return "bg-[hsl(var(--risk-safe))]/10 border-[hsl(var(--risk-safe))]/30";
+  };
+
+  const hasUnsavedRoute = newRouteData && newRouteData.routeState !== "draft";
 
   return (
     <div className={`flex flex-col ${isFullscreen ? 'fixed inset-0 z-[100] bg-background' : 'h-[calc(100vh-2.5rem)]'}`}>
@@ -132,25 +183,37 @@ export default function CreatorMode() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            {/* Clear route */}
+            {newRouteData && (
+              <Button size="sm" variant="ghost" className="h-7 text-xs font-mono gap-1 text-muted-foreground" onClick={handleClearRoute}>
+                <Eraser size={12} /> Clear
+              </Button>
+            )}
+            {/* Reset planner */}
+            <Button size="sm" variant="ghost" className="h-7 text-xs font-mono gap-1 text-muted-foreground" onClick={handleResetPlanner}>
+              <RotateCcw size={12} /> Reset
+            </Button>
+            {/* New route */}
             <Button
               size="sm"
-              variant={showNewRoute ? "default" : "outline"}
+              variant="default"
               className="h-7 text-xs font-mono gap-1"
-              onClick={() => {
-                setShowNewRoute(true);
-                setActiveTab("new-route");
-              }}
+              onClick={() => { setActiveTab("new-route"); }}
             >
               <Route size={12} /> New Route
             </Button>
-            <Input
-              value={privateLabel}
-              onChange={e => setPrivateLabel(e.target.value)}
-              className="h-7 w-48 text-xs font-mono bg-secondary border-border"
-              placeholder="Private route label…"
-            />
-            <Button size="sm" variant="outline" className="h-7 text-xs font-mono" onClick={saveProfile}>
-              <Save size={12} className="mr-1" /> Save Profile
+            {/* Save */}
+            <Button size="sm" variant="outline" className="h-7 text-xs font-mono gap-1" onClick={handleSaveRoute} disabled={!newRouteData}>
+              <Save size={12} /> Save
+            </Button>
+            {/* History */}
+            <Button
+              size="sm"
+              variant={activeTab === "history" ? "default" : "outline"}
+              className="h-7 text-xs font-mono gap-1"
+              onClick={() => setActiveTab("history")}
+            >
+              <Clock size={12} /> Library
             </Button>
             <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setIsFullscreen(true)} title="Fullscreen map">
               <Maximize2 size={14} />
@@ -169,6 +232,12 @@ export default function CreatorMode() {
                 <TabsTrigger value="new-route" className="text-[10px] font-mono flex-1">
                   <Route size={10} className="mr-0.5" /> ROUTE
                 </TabsTrigger>
+                <TabsTrigger value="history" className="text-[10px] font-mono flex-1 relative">
+                  <Clock size={10} className="mr-0.5" /> LIBRARY
+                  {library.routes.length > 0 && (
+                    <span className="ml-0.5 text-[8px]">({library.routes.length})</span>
+                  )}
+                </TabsTrigger>
                 <TabsTrigger value="map" className="text-[10px] font-mono flex-1">LAYERS</TabsTrigger>
                 <TabsTrigger value="custody" className="text-[10px] font-mono flex-1 relative">
                   CUSTODY
@@ -176,15 +245,30 @@ export default function CreatorMode() {
                     <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-[hsl(var(--risk-medium))]" />
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="privacy" className="text-[10px] font-mono flex-1">PRIV</TabsTrigger>
               </TabsList>
 
               {/* NEW ROUTE TAB */}
               <TabsContent value="new-route" className="flex-1 overflow-hidden mt-0">
                 <NewRouteBuilder
+                  key={routeBuilderKey}
                   onRouteChange={setNewRouteData}
                   onRouteGenerate={setNewRouteData}
                   onClose={() => setActiveTab("map")}
+                />
+              </TabsContent>
+
+              {/* ROUTE LIBRARY TAB */}
+              <TabsContent value="history" className="flex-1 overflow-hidden mt-0">
+                <RouteHistoryPanel
+                  routes={library.routes}
+                  deletedRoutes={library.deletedRoutes}
+                  loading={library.loading}
+                  onReview={setReviewRoute}
+                  onLoad={handleLoadRoute}
+                  onDuplicate={library.duplicateRoute}
+                  onDelete={handleDeleteRoute}
+                  onRestore={library.restoreRoute}
+                  onPermanentDelete={library.permanentDelete}
                 />
               </TabsContent>
 
@@ -239,60 +323,22 @@ export default function CreatorMode() {
                   </Select>
                 </div>
 
-                {/* Legacy waypoints */}
-                <div className="space-y-2">
-                  <p className="text-[10px] font-mono text-muted-foreground tracking-wider">LEGACY WAYPOINTS</p>
-                  {waypoints.map((wp, idx) => (
-                    <div key={wp.id} className={`p-2 rounded border ${riskBg(wp.riskLevel)} space-y-1.5`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-mono text-muted-foreground w-4">{idx + 1}</span>
-                          <Input
-                            value={wp.label}
-                            onChange={e => updateWaypoint(wp.id, "label", e.target.value)}
-                            className="h-6 text-xs font-mono bg-transparent border-none p-0 w-32"
-                          />
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => updateWaypoint(wp.id, "hidden", !wp.hidden)} className="p-0.5">
-                            {wp.hidden ? <EyeOff size={11} className="text-muted-foreground" /> : <Eye size={11} className="text-primary" />}
-                          </button>
-                          {wp.type !== "origin" && wp.type !== "destination" && (
-                            <button onClick={() => removeWaypoint(wp.id)} className="p-0.5">
-                              <X size={11} className="text-muted-foreground hover:text-destructive" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Select value={wp.type} onValueChange={v => updateWaypoint(wp.id, "type", v)}>
-                          <SelectTrigger className="h-5 text-[10px] font-mono border-none bg-background/50 w-24 px-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="origin">Origin</SelectItem>
-                            <SelectItem value="transit">Transit</SelectItem>
-                            <SelectItem value="handoff">Handoff</SelectItem>
-                            <SelectItem value="refuel">Refuel</SelectItem>
-                            <SelectItem value="destination">Destination</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Select value={wp.riskLevel} onValueChange={v => updateWaypoint(wp.id, "riskLevel", v)}>
-                          <SelectTrigger className="h-5 text-[10px] font-mono border-none bg-background/50 w-20 px-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="safe">Safe</SelectItem>
-                            <SelectItem value="caution">Caution</SelectItem>
-                            <SelectItem value="high">High Risk</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  ))}
-                  <Button variant="outline" size="sm" className="w-full text-xs font-mono h-7" onClick={addWaypoint}>
-                    <Plus size={12} className="mr-1" /> Add Waypoint
-                  </Button>
+                {/* Privacy controls inline */}
+                <div className="space-y-3">
+                  <p className="text-[10px] font-mono text-muted-foreground tracking-wider">PRIVACY</p>
+                  <div className="flex items-center justify-between py-1.5 px-2 rounded bg-secondary/50">
+                    <Label className="text-xs font-mono">Hide Counterparties</Label>
+                    <Switch checked={hideCounterparties} onCheckedChange={setHideCounterparties} className="scale-75" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-mono text-muted-foreground">ROUTE NOTES (PRIVATE)</Label>
+                    <Textarea
+                      value={routeNotes}
+                      onChange={e => setRouteNotes(e.target.value)}
+                      className="text-xs font-mono min-h-[60px] resize-none"
+                      placeholder="Private notes…"
+                    />
+                  </div>
                 </div>
               </TabsContent>
 
@@ -306,63 +352,6 @@ export default function CreatorMode() {
                   onSelect={handoff.openCheckpoint}
                   onAdd={handleAddCheckpoint}
                 />
-              </TabsContent>
-
-              <TabsContent value="privacy" className="flex-1 overflow-y-auto p-3 space-y-4 mt-0">
-                <div className="space-y-3">
-                  <p className="text-[10px] font-mono text-muted-foreground tracking-wider">PRIVACY CONTROLS</p>
-                  <div className="flex items-center justify-between py-1.5 px-2 rounded bg-secondary/50">
-                    <Label className="text-xs font-mono">Hide Counterparties</Label>
-                    <Switch checked={hideCounterparties} onCheckedChange={setHideCounterparties} className="scale-75" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] font-mono text-muted-foreground">PRIVATE ROUTE LABEL</Label>
-                    <Input
-                      value={privateLabel}
-                      onChange={e => setPrivateLabel(e.target.value)}
-                      className="h-7 text-xs font-mono"
-                      placeholder="Internal codename…"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] font-mono text-muted-foreground">ROUTE NOTES (PRIVATE)</Label>
-                    <Textarea
-                      value={routeNotes}
-                      onChange={e => setRouteNotes(e.target.value)}
-                      className="text-xs font-mono min-h-[60px] resize-none"
-                      placeholder="Private notes about this route…"
-                    />
-                  </div>
-                  <div className="p-2 rounded bg-primary/5 border border-primary/20">
-                    <p className="text-[10px] font-mono text-primary mb-1">🔒 Privacy Status</p>
-                    <ul className="space-y-0.5">
-                      <li className="text-[10px] text-muted-foreground font-mono">
-                        • {hideCounterparties ? "Counterparties hidden" : "Counterparties visible"}
-                      </li>
-                      <li className="text-[10px] text-muted-foreground font-mono">
-                        • {waypoints.filter(w => w.hidden).length}/{waypoints.length} waypoints masked
-                      </li>
-                      <li className="text-[10px] text-muted-foreground font-mono">
-                        • Sensitivity: {sensitivity}
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-
-                {savedProfiles.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-mono text-muted-foreground tracking-wider">SAVED PROFILES</p>
-                    {savedProfiles.map(p => (
-                      <div key={p.id} className="p-2 rounded bg-secondary/50 flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-mono font-medium">{p.name}</p>
-                          <p className="text-[10px] text-muted-foreground font-mono">{p.mode} • {p.waypoints.length} pts</p>
-                        </div>
-                        <ChevronRight size={12} className="text-muted-foreground" />
-                      </div>
-                    ))}
-                  </div>
-                )}
               </TabsContent>
             </Tabs>
           </div>
@@ -383,8 +372,21 @@ export default function CreatorMode() {
             />
           </div>
 
+          {/* Route Review Drawer */}
+          {reviewRoute && (
+            <div className="absolute top-0 right-0 bottom-0 z-30">
+              <RouteReviewDrawer
+                route={reviewRoute}
+                onClose={() => setReviewRoute(null)}
+                onLoad={handleLoadRoute}
+                onDuplicate={library.duplicateRoute}
+                onDelete={handleDeleteRoute}
+              />
+            </div>
+          )}
+
           {/* Checkpoint Drawer */}
-          {handoff.drawerOpen && handoff.selected && (
+          {handoff.drawerOpen && handoff.selected && !reviewRoute && (
             <div className="absolute top-0 right-0 bottom-0 z-30">
               <CheckpointDrawer
                 checkpoint={handoff.selected}
@@ -415,31 +417,38 @@ export default function CreatorMode() {
                   <div className="flex items-center gap-4">
                     <div>
                       <p className="text-[10px] font-mono text-muted-foreground">ROUTE</p>
-                      <p className="text-xs font-mono font-medium">{newRouteData?.name || privateLabel || "Unnamed Route"}</p>
+                      <p className="text-xs font-mono font-medium">{newRouteData?.name || privateLabel || "No active route"}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-mono text-muted-foreground">SEGMENTS</p>
-                      <p className="text-xs font-mono">{newRouteData?.segments.length || waypoints.length}</p>
+                      <p className="text-[10px] font-mono text-muted-foreground">STATE</p>
+                      <Badge variant="outline" className={`text-[9px] font-mono ${
+                        newRouteData?.routeState === "rendered" ? "border-[hsl(var(--risk-safe))]/40 text-[hsl(var(--risk-safe))]" :
+                        newRouteData?.routeState === "generating" ? "border-primary/40 text-primary" :
+                        "border-muted-foreground/30 text-muted-foreground"
+                      }`}>
+                        {newRouteData?.routeState?.toUpperCase() || "EMPTY"}
+                      </Badge>
                     </div>
                     <div>
                       <p className="text-[10px] font-mono text-muted-foreground">CUSTODY</p>
                       <p className="text-xs font-mono">{handoff.completedCount}/{handoff.checkpoints.length} verified</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-mono text-muted-foreground">SENSITIVITY</p>
-                      <Badge variant="outline" className={`text-[10px] font-mono ${
-                        sensitivity === "high" ? "border-primary text-primary" :
-                        sensitivity === "medium" ? "border-[hsl(var(--risk-medium))] text-[hsl(var(--risk-medium))]" :
-                        "border-muted-foreground"
-                      }`}>{sensitivity.toUpperCase()}</Badge>
+                      <p className="text-[10px] font-mono text-muted-foreground">LIBRARY</p>
+                      <p className="text-xs font-mono">{library.routes.length} saved</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="text-xs font-mono h-7" onClick={() => toast.info("AI route analysis coming soon")}>
-                      <Zap size={12} className="mr-1" /> AI Recommend
+                    {newRouteData && (
+                      <Button variant="ghost" size="sm" className="text-xs font-mono h-7 gap-1 text-muted-foreground" onClick={handleClearRoute}>
+                        <Eraser size={12} /> Clear
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" className="text-xs font-mono h-7 gap-1" onClick={() => toast.info("AI route analysis coming soon")}>
+                      <Zap size={12} /> AI Recommend
                     </Button>
-                    <Button size="sm" className="text-xs font-mono h-7" onClick={saveProfile}>
-                      <Save size={12} className="mr-1" /> Save
+                    <Button size="sm" className="text-xs font-mono h-7 gap-1" onClick={handleSaveRoute} disabled={!newRouteData}>
+                      <Save size={12} /> Save
                     </Button>
                   </div>
                 </div>
@@ -448,6 +457,44 @@ export default function CreatorMode() {
           )}
         </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-mono">
+              {confirmAction?.type === "clear" && "Clear Current Route?"}
+              {confirmAction?.type === "reset" && "Reset Route Planner?"}
+              {confirmAction?.type === "delete" && "Delete Saved Route?"}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              {confirmAction?.type === "clear" && "This will remove the rendered route from the map. Your inputs will remain."}
+              {confirmAction?.type === "reset" && "This will clear all inputs and return to an empty planning state."}
+              {confirmAction?.type === "delete" && "This route will be moved to Recently Deleted and can be restored later."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 sm:gap-2">
+            <Button variant="outline" size="sm" className="text-xs font-mono" onClick={() => setConfirmAction(null)}>
+              Cancel
+            </Button>
+            {(confirmAction?.type === "clear" || confirmAction?.type === "reset") && hasUnsavedRoute && (
+              <Button variant="secondary" size="sm" className="text-xs font-mono gap-1" onClick={handleSaveBeforeAction}>
+                <Save size={10} /> Save First
+              </Button>
+            )}
+            <Button
+              variant="destructive" size="sm" className="text-xs font-mono"
+              onClick={() => {
+                if (confirmAction?.type === "clear") doClearRoute();
+                else if (confirmAction?.type === "reset") doResetPlanner();
+                else if (confirmAction?.type === "delete") doDeleteRoute();
+              }}
+            >
+              {confirmAction?.type === "delete" ? "Delete" : confirmAction?.type === "reset" ? "Reset" : "Clear"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
