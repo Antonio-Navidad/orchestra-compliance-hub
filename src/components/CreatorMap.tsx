@@ -111,7 +111,18 @@ export default function CreatorMap({ layers, overlays, sensitivity, hideCounterp
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
 
-    map.on("error", () => setLoadError(true));
+    // Only treat source/tile errors as fatal — ignore glyph/sprite warnings
+    let tileErrorCount = 0;
+    map.on("error", (e) => {
+      const msg = e.error?.message || "";
+      // Glyph/font errors are non-fatal (labels just won't render)
+      if (msg.includes("glyph") || msg.includes("font") || msg.includes("sprite")) return;
+      // Count tile errors — only show failure after multiple consecutive failures
+      if (msg.includes("tile") || msg.includes("source") || msg.includes("AJAXError")) {
+        tileErrorCount++;
+        if (tileErrorCount >= 6) setLoadError(true);
+      }
+    });
 
     // Force resize after mount stabilization
     requestAnimationFrame(() => {
