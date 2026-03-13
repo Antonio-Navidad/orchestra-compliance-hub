@@ -334,6 +334,16 @@ export default function ShipmentDetail() {
           <TabsContent value="audit" className="mt-4">
             <AuditTimeline shipmentId={shipment.shipment_id} />
           </TabsContent>
+
+          {(shipment.status === "cleared" || shipment.status === "closed_avoided" || shipment.status === "closed_incident") && (
+            <TabsContent value="outcome" className="mt-4">
+              <OutcomeRecorder
+                shipmentId={shipment.shipment_id}
+                workspaceId={(shipment as any).workspace_id}
+              />
+            </TabsContent>
+          )}
+          </TabsContent>
         </Tabs>
       </main>
     </div>
