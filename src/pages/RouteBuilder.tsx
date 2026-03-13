@@ -145,6 +145,7 @@ export default function RouteBuilder() {
   const [weightKg, setWeightKg] = useState("");
   const [deadline, setDeadline] = useState("");
   const [incoterm, setIncoterm] = useState("");
+  const [shipmentId, setShipmentId] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<RouteResult | null>(null);
 
@@ -163,6 +164,7 @@ export default function RouteBuilder() {
           weightKg: weightKg ? parseFloat(weightKg) : undefined,
           deadline: deadline || undefined,
           incoterm: incoterm || undefined,
+          shipmentId: shipmentId || undefined,
         },
       });
       if (error) throw error;
