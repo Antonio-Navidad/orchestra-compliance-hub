@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useRole, AppRole } from "@/hooks/useRole";
+import MakeIntegrationPanel from "@/components/MakeIntegrationPanel";
 
 const ROLE_LABELS: Record<AppRole, string> = {
   admin: "Admin",
