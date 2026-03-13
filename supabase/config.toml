@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.eta-predict]
 verify_jwt = false
+
+[functions.reeval-stale-twins]
+verify_jwt = false
