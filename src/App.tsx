@@ -65,6 +65,7 @@ const App = () => (
           <Route path="/hints" element={<ProtectedRoute><Hints /></ProtectedRoute>} />
           <Route path="/classify" element={<ProtectedRoute><ProductClassification /></ProtectedRoute>} />
           <Route path="/validate-docs" element={<ProtectedRoute><DocumentValidator /></ProtectedRoute>} />
+          <Route path="/route-builder" element={<ProtectedRoute><RouteBuilder /></ProtectedRoute>} />
           <Route path="/decision-twin" element={<ProtectedRoute><DecisionTwin /></ProtectedRoute>} />
           <Route path="/decision-twin/:id" element={<ProtectedRoute><DecisionTwin /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
