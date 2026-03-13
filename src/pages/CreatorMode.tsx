@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   Eye, EyeOff, Shield, Ship, Plane, Truck, Layers,
-  AlertTriangle, Cloud, Zap, Plus, Save, Lock, X,
+  AlertTriangle, Cloud, Zap, Plus, Save, Lock, X, Maximize2, Minimize2,
   ChevronRight, Link2,
 } from "lucide-react";
 import CreatorMap from "@/components/CreatorMap";
@@ -48,6 +48,7 @@ export default function CreatorMode() {
   const [sensitivity, setSensitivity] = useState("medium");
   const [hideCounterparties, setHideCounterparties] = useState(true);
   const [waypoints, setWaypoints] = useState<RouteWaypoint[]>(MOCK_WAYPOINTS);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [privateLabel, setPrivateLabel] = useState("Operation Condor");
   const [routeNotes, setRouteNotes] = useState("");
   const [savedProfiles, setSavedProfiles] = useState<RouteProfile[]>([]);
@@ -108,9 +109,9 @@ export default function CreatorMode() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-2.5rem)]">
+    <div className={`flex flex-col ${isFullscreen ? 'fixed inset-0 z-[100]' : 'h-[calc(100vh-2.5rem)]'}`}>
       {/* Top Bar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50">
+      <div className={`flex items-center justify-between px-4 py-2 border-b border-border bg-card/50 ${isFullscreen ? 'hidden' : ''}`}>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Lock size={14} className="text-primary" />
@@ -136,12 +137,15 @@ export default function CreatorMode() {
           <Button size="sm" variant="outline" className="h-7 text-xs font-mono" onClick={saveProfile}>
             <Save size={12} className="mr-1" /> Save Profile
           </Button>
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setIsFullscreen(f => !f)} title={isFullscreen ? "Exit fullscreen" : "Fullscreen map"}>
+            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+          </Button>
         </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel — Controls */}
-        <div className="w-72 border-r border-border bg-card/30 overflow-y-auto flex-shrink-0">
+        <div className={`w-72 border-r border-border bg-card/30 overflow-y-auto flex-shrink-0 ${isFullscreen ? 'hidden' : ''}`}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
             <TabsList className="w-full rounded-none border-b border-border bg-transparent h-9">
               <TabsTrigger value="map" className="text-[10px] font-mono flex-1">LAYERS</TabsTrigger>
@@ -338,7 +342,17 @@ export default function CreatorMode() {
         </div>
 
         {/* Main Map Area */}
-        <div className="flex-1 relative bg-background overflow-hidden">
+        <div className={`flex-1 relative bg-background overflow-hidden ${isFullscreen ? 'w-full' : ''}`}>
+          {isFullscreen && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="absolute top-3 right-3 z-10 h-8 gap-1.5 text-xs font-mono bg-card/80 backdrop-blur-sm border-border"
+              onClick={() => setIsFullscreen(false)}
+            >
+              <Minimize2 size={14} /> Exit Fullscreen
+            </Button>
+          )}
           <CreatorMap
             layers={layers}
             overlays={overlays}
@@ -359,7 +373,7 @@ export default function CreatorMode() {
           )}
 
           {/* Bottom route summary */}
-          <div className="absolute bottom-0 left-0 right-0 bg-card/90 backdrop-blur border-t border-border p-3">
+          <div className={`absolute bottom-0 left-0 right-0 bg-card/90 backdrop-blur border-t border-border p-3 ${isFullscreen ? 'hidden' : ''}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div>
