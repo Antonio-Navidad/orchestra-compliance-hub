@@ -12,6 +12,7 @@ import { AlertTriangle } from "lucide-react";
 const DARK_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   name: "Orchestra Dark",
+  glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
   sources: {
     "carto-dark": {
       type: "raster",
