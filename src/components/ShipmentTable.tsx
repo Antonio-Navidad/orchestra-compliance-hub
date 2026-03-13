@@ -89,11 +89,24 @@ export function ShipmentTable({ shipments, mode }: ShipmentTableProps) {
               sorted.map((shipment) => (
                 <TableRow
                   key={shipment.id}
-                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  className={`cursor-pointer hover:bg-accent/50 transition-colors border-l-[3px] ${
+                    shipment.risk_score >= 85 ? 'border-l-risk-critical' :
+                    shipment.risk_score >= 60 ? 'border-l-risk-high' :
+                    shipment.risk_score >= 40 ? 'border-l-risk-medium' :
+                    'border-l-risk-safe'
+                  }`}
                   onClick={() => navigate(`/shipment/${shipment.shipment_id}`)}
                 >
                   <TableCell className="font-mono text-sm font-semibold text-primary">
-                    {shipment.shipment_id}
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${
+                        shipment.risk_score >= 85 ? 'bg-risk-critical animate-pulse' :
+                        shipment.risk_score >= 60 ? 'bg-risk-high' :
+                        shipment.risk_score >= 40 ? 'bg-risk-medium' :
+                        'bg-risk-safe'
+                      }`} />
+                      {shipment.shipment_id}
+                    </div>
                   </TableCell>
                   {!mode && (
                     <TableCell>
