@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   Eye, EyeOff, Shield, Ship, Plane, Truck, Layers,
-  AlertTriangle, Cloud, Zap, Plus, Save, Lock, X,
+  AlertTriangle, Cloud, Zap, Plus, Save, Lock, X, Maximize2, Minimize2,
   ChevronRight, Link2,
 } from "lucide-react";
 import CreatorMap from "@/components/CreatorMap";
