@@ -7,6 +7,7 @@ import { WorkspaceSelector } from "@/components/WorkspaceSelector";
 import { ViewModeContext, useViewModeState } from "@/hooks/useViewMode";
 import { WorkspaceContext, useWorkspaceProvider } from "@/hooks/useWorkspace";
 import { useWorkspacePurpose, WORKSPACE_PURPOSES } from "@/hooks/useWorkspacePurpose";
+import { OnboardingTour } from "@/components/OnboardingTour";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const viewMode = useViewModeState();
@@ -42,6 +43,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </main>
             </div>
           </div>
+          <OnboardingTour />
         </SidebarProvider>
       </ViewModeContext.Provider>
     </WorkspaceContext.Provider>

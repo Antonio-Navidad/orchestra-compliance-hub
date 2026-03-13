@@ -4,6 +4,7 @@ import {
   Search, Eye, ShoppingCart, Radio, Zap, ShieldCheck,
   CreditCard, Lightbulb, Fingerprint, Truck, Plane, Ship,
   AlertTriangle, Bell, GitBranch, Box, Route, Layers,
+  HelpCircle,
 } from "lucide-react";
 import type { WorkspacePurpose } from "@/hooks/useWorkspacePurpose";
 
@@ -47,7 +48,7 @@ const MARKETPLACE_NAV: NavGroup[] = [
     items: [
       { title: "Analytics", url: "/analytics", icon: BarChart3 },
       { title: "Pricing", url: "/pricing", icon: CreditCard },
-      { title: "Guide", url: "/hints", icon: Lightbulb },
+      { title: "Guide", url: "/guide", icon: HelpCircle },
     ],
   },
 ];
@@ -83,6 +84,7 @@ const COMPLIANCE_NAV: NavGroup[] = [
     items: [
       { title: "Jurisdictions", url: "/jurisdiction-settings", icon: ShieldCheck },
       { title: "Admin", url: "/admin", icon: Settings },
+      { title: "Guide", url: "/guide", icon: HelpCircle },
     ],
   },
 ];
@@ -118,6 +120,7 @@ const ROUTE_PLANNING_NAV: NavGroup[] = [
     items: [
       { title: "Analytics", url: "/analytics", icon: BarChart3 },
       { title: "Broker Scorecard", url: "/brokers", icon: Users },
+      { title: "Guide", url: "/guide", icon: HelpCircle },
     ],
   },
 ];
@@ -160,6 +163,7 @@ const OPERATIONS_NAV: NavGroup[] = [
       { title: "Team Chat", url: "/team-chat", icon: Users },
       { title: "Analytics", url: "/analytics", icon: BarChart3 },
       { title: "Admin", url: "/admin", icon: Settings },
+      { title: "Guide", url: "/guide", icon: HelpCircle },
     ],
   },
 ];
@@ -205,6 +209,7 @@ const ENTERPRISE_NAV: NavGroup[] = [
       { title: "Admin Settings", url: "/admin", icon: Settings },
       { title: "Jurisdictions", url: "/jurisdiction-settings", icon: ShieldCheck },
       { title: "Pricing", url: "/pricing", icon: CreditCard },
+      { title: "Guide", url: "/guide", icon: HelpCircle },
     ],
   },
 ];
