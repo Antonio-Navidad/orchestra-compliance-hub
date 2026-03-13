@@ -13,6 +13,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { detectShipmentIssues, getIssueFrame, type DirectionContext, type IssueType } from "@/lib/issueFraming";
+import { StartNewWorkflow } from "@/components/StartNewWorkflow";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { Shipment, TransportMode } from "@/types/orchestra";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { detectShipmentIssues, getIssueFrame, type DirectionContext, type IssueType } from "@/lib/issueFraming";
 
 type DashboardView = 'inbound' | 'outbound' | 'combined';
 
