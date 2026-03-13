@@ -35,6 +35,50 @@ export type Database = {
         }
         Relationships: []
       }
+      alert_rules: {
+        Row: {
+          channels: string[] | null
+          created_at: string
+          enabled: boolean
+          event_type: string
+          id: string
+          quiet_hours: Json | null
+          severity_threshold: string | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          channels?: string[] | null
+          created_at?: string
+          enabled?: boolean
+          event_type: string
+          id?: string
+          quiet_hours?: Json | null
+          severity_threshold?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          channels?: string[] | null
+          created_at?: string
+          enabled?: boolean
+          event_type?: string
+          id?: string
+          quiet_hours?: Json | null
+          severity_threshold?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brokers: {
         Row: {
           aliases: string[]
@@ -159,6 +203,443 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: false
             referencedRelation: "chat_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compliance_checks: {
+        Row: {
+          check_type: string
+          checked_at: string | null
+          findings: Json | null
+          id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          shipment_id: string
+          source_freshness: string | null
+          status: string
+          workspace_id: string | null
+        }
+        Insert: {
+          check_type: string
+          checked_at?: string | null
+          findings?: Json | null
+          id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          shipment_id: string
+          source_freshness?: string | null
+          status?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          check_type?: string
+          checked_at?: string | null
+          findings?: Json | null
+          id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          shipment_id?: string
+          source_freshness?: string | null
+          status?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_checks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      decision_approvals: {
+        Row: {
+          action: string
+          actor_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          scenario_id: string | null
+          twin_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          scenario_id?: string | null
+          twin_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          scenario_id?: string | null
+          twin_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decision_approvals_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "decision_scenarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "decision_approvals_twin_id_fkey"
+            columns: ["twin_id"]
+            isOneToOne: false
+            referencedRelation: "decision_twins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      decision_scenarios: {
+        Row: {
+          complexity_score: number | null
+          compliance_risk_score: number | null
+          created_at: string
+          doc_risk_score: number | null
+          hold_probability: number | null
+          id: string
+          is_selected: boolean
+          label: string
+          projected_cost: Json | null
+          projected_eta: Json | null
+          rank: number | null
+          rank_explanation: string | null
+          route_summary: string | null
+          twin_id: string
+        }
+        Insert: {
+          complexity_score?: number | null
+          compliance_risk_score?: number | null
+          created_at?: string
+          doc_risk_score?: number | null
+          hold_probability?: number | null
+          id?: string
+          is_selected?: boolean
+          label: string
+          projected_cost?: Json | null
+          projected_eta?: Json | null
+          rank?: number | null
+          rank_explanation?: string | null
+          route_summary?: string | null
+          twin_id: string
+        }
+        Update: {
+          complexity_score?: number | null
+          compliance_risk_score?: number | null
+          created_at?: string
+          doc_risk_score?: number | null
+          hold_probability?: number | null
+          id?: string
+          is_selected?: boolean
+          label?: string
+          projected_cost?: Json | null
+          projected_eta?: Json | null
+          rank?: number | null
+          rank_explanation?: string | null
+          route_summary?: string | null
+          twin_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decision_scenarios_twin_id_fkey"
+            columns: ["twin_id"]
+            isOneToOne: false
+            referencedRelation: "decision_twins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      decision_twins: {
+        Row: {
+          clearance_probability: number | null
+          confidence: number | null
+          created_at: string
+          delay_probability: number | null
+          eta_range: Json | null
+          evaluated_at: string | null
+          explanation: string | null
+          hold_probability: number | null
+          id: string
+          input_snapshot: Json
+          landed_cost_range: Json | null
+          prescriptive_actions: Json | null
+          readiness_score: number | null
+          readiness_state: string | null
+          shipment_id: string
+          stale_at: string | null
+          status: string
+          top_failure_point: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          clearance_probability?: number | null
+          confidence?: number | null
+          created_at?: string
+          delay_probability?: number | null
+          eta_range?: Json | null
+          evaluated_at?: string | null
+          explanation?: string | null
+          hold_probability?: number | null
+          id?: string
+          input_snapshot?: Json
+          landed_cost_range?: Json | null
+          prescriptive_actions?: Json | null
+          readiness_score?: number | null
+          readiness_state?: string | null
+          shipment_id: string
+          stale_at?: string | null
+          status?: string
+          top_failure_point?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          clearance_probability?: number | null
+          confidence?: number | null
+          created_at?: string
+          delay_probability?: number | null
+          eta_range?: Json | null
+          evaluated_at?: string | null
+          explanation?: string | null
+          hold_probability?: number | null
+          id?: string
+          input_snapshot?: Json
+          landed_cost_range?: Json | null
+          prescriptive_actions?: Json | null
+          readiness_score?: number | null
+          readiness_state?: string | null
+          shipment_id?: string
+          stale_at?: string | null
+          status?: string
+          top_failure_point?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decision_twins_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_extractions: {
+        Row: {
+          created_at: string
+          document_id: string | null
+          extracted_fields: Json
+          extraction_model: string | null
+          field_confidence: Json | null
+          id: string
+          packet_id: string | null
+          parse_warnings: string[] | null
+          raw_text: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_id?: string | null
+          extracted_fields?: Json
+          extraction_model?: string | null
+          field_confidence?: Json | null
+          id?: string
+          packet_id?: string | null
+          parse_warnings?: string[] | null
+          raw_text?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_id?: string | null
+          extracted_fields?: Json
+          extraction_model?: string | null
+          field_confidence?: Json | null
+          id?: string
+          packet_id?: string | null
+          parse_warnings?: string[] | null
+          raw_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_extractions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "shipment_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_extractions_packet_id_fkey"
+            columns: ["packet_id"]
+            isOneToOne: false
+            referencedRelation: "document_packets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_issues: {
+        Row: {
+          created_at: string
+          description: string
+          field_name: string | null
+          id: string
+          issue_type: string
+          packet_id: string | null
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          suggestion: string | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          field_name?: string | null
+          id?: string
+          issue_type: string
+          packet_id?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          suggestion?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          field_name?: string | null
+          id?: string
+          issue_type?: string
+          packet_id?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          suggestion?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_issues_packet_id_fkey"
+            columns: ["packet_id"]
+            isOneToOne: false
+            referencedRelation: "document_packets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_packets: {
+        Row: {
+          completeness_score: number | null
+          country_requirements: Json | null
+          created_at: string
+          filing_readiness_score: number | null
+          id: string
+          shipment_id: string
+          status: string
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          completeness_score?: number | null
+          country_requirements?: Json | null
+          created_at?: string
+          filing_readiness_score?: number | null
+          id?: string
+          shipment_id: string
+          status?: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          completeness_score?: number | null
+          country_requirements?: Json | null
+          created_at?: string
+          filing_readiness_score?: number | null
+          id?: string
+          shipment_id?: string
+          status?: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_packets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eta_predictions: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          factors: Json | null
+          id: string
+          model_version: string | null
+          predicted_earliest: string | null
+          predicted_latest: string | null
+          prior_prediction_id: string | null
+          route_version_id: string | null
+          shipment_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          factors?: Json | null
+          id?: string
+          model_version?: string | null
+          predicted_earliest?: string | null
+          predicted_latest?: string | null
+          prior_prediction_id?: string | null
+          route_version_id?: string | null
+          shipment_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          factors?: Json | null
+          id?: string
+          model_version?: string | null
+          predicted_earliest?: string | null
+          predicted_latest?: string | null
+          prior_prediction_id?: string | null
+          route_version_id?: string | null
+          shipment_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eta_predictions_prior_prediction_id_fkey"
+            columns: ["prior_prediction_id"]
+            isOneToOne: false
+            referencedRelation: "eta_predictions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eta_predictions_route_version_id_fkey"
+            columns: ["route_version_id"]
+            isOneToOne: false
+            referencedRelation: "route_recommendations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eta_predictions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -391,6 +872,44 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          channel_preferences: Json | null
+          created_at: string
+          critical_override: boolean
+          id: string
+          quiet_hours: Json | null
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          channel_preferences?: Json | null
+          created_at?: string
+          critical_override?: boolean
+          id?: string
+          quiet_hours?: Json | null
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          channel_preferences?: Json | null
+          created_at?: string
+          critical_override?: boolean
+          id?: string
+          quiet_hours?: Json | null
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string | null
@@ -433,6 +952,190 @@ export type Database = {
         }
         Relationships: []
       }
+      outcome_records: {
+        Row: {
+          actual_clearance_result: string | null
+          actual_delays: Json | null
+          actual_delivery_date: string | null
+          actual_issues: Json | null
+          actual_landed_cost: number | null
+          actual_route_used: string | null
+          created_at: string
+          id: string
+          prediction_accuracy: Json | null
+          shipment_id: string
+          twin_id: string | null
+          validated: boolean
+          validated_by: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          actual_clearance_result?: string | null
+          actual_delays?: Json | null
+          actual_delivery_date?: string | null
+          actual_issues?: Json | null
+          actual_landed_cost?: number | null
+          actual_route_used?: string | null
+          created_at?: string
+          id?: string
+          prediction_accuracy?: Json | null
+          shipment_id: string
+          twin_id?: string | null
+          validated?: boolean
+          validated_by?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          actual_clearance_result?: string | null
+          actual_delays?: Json | null
+          actual_delivery_date?: string | null
+          actual_issues?: Json | null
+          actual_landed_cost?: number | null
+          actual_route_used?: string | null
+          created_at?: string
+          id?: string
+          prediction_accuracy?: Json | null
+          shipment_id?: string
+          twin_id?: string | null
+          validated?: boolean
+          validated_by?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outcome_records_twin_id_fkey"
+            columns: ["twin_id"]
+            isOneToOne: false
+            referencedRelation: "decision_twins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outcome_records_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_classifications: {
+        Row: {
+          accepted_code: string | null
+          ai_model_version: string | null
+          candidate_codes: Json
+          confidence: number | null
+          created_at: string
+          evidence: Json | null
+          id: string
+          overridden_by: string | null
+          override_reason: string | null
+          product_id: string | null
+          restricted_flags: string[] | null
+          shipment_id: string | null
+          status: string
+        }
+        Insert: {
+          accepted_code?: string | null
+          ai_model_version?: string | null
+          candidate_codes?: Json
+          confidence?: number | null
+          created_at?: string
+          evidence?: Json | null
+          id?: string
+          overridden_by?: string | null
+          override_reason?: string | null
+          product_id?: string | null
+          restricted_flags?: string[] | null
+          shipment_id?: string | null
+          status?: string
+        }
+        Update: {
+          accepted_code?: string | null
+          ai_model_version?: string | null
+          candidate_codes?: Json
+          confidence?: number | null
+          created_at?: string
+          evidence?: Json | null
+          id?: string
+          overridden_by?: string | null
+          override_reason?: string | null
+          product_id?: string | null
+          restricted_flags?: string[] | null
+          shipment_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_classifications_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          destination_country: string | null
+          dimensions: Json | null
+          id: string
+          image_urls: string[] | null
+          intended_use: string | null
+          material_composition: string | null
+          metadata: Json | null
+          origin_country: string | null
+          title: string
+          updated_at: string
+          weight_kg: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          destination_country?: string | null
+          dimensions?: Json | null
+          id?: string
+          image_urls?: string[] | null
+          intended_use?: string | null
+          material_composition?: string | null
+          metadata?: Json | null
+          origin_country?: string | null
+          title: string
+          updated_at?: string
+          weight_kg?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          destination_country?: string | null
+          dimensions?: Json | null
+          id?: string
+          image_urls?: string[] | null
+          intended_use?: string | null
+          material_composition?: string | null
+          metadata?: Json | null
+          origin_country?: string | null
+          title?: string
+          updated_at?: string
+          weight_kg?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           company_name: string | null
@@ -471,6 +1174,115 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      route_recommendations: {
+        Row: {
+          ai_model_version: string | null
+          confidence: number | null
+          constraints: Json | null
+          created_at: string
+          destination: Json
+          freshness: string | null
+          id: string
+          mode: string
+          options: Json
+          origin: Json
+          priority: string
+          selected_option_index: number | null
+          shipment_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          ai_model_version?: string | null
+          confidence?: number | null
+          constraints?: Json | null
+          created_at?: string
+          destination: Json
+          freshness?: string | null
+          id?: string
+          mode: string
+          options?: Json
+          origin: Json
+          priority?: string
+          selected_option_index?: number | null
+          shipment_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          ai_model_version?: string | null
+          confidence?: number | null
+          constraints?: Json | null
+          created_at?: string
+          destination?: Json
+          freshness?: string | null
+          id?: string
+          mode?: string
+          options?: Json
+          origin?: Json
+          priority?: string
+          selected_option_index?: number | null
+          shipment_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_recommendations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sanctions_alerts: {
+        Row: {
+          created_at: string
+          entity_name: string
+          id: string
+          list_freshness: string | null
+          list_source: string | null
+          match_confidence: number | null
+          match_type: string | null
+          reviewed_by: string | null
+          shipment_id: string | null
+          status: string
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          entity_name: string
+          id?: string
+          list_freshness?: string | null
+          list_source?: string | null
+          match_confidence?: number | null
+          match_type?: string | null
+          reviewed_by?: string | null
+          shipment_id?: string | null
+          status?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          entity_name?: string
+          id?: string
+          list_freshness?: string | null
+          list_source?: string | null
+          match_confidence?: number | null
+          match_type?: string | null
+          reviewed_by?: string | null
+          shipment_id?: string | null
+          status?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sanctions_alerts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shipment_comments: {
         Row: {
@@ -761,6 +1573,47 @@ export type Database = {
         }
         Relationships: []
       }
+      view_presets: {
+        Row: {
+          config: Json
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          preset_type: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          preset_type?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          preset_type?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "view_presets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_members: {
         Row: {
           id: string
@@ -789,6 +1642,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+          updated_by: string | null
+          workspace_id: string
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string
+          updated_by?: string | null
+          workspace_id: string
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+          updated_by?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_settings_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
