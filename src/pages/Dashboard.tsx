@@ -16,6 +16,8 @@ import { RiskBadge } from "@/components/RiskBadge";
 import { RiskDot } from "@/components/RiskDot";
 import { StatusBadge } from "@/components/StatusBadge";
 import { getRiskLevel } from "@/lib/compliance";
+import { ExportButton } from "@/components/ExportButton";
+import { SHIPMENT_COLUMNS } from "@/lib/excelExport";
 
 type DashboardView = 'inbound' | 'outbound' | 'combined';
 
