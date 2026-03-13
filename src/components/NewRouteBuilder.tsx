@@ -327,15 +327,41 @@ export function NewRouteBuilder({ onRouteChange, onRouteGenerate, onClose }: New
     if (!canGenerate) return;
     updateRoute(prev => ({ ...prev, routeState: "generating" }));
 
-    // Simulate brief generation delay then mark rendered
+    // Use network routing engine
     setTimeout(() => {
+      const seg = route.segments[0];
+      if (!seg.from.lat || !seg.from.lng || !seg.to.lat || !seg.to.lng) return;
+
+      const networkResult = generateNetworkRoute(
+        seg.from.lat, seg.from.lng,
+        seg.to.lat, seg.to.lng,
+        seg.mode,
+        seg.from.resolvedName || seg.from.name,
+        seg.to.resolvedName || seg.to.name,
+      );
+
+      if (!networkResult.feasible) {
+        updateRoute(prev => ({
+          ...prev,
+          routeState: "invalid" as RouteState,
+          feasibilityMessage: networkResult.message,
+          networkRoute: undefined,
+        }));
+        toast.error(networkResult.message || "Route not feasible");
+        return;
+      }
+
       updateRoute(prev => {
-        const updated = { ...prev, routeState: "rendered" as RouteState };
+        const updated = {
+          ...prev,
+          routeState: "rendered" as RouteState,
+          networkRoute: networkResult,
+        };
         onRouteGenerate?.(updated);
         return updated;
       });
-      toast.success("Route generated and rendered on map");
-    }, 800);
+      toast.success(`Route generated: ${networkResult.waypoints.length} waypoints, ~${networkResult.totalDistanceKm.toLocaleString()} km`);
+    }, 300);
   };
 
   const handleFixFeasibility = (segId: string, mode: SegmentMode) => {
