@@ -308,6 +308,16 @@ export default function Dashboard() {
         )}
 
         {/* ═══ Shipment Table with Mode Tabs ═══ */}
+        <div className="flex items-center justify-between">
+          <h3 className="font-mono text-xs text-muted-foreground tracking-wider">ORDERS & SHIPMENTS</h3>
+          <ExportButton
+            data={filteredShipments as any[]}
+            columns={SHIPMENT_COLUMNS}
+            filename={`orchestra-shipments-${new Date().toISOString().slice(0, 10)}`}
+            sheetName="Shipments"
+            label="Export Shipments"
+          />
+        </div>
         <Tabs value={activeMode} onValueChange={setActiveMode}>
           <TabsList className="bg-secondary/50 border border-border">
             <TabsTrigger value="all" className="font-mono text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
