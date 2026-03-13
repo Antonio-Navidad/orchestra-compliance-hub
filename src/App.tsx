@@ -25,6 +25,7 @@ import DocumentValidator from "./pages/DocumentValidator";
 import DecisionTwin from "./pages/DecisionTwin";
 import RouteBuilder from "./pages/RouteBuilder";
 import TeamChat from "./pages/TeamChat";
+import DianCompliance from "./pages/DianCompliance";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -68,6 +69,7 @@ const App = () => (
           <Route path="/validate-docs" element={<ProtectedRoute><DocumentValidator /></ProtectedRoute>} />
           <Route path="/route-builder" element={<ProtectedRoute><RouteBuilder /></ProtectedRoute>} />
           <Route path="/team-chat" element={<ProtectedRoute><TeamChat /></ProtectedRoute>} />
+          <Route path="/dian-compliance" element={<ProtectedRoute><DianCompliance /></ProtectedRoute>} />
           <Route path="/decision-twin" element={<ProtectedRoute><DecisionTwin /></ProtectedRoute>} />
           <Route path="/decision-twin/:id" element={<ProtectedRoute><DecisionTwin /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />

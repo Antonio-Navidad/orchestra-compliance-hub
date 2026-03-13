@@ -29,6 +29,10 @@ const aiNav = [
   { title: "Team Chat", url: "/team-chat", icon: Users },
 ];
 
+const complianceNav = [
+  { title: "DIAN / Colombia", url: "/dian-compliance", icon: Fingerprint },
+];
+
 const insightsNav = [
   { title: "Analytics / ROI", url: "/analytics", icon: BarChart3 },
   { title: "Broker Scorecard", url: "/brokers", icon: Users },
@@ -97,6 +101,7 @@ export function AppSidebar() {
       <SidebarContent className="px-1">
         {renderGroup("OPERATIONS", mainNav)}
         {renderGroup("AI ENGINES", aiNav)}
+        {renderGroup("COMPLIANCE", complianceNav)}
         {renderGroup("INSIGHTS", insightsNav)}
         {renderGroup("SETTINGS", settingsNav)}
       </SidebarContent>
