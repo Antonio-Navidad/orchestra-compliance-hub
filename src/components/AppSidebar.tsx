@@ -29,6 +29,10 @@ const aiNav = [
   { title: "Team Chat", url: "/team-chat", icon: Users },
 ];
 
+const complianceNav = [
+  { title: "DIAN / Colombia", url: "/dian-compliance", icon: Fingerprint },
+];
+
 const insightsNav = [
   { title: "Analytics / ROI", url: "/analytics", icon: BarChart3 },
   { title: "Broker Scorecard", url: "/brokers", icon: Users },
