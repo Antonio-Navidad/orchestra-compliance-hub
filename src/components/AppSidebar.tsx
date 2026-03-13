@@ -2,7 +2,7 @@ import {
   Activity, Package, FileText, BarChart3, Users, Plus, CreditCard,
   Lightbulb, ClipboardList, Settings, Scale, BookOpen, Map,
   Search, LogOut, ArrowDownToLine, ArrowUpFromLine, Layers,
-  Fingerprint, Zap, ShieldCheck
+  Fingerprint, Zap, ShieldCheck, Eye
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -26,6 +26,7 @@ const aiNav = [
   { title: "Validate Documents", url: "/validate-docs", icon: FileText },
   { title: "Route Builder", url: "/route-builder", icon: Map },
   { title: "Decision Twin", url: "/decision-twin", icon: Zap },
+  { title: "Creator Mode", url: "/creator-mode", icon: Eye },
   { title: "Team Chat", url: "/team-chat", icon: Users },
 ];
 

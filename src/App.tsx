@@ -26,6 +26,7 @@ import DecisionTwin from "./pages/DecisionTwin";
 import RouteBuilder from "./pages/RouteBuilder";
 import TeamChat from "./pages/TeamChat";
 import DianCompliance from "./pages/DianCompliance";
+import CreatorMode from "./pages/CreatorMode";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -72,6 +73,7 @@ const App = () => (
           <Route path="/dian-compliance" element={<ProtectedRoute><DianCompliance /></ProtectedRoute>} />
           <Route path="/decision-twin" element={<ProtectedRoute><DecisionTwin /></ProtectedRoute>} />
           <Route path="/decision-twin/:id" element={<ProtectedRoute><DecisionTwin /></ProtectedRoute>} />
+          <Route path="/creator-mode" element={<ProtectedRoute><CreatorMode /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
