@@ -335,6 +335,10 @@ export default function ShipmentDetail() {
             <PdfUpload shipmentId={shipment.shipment_id} />
           </TabsContent>
 
+          <TabsContent value="eta" className="mt-4">
+            <ETAPanel shipmentId={shipment.shipment_id} workspaceId={(shipment as any).workspace_id} />
+          </TabsContent>
+
           <TabsContent value="audit" className="mt-4">
             <AuditTimeline shipmentId={shipment.shipment_id} />
           </TabsContent>
