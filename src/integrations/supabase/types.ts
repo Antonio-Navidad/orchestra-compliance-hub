@@ -435,6 +435,51 @@ export type Database = {
           },
         ]
       }
+      delay_signals: {
+        Row: {
+          affects_modes: string[] | null
+          confidence: number | null
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          location: string | null
+          location_code: string | null
+          metadata: Json | null
+          severity: string
+          signal_type: string
+          source: string | null
+        }
+        Insert: {
+          affects_modes?: string[] | null
+          confidence?: number | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          location?: string | null
+          location_code?: string | null
+          metadata?: Json | null
+          severity?: string
+          signal_type: string
+          source?: string | null
+        }
+        Update: {
+          affects_modes?: string[] | null
+          confidence?: number | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          location?: string | null
+          location_code?: string | null
+          metadata?: Json | null
+          severity?: string
+          signal_type?: string
+          source?: string | null
+        }
+        Relationships: []
+      }
       document_extractions: {
         Row: {
           created_at: string

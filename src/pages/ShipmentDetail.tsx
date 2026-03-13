@@ -14,8 +14,9 @@ import { ExplainabilityDrawer } from "@/components/ExplainabilityDrawer";
 import { AuditTimeline } from "@/components/AuditTimeline";
 import { StatusWorkflow } from "@/components/StatusWorkflow";
 import { OutcomeRecorder } from "@/components/OutcomeRecorder";
+import { ETAPanel } from "@/components/ETAPanel";
 import { Shipment, Invoice, Manifest, TransportMode } from "@/types/orchestra";
-import { ArrowLeft, FileText, AlertTriangle, TrendingDown, Zap, Clock, ClipboardCheck, Send, BarChart3 } from "lucide-react";
+import { ArrowLeft, FileText, AlertTriangle, TrendingDown, Zap, Clock, ClipboardCheck, Send, BarChart3, Navigation } from "lucide-react";
 import { PacketScoreCard } from "@/components/PacketScoreCard";
 import { computePacketScore } from "@/lib/packetScore";
 import { EscalationPanel } from "@/components/EscalationPanel";
@@ -217,6 +218,9 @@ export default function ShipmentDetail() {
             <TabsTrigger value="documents" className="font-mono text-xs">
               <FileText size={12} className="mr-1" /> DOCUMENTS
             </TabsTrigger>
+            <TabsTrigger value="eta" className="font-mono text-xs">
+              <Navigation size={12} className="mr-1" /> ETA
+            </TabsTrigger>
             <TabsTrigger value="audit" className="font-mono text-xs">
               <Clock size={12} className="mr-1" /> AUDIT TRAIL
             </TabsTrigger>
@@ -329,6 +333,10 @@ export default function ShipmentDetail() {
 
           <TabsContent value="documents" className="mt-4">
             <PdfUpload shipmentId={shipment.shipment_id} />
+          </TabsContent>
+
+          <TabsContent value="eta" className="mt-4">
+            <ETAPanel shipmentId={shipment.shipment_id} workspaceId={(shipment as any).workspace_id} />
           </TabsContent>
 
           <TabsContent value="audit" className="mt-4">
