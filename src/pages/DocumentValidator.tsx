@@ -66,6 +66,8 @@ export default function DocumentValidator() {
     setDocuments(documents.filter(d => d.id !== id));
   };
 
+  const [shipmentId, setShipmentId] = useState("");
+
   const handleValidate = async () => {
     if (documents.length === 0) {
       toast.error("Add at least one document to validate");
@@ -75,7 +77,7 @@ export default function DocumentValidator() {
     setResult(null);
     try {
       const { data, error } = await supabase.functions.invoke("validate-documents", {
-        body: { documents, shipmentMode, originCountry, destinationCountry, hsCode, declaredValue },
+        body: { documents, shipmentMode, originCountry, destinationCountry, hsCode, declaredValue, shipmentId: shipmentId || undefined },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -141,7 +143,11 @@ export default function DocumentValidator() {
                 <div>
                   <label className="text-xs font-mono text-muted-foreground mb-1 block">Declared Value</label>
                   <Input value={declaredValue} onChange={(e) => setDeclaredValue(e.target.value)} placeholder="$25,000" />
-                </div>
+               </div>
+              </div>
+              <div>
+                <label className="text-xs font-mono text-muted-foreground mb-1 block">Shipment ID (optional)</label>
+                <Input value={shipmentId} onChange={(e) => setShipmentId(e.target.value)} placeholder="e.g. SHP-001" />
               </div>
             </CardContent>
           </Card>

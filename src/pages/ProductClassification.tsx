@@ -1,12 +1,14 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Upload, Link as LinkIcon, AlertTriangle, CheckCircle, FileText, Loader2, Info, ShieldAlert } from "lucide-react";
+import { Search, Upload, Link as LinkIcon, AlertTriangle, CheckCircle, FileText, Loader2, Info, ShieldAlert, History } from "lucide-react";
 import { toast } from "sonner";
 
 interface ClassificationResult {
@@ -21,6 +23,7 @@ interface ClassificationResult {
   restrictedFlags?: string[];
   warnings?: string[];
   missingInfo?: string[];
+  classificationId?: string;
 }
 
 export default function ProductClassification() {
@@ -34,6 +37,21 @@ export default function ProductClassification() {
   const [destinationCountry, setDestinationCountry] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ClassificationResult | null>(null);
+  const { currentWorkspace } = useWorkspace();
+
+  // Load recent classifications from DB
+  const { data: recentClassifications = [] } = useQuery({
+    queryKey: ["recent-classifications"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_classifications")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const handleClassify = async () => {
     if (!title && !description && !productUrl) {
@@ -281,6 +299,37 @@ export default function ProductClassification() {
                 </Card>
               )}
             </>
+          )}
+
+          {/* Recent Classifications History */}
+          {!result && !loading && recentClassifications.length > 0 && (
+            <Card className="border-border bg-card">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-mono text-muted-foreground flex items-center gap-1">
+                  <History size={12} /> RECENT CLASSIFICATIONS
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {recentClassifications.map((c: any) => (
+                  <div key={c.id} className="p-3 rounded border border-border bg-secondary/30 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-mono text-sm font-semibold text-primary">{c.accepted_code || "Pending"}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {(c.evidence as any)?.input?.title || (c.evidence as any)?.input?.description || "No title"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {new Date(c.created_at).toLocaleDateString()} · {c.status}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className={`shrink-0 font-mono ${
+                      (c.confidence || 0) >= 0.8 ? "text-risk-low" : (c.confidence || 0) >= 0.6 ? "text-risk-medium" : "text-risk-critical"
+                    }`}>
+                      {Math.round((c.confidence || 0) * 100)}%
+                    </Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>
