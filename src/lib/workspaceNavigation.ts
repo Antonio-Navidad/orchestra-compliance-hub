@@ -120,6 +120,7 @@ const ROUTE_PLANNING_NAV: NavGroup[] = [
     items: [
       { title: "Analytics", url: "/analytics", icon: BarChart3 },
       { title: "Broker Scorecard", url: "/brokers", icon: Users },
+      { title: "Guide", url: "/guide", icon: HelpCircle },
     ],
   },
 ];
