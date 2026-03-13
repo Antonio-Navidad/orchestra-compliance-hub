@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -10,10 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
-  Map, Eye, EyeOff, Shield, Ship, Plane, Truck, Layers,
-  AlertTriangle, Cloud, Zap, Plus, Save, Navigation, Lock, X,
-  ChevronRight, Globe, Anchor, MapPin
+  Eye, EyeOff, Shield, Ship, Plane, Truck, Layers,
+  AlertTriangle, Cloud, Zap, Plus, Save, Lock, X,
+  ChevronRight
 } from "lucide-react";
+import CreatorMap from "@/components/CreatorMap";
 
 interface RouteWaypoint {
   id: string;
@@ -302,116 +302,12 @@ export default function CreatorMode() {
 
         {/* Main Map Area */}
         <div className="flex-1 relative bg-background overflow-hidden">
-          {/* Simulated Map */}
-          <div className="absolute inset-0 bg-[hsl(222,47%,4%)]">
-            {/* Grid overlay */}
-            <div className="absolute inset-0" style={{
-              backgroundImage: `
-                linear-gradient(hsl(var(--border) / 0.15) 1px, transparent 1px),
-                linear-gradient(90deg, hsl(var(--border) / 0.15) 1px, transparent 1px)
-              `,
-              backgroundSize: '40px 40px'
-            }} />
-
-            {/* Continents placeholder shapes */}
-            <svg className="absolute inset-0 w-full h-full opacity-20" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
-              {/* Americas */}
-              <path d="M200 100 Q220 80 240 110 Q260 130 250 180 Q240 220 230 260 Q220 300 210 350 Q200 400 190 420 Q180 380 170 350 Q160 300 170 250 Q180 200 190 150 Z" fill="hsl(var(--primary) / 0.3)" />
-              <path d="M210 350 Q230 360 240 400 Q250 450 240 500 Q220 530 200 500 Q190 460 195 420 Z" fill="hsl(var(--primary) / 0.3)" />
-              {/* Europe/Africa */}
-              <path d="M450 100 Q480 90 510 110 Q530 130 520 170 Q510 200 500 230 Q490 260 480 290 Q470 320 460 280 Q450 240 445 200 Q440 160 445 130 Z" fill="hsl(var(--primary) / 0.3)" />
-              <path d="M470 290 Q490 300 500 350 Q510 400 500 450 Q490 480 470 460 Q460 420 465 370 Q468 330 470 290 Z" fill="hsl(var(--primary) / 0.3)" />
-              {/* Asia */}
-              <path d="M580 80 Q650 70 720 90 Q780 110 820 140 Q840 170 830 200 Q800 230 760 250 Q720 260 680 250 Q640 240 610 220 Q580 200 570 160 Q565 120 580 80 Z" fill="hsl(var(--primary) / 0.3)" />
-              {/* Australia */}
-              <path d="M750 380 Q790 370 820 390 Q840 410 830 440 Q810 460 780 460 Q760 450 750 430 Q745 410 750 380 Z" fill="hsl(var(--primary) / 0.3)" />
-            </svg>
-
-            {/* Route lines */}
-            {layers.sea && (
-              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 1000 600">
-                <path d="M220 280 Q350 200 470 250" stroke="hsl(var(--primary))" strokeWidth="2" fill="none" strokeDasharray="6 4" opacity="0.6" />
-                <path d="M470 250 Q600 180 720 200" stroke="hsl(var(--primary))" strokeWidth="2" fill="none" strokeDasharray="6 4" opacity="0.6" />
-              </svg>
-            )}
-            {layers.air && (
-              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 1000 600">
-                <path d="M230 250 Q400 120 500 160" stroke="hsl(var(--glow-amber))" strokeWidth="1.5" fill="none" strokeDasharray="4 6" opacity="0.5" />
-                <path d="M500 160 Q650 100 750 170" stroke="hsl(var(--glow-amber))" strokeWidth="1.5" fill="none" strokeDasharray="4 6" opacity="0.5" />
-              </svg>
-            )}
-
-            {/* Warning zones */}
-            {overlays.warnings && (
-              <>
-                <div className="absolute rounded-full border-2 border-[hsl(var(--risk-medium))]/40 bg-[hsl(var(--risk-medium))]/10 animate-pulse" style={{ left: '38%', top: '35%', width: 60, height: 60, transform: 'translate(-50%,-50%)' }} />
-                <div className="absolute rounded-full border-2 border-destructive/40 bg-destructive/10 animate-pulse" style={{ left: '62%', top: '25%', width: 45, height: 45, transform: 'translate(-50%,-50%)' }} />
-              </>
-            )}
-
-            {/* Congestion indicators */}
-            {overlays.congestion && (
-              <>
-                <div className="absolute" style={{ left: '46%', top: '40%' }}>
-                  <div className="w-3 h-3 rounded-full bg-[hsl(var(--risk-medium))] animate-pulse" />
-                </div>
-                <div className="absolute" style={{ left: '72%', top: '32%' }}>
-                  <div className="w-3 h-3 rounded-full bg-[hsl(var(--risk-high))] animate-pulse" />
-                </div>
-              </>
-            )}
-
-            {/* Waypoint markers */}
-            {waypoints.map((wp, idx) => {
-              const positions = [
-                { left: '21%', top: '45%' },
-                { left: '40%', top: '38%' },
-                { left: '58%', top: '32%' },
-                { left: '75%', top: '35%' },
-                { left: '30%', top: '55%' },
-                { left: '50%', top: '50%' },
-              ];
-              const pos = positions[idx % positions.length];
-              return (
-                <div key={wp.id} className="absolute group" style={{ ...pos, transform: 'translate(-50%,-50%)' }}>
-                  <div className={`relative flex items-center justify-center w-7 h-7 rounded-full border-2 ${
-                    wp.riskLevel === "high" ? "border-destructive bg-destructive/20" :
-                    wp.riskLevel === "caution" ? "border-[hsl(var(--risk-medium))] bg-[hsl(var(--risk-medium))]/20" :
-                    "border-primary bg-primary/20"
-                  }`}>
-                    {wp.type === "origin" ? <MapPin size={12} /> :
-                     wp.type === "destination" ? <Navigation size={12} /> :
-                     wp.type === "handoff" ? <Globe size={12} /> :
-                     <Anchor size={12} />}
-                    {wp.hidden && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-muted flex items-center justify-center">
-                        <EyeOff size={7} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="absolute top-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-card/90 backdrop-blur px-2 py-0.5 rounded text-[10px] font-mono border border-border opacity-0 group-hover:opacity-100 transition-opacity">
-                    {hideCounterparties && wp.hidden ? "••••••" : wp.label}
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Weather overlay indicator */}
-            {overlays.weather && (
-              <div className="absolute top-3 right-3 bg-card/80 backdrop-blur rounded px-2 py-1 border border-border flex items-center gap-1.5">
-                <Cloud size={12} className="text-primary" />
-                <span className="text-[10px] font-mono text-muted-foreground">Weather: Clear</span>
-              </div>
-            )}
-
-            {/* Military overlay indicator */}
-            {overlays.military && (
-              <div className="absolute top-10 right-3 bg-card/80 backdrop-blur rounded px-2 py-1 border border-border flex items-center gap-1.5">
-                <Shield size={12} className="text-[hsl(var(--risk-medium))]" />
-                <span className="text-[10px] font-mono text-muted-foreground">2 surveillance zones</span>
-              </div>
-            )}
-          </div>
+          <CreatorMap
+            layers={layers}
+            overlays={overlays}
+            sensitivity={sensitivity}
+            hideCounterparties={hideCounterparties}
+          />
 
           {/* Bottom route summary */}
           <div className="absolute bottom-0 left-0 right-0 bg-card/90 backdrop-blur border-t border-border p-3">
