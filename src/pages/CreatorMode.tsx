@@ -363,7 +363,7 @@ export default function CreatorMode() {
           )}
 
           {/* Bottom route summary */}
-          <div className="absolute bottom-0 left-0 right-0 bg-card/90 backdrop-blur border-t border-border p-3">
+          <div className={`absolute bottom-0 left-0 right-0 bg-card/90 backdrop-blur border-t border-border p-3 ${isFullscreen ? 'hidden' : ''}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div>
