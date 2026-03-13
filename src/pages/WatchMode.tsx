@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Radio, Eye, EyeOff } from "lucide-react";
+import { Radio, Eye, EyeOff, Plus } from "lucide-react";
 import { useWatchMode } from "@/hooks/useWatchMode";
 import WatchMap from "@/components/watch/WatchMap";
 import { WatchSidebar } from "@/components/watch/WatchSidebar";
 import { ShipmentDetailPanel } from "@/components/watch/ShipmentDetailPanel";
+import { Link } from "react-router-dom";
 
 export default function WatchMode() {
   const wm = useWatchMode();
@@ -31,6 +32,11 @@ export default function WatchMode() {
           )}
         </div>
         <div className="flex items-center gap-3">
+          <Link to="/intake">
+            <Button variant="outline" size="sm" className="h-7 text-[10px] font-mono gap-1">
+              <Plus size={11} /> Add Shipment
+            </Button>
+          </Link>
           <div className="flex items-center gap-1.5">
             {privacyMode ? <EyeOff size={12} className="text-primary" /> : <Eye size={12} className="text-muted-foreground" />}
             <span className="text-[10px] font-mono text-muted-foreground">Privacy</span>

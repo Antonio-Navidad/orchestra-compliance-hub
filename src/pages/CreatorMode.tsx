@@ -11,12 +11,13 @@ import { toast } from "sonner";
 import {
   Eye, EyeOff, Shield, Ship, Plane, Truck, Layers,
   AlertTriangle, Cloud, Zap, Plus, Save, Lock, X, Maximize2, Minimize2,
-  ChevronRight, Link2,
+  ChevronRight, Link2, Route,
 } from "lucide-react";
 import CreatorMap from "@/components/CreatorMap";
 import { CheckpointList } from "@/components/handoff/CheckpointList";
 import { CheckpointDrawer } from "@/components/handoff/CheckpointDrawer";
 import { useHandoffCheckpoints } from "@/hooks/useHandoffCheckpoints";
+import { NewRouteBuilder, type NewRouteData } from "@/components/NewRouteBuilder";
 
 interface RouteWaypoint {
   id: string;
@@ -52,7 +53,9 @@ export default function CreatorMode() {
   const [privateLabel, setPrivateLabel] = useState("Operation Condor");
   const [routeNotes, setRouteNotes] = useState("");
   const [savedProfiles, setSavedProfiles] = useState<RouteProfile[]>([]);
-  const [activeTab, setActiveTab] = useState("map");
+  const [activeTab, setActiveTab] = useState("new-route");
+  const [newRouteData, setNewRouteData] = useState<NewRouteData | null>(null);
+  const [showNewRoute, setShowNewRoute] = useState(true);
 
   const handoff = useHandoffCheckpoints('SH-2026-CONDOR');
 
@@ -110,7 +113,7 @@ export default function CreatorMode() {
 
   return (
     <div className={`flex flex-col ${isFullscreen ? 'fixed inset-0 z-[100] bg-background' : 'h-[calc(100vh-2.5rem)]'}`}>
-      {/* Top Bar — hidden in fullscreen */}
+      {/* Top Bar */}
       {!isFullscreen && (
         <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-card/50 shrink-0">
           <div className="flex items-center gap-3">
@@ -119,7 +122,7 @@ export default function CreatorMode() {
               <span className="text-xs font-mono font-bold tracking-wider text-primary">CREATOR MODE</span>
             </div>
             <Badge variant="outline" className="text-[10px] font-mono border-primary/30 text-primary">
-              PRIVACY-CENTRIC
+              STRATEGIC ROUTE LAB
             </Badge>
             {handoff.checkpoints.length > 0 && (
               <Badge variant="outline" className="text-[10px] font-mono border-[hsl(var(--risk-medium))]/30 text-[hsl(var(--risk-medium))]">
@@ -129,6 +132,17 @@ export default function CreatorMode() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant={showNewRoute ? "default" : "outline"}
+              className="h-7 text-xs font-mono gap-1"
+              onClick={() => {
+                setShowNewRoute(true);
+                setActiveTab("new-route");
+              }}
+            >
+              <Route size={12} /> New Route
+            </Button>
             <Input
               value={privateLabel}
               onChange={e => setPrivateLabel(e.target.value)}
@@ -145,15 +159,17 @@ export default function CreatorMode() {
         </div>
       )}
 
-      {/* Body: left control panel + right map region */}
+      {/* Body */}
       <div className="flex flex-1 min-h-0">
-        {/* Left control panel — hidden in fullscreen */}
+        {/* Left control panel */}
         {!isFullscreen && (
-          <div className="w-72 border-r border-border bg-card/30 overflow-y-auto shrink-0">
+          <div className="w-72 border-r border-border bg-card/30 overflow-hidden shrink-0 flex flex-col">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-              <TabsList className="w-full rounded-none border-b border-border bg-transparent h-9">
+              <TabsList className="w-full rounded-none border-b border-border bg-transparent h-9 shrink-0">
+                <TabsTrigger value="new-route" className="text-[10px] font-mono flex-1">
+                  <Route size={10} className="mr-0.5" /> ROUTE
+                </TabsTrigger>
                 <TabsTrigger value="map" className="text-[10px] font-mono flex-1">LAYERS</TabsTrigger>
-                <TabsTrigger value="route" className="text-[10px] font-mono flex-1">ROUTE</TabsTrigger>
                 <TabsTrigger value="custody" className="text-[10px] font-mono flex-1 relative">
                   CUSTODY
                   {handoff.checkpoints.some(c => c.status.startsWith('awaiting')) && (
@@ -162,6 +178,14 @@ export default function CreatorMode() {
                 </TabsTrigger>
                 <TabsTrigger value="privacy" className="text-[10px] font-mono flex-1">PRIV</TabsTrigger>
               </TabsList>
+
+              {/* NEW ROUTE TAB */}
+              <TabsContent value="new-route" className="flex-1 overflow-hidden mt-0">
+                <NewRouteBuilder
+                  onRouteChange={setNewRouteData}
+                  onClose={() => setActiveTab("map")}
+                />
+              </TabsContent>
 
               <TabsContent value="map" className="flex-1 overflow-y-auto p-3 space-y-4 mt-0">
                 <div className="space-y-2">
@@ -213,61 +237,62 @@ export default function CreatorMode() {
                     </SelectContent>
                   </Select>
                 </div>
-              </TabsContent>
 
-              <TabsContent value="route" className="flex-1 overflow-y-auto p-3 space-y-3 mt-0">
-                <p className="text-[10px] font-mono text-muted-foreground tracking-wider">WAYPOINTS</p>
-                {waypoints.map((wp, idx) => (
-                  <div key={wp.id} className={`p-2 rounded border ${riskBg(wp.riskLevel)} space-y-1.5`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-mono text-muted-foreground w-4">{idx + 1}</span>
-                        <Input
-                          value={wp.label}
-                          onChange={e => updateWaypoint(wp.id, "label", e.target.value)}
-                          className="h-6 text-xs font-mono bg-transparent border-none p-0 w-32"
-                        />
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => updateWaypoint(wp.id, "hidden", !wp.hidden)} className="p-0.5">
-                          {wp.hidden ? <EyeOff size={11} className="text-muted-foreground" /> : <Eye size={11} className="text-primary" />}
-                        </button>
-                        {wp.type !== "origin" && wp.type !== "destination" && (
-                          <button onClick={() => removeWaypoint(wp.id)} className="p-0.5">
-                            <X size={11} className="text-muted-foreground hover:text-destructive" />
+                {/* Legacy waypoints */}
+                <div className="space-y-2">
+                  <p className="text-[10px] font-mono text-muted-foreground tracking-wider">LEGACY WAYPOINTS</p>
+                  {waypoints.map((wp, idx) => (
+                    <div key={wp.id} className={`p-2 rounded border ${riskBg(wp.riskLevel)} space-y-1.5`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-mono text-muted-foreground w-4">{idx + 1}</span>
+                          <Input
+                            value={wp.label}
+                            onChange={e => updateWaypoint(wp.id, "label", e.target.value)}
+                            className="h-6 text-xs font-mono bg-transparent border-none p-0 w-32"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => updateWaypoint(wp.id, "hidden", !wp.hidden)} className="p-0.5">
+                            {wp.hidden ? <EyeOff size={11} className="text-muted-foreground" /> : <Eye size={11} className="text-primary" />}
                           </button>
-                        )}
+                          {wp.type !== "origin" && wp.type !== "destination" && (
+                            <button onClick={() => removeWaypoint(wp.id)} className="p-0.5">
+                              <X size={11} className="text-muted-foreground hover:text-destructive" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Select value={wp.type} onValueChange={v => updateWaypoint(wp.id, "type", v)}>
+                          <SelectTrigger className="h-5 text-[10px] font-mono border-none bg-background/50 w-24 px-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="origin">Origin</SelectItem>
+                            <SelectItem value="transit">Transit</SelectItem>
+                            <SelectItem value="handoff">Handoff</SelectItem>
+                            <SelectItem value="refuel">Refuel</SelectItem>
+                            <SelectItem value="destination">Destination</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Select value={wp.riskLevel} onValueChange={v => updateWaypoint(wp.id, "riskLevel", v)}>
+                          <SelectTrigger className="h-5 text-[10px] font-mono border-none bg-background/50 w-20 px-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="safe">Safe</SelectItem>
+                            <SelectItem value="caution">Caution</SelectItem>
+                            <SelectItem value="high">High Risk</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Select value={wp.type} onValueChange={v => updateWaypoint(wp.id, "type", v)}>
-                        <SelectTrigger className="h-5 text-[10px] font-mono border-none bg-background/50 w-24 px-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="origin">Origin</SelectItem>
-                          <SelectItem value="transit">Transit</SelectItem>
-                          <SelectItem value="handoff">Handoff</SelectItem>
-                          <SelectItem value="refuel">Refuel</SelectItem>
-                          <SelectItem value="destination">Destination</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Select value={wp.riskLevel} onValueChange={v => updateWaypoint(wp.id, "riskLevel", v)}>
-                        <SelectTrigger className="h-5 text-[10px] font-mono border-none bg-background/50 w-20 px-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="safe">Safe</SelectItem>
-                          <SelectItem value="caution">Caution</SelectItem>
-                          <SelectItem value="high">High Risk</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                ))}
-                <Button variant="outline" size="sm" className="w-full text-xs font-mono h-7" onClick={addWaypoint}>
-                  <Plus size={12} className="mr-1" /> Add Waypoint
-                </Button>
+                  ))}
+                  <Button variant="outline" size="sm" className="w-full text-xs font-mono h-7" onClick={addWaypoint}>
+                    <Plus size={12} className="mr-1" /> Add Waypoint
+                  </Button>
+                </div>
               </TabsContent>
 
               <TabsContent value="custody" className="flex-1 overflow-hidden mt-0">
@@ -285,12 +310,10 @@ export default function CreatorMode() {
               <TabsContent value="privacy" className="flex-1 overflow-y-auto p-3 space-y-4 mt-0">
                 <div className="space-y-3">
                   <p className="text-[10px] font-mono text-muted-foreground tracking-wider">PRIVACY CONTROLS</p>
-
                   <div className="flex items-center justify-between py-1.5 px-2 rounded bg-secondary/50">
                     <Label className="text-xs font-mono">Hide Counterparties</Label>
                     <Switch checked={hideCounterparties} onCheckedChange={setHideCounterparties} className="scale-75" />
                   </div>
-
                   <div className="space-y-1.5">
                     <Label className="text-[10px] font-mono text-muted-foreground">PRIVATE ROUTE LABEL</Label>
                     <Input
@@ -300,7 +323,6 @@ export default function CreatorMode() {
                       placeholder="Internal codename…"
                     />
                   </div>
-
                   <div className="space-y-1.5">
                     <Label className="text-[10px] font-mono text-muted-foreground">ROUTE NOTES (PRIVATE)</Label>
                     <Textarea
@@ -310,7 +332,6 @@ export default function CreatorMode() {
                       placeholder="Private notes about this route…"
                     />
                   </div>
-
                   <div className="p-2 rounded bg-primary/5 border border-primary/20">
                     <p className="text-[10px] font-mono text-primary mb-1">🔒 Privacy Status</p>
                     <ul className="space-y-0.5">
@@ -346,12 +367,8 @@ export default function CreatorMode() {
           </div>
         )}
 
-        {/* ═══════════════════════════════════════════════════
-            RIGHT MAP REGION — flex-1, min-h-0, relative
-            Map fills via absolute inset-0. Bottom dock overlaid.
-            ═══════════════════════════════════════════════════ */}
+        {/* RIGHT MAP REGION */}
         <div className="flex-1 min-h-0 relative overflow-hidden bg-[#06111f]">
-          {/* Absolute map layer */}
           <div className="absolute inset-0">
             <CreatorMap
               layers={layers}
@@ -360,11 +377,11 @@ export default function CreatorMode() {
               hideCounterparties={hideCounterparties}
               checkpoints={handoff.checkpoints}
               onCheckpointClick={handoff.openCheckpoint}
-              showDebug={true}
+              showDebug={false}
             />
           </div>
 
-          {/* Checkpoint Drawer — overlaid */}
+          {/* Checkpoint Drawer */}
           {handoff.drawerOpen && handoff.selected && (
             <div className="absolute top-0 right-0 bottom-0 z-30">
               <CheckpointDrawer
@@ -376,7 +393,7 @@ export default function CreatorMode() {
             </div>
           )}
 
-          {/* Fullscreen exit button — overlaid */}
+          {/* Fullscreen exit */}
           {isFullscreen && (
             <Button
               size="sm"
@@ -388,7 +405,7 @@ export default function CreatorMode() {
             </Button>
           )}
 
-          {/* Bottom dock — overlaid on top of map, NOT in flow */}
+          {/* Bottom dock */}
           {!isFullscreen && (
             <div className="absolute left-0 right-0 bottom-0 z-20 pointer-events-none">
               <div className="mx-0 pointer-events-auto bg-card/90 backdrop-blur border-t border-border p-3">
@@ -396,11 +413,11 @@ export default function CreatorMode() {
                   <div className="flex items-center gap-4">
                     <div>
                       <p className="text-[10px] font-mono text-muted-foreground">ROUTE</p>
-                      <p className="text-xs font-mono font-medium">{privateLabel || "Unnamed Route"}</p>
+                      <p className="text-xs font-mono font-medium">{newRouteData?.name || privateLabel || "Unnamed Route"}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-mono text-muted-foreground">WAYPOINTS</p>
-                      <p className="text-xs font-mono">{waypoints.length} ({waypoints.filter(w => w.hidden).length} masked)</p>
+                      <p className="text-[10px] font-mono text-muted-foreground">SEGMENTS</p>
+                      <p className="text-xs font-mono">{newRouteData?.segments.length || waypoints.length}</p>
                     </div>
                     <div>
                       <p className="text-[10px] font-mono text-muted-foreground">CUSTODY</p>
