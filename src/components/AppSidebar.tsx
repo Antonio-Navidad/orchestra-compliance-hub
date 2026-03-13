@@ -101,6 +101,7 @@ export function AppSidebar() {
       <SidebarContent className="px-1">
         {renderGroup("OPERATIONS", mainNav)}
         {renderGroup("AI ENGINES", aiNav)}
+        {renderGroup("COMPLIANCE", complianceNav)}
         {renderGroup("INSIGHTS", insightsNav)}
         {renderGroup("SETTINGS", settingsNav)}
       </SidebarContent>
