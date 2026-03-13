@@ -2,7 +2,7 @@ import {
   Activity, Package, FileText, BarChart3, Users, Plus, CreditCard,
   Lightbulb, ClipboardList, Settings, Scale, BookOpen, Map,
   Search, LogOut, ArrowDownToLine, ArrowUpFromLine, Layers,
-  Fingerprint, Zap, ShieldCheck, Eye, ShoppingCart
+  Fingerprint, Zap, ShieldCheck, Eye, ShoppingCart, Radio
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -27,6 +27,7 @@ const aiNav = [
   { title: "Route Builder", url: "/route-builder", icon: Map },
   { title: "Decision Twin", url: "/decision-twin", icon: Zap },
   { title: "Creator Mode", url: "/creator-mode", icon: Eye },
+  { title: "Watch Mode", url: "/watch-mode", icon: Radio },
   { title: "Seller Mode", url: "/seller-mode", icon: ShoppingCart },
   { title: "Teams / Enterprise", url: "/teams", icon: Users },
   { title: "Team Chat", url: "/team-chat", icon: Users },

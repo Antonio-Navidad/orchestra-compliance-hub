@@ -2225,6 +2225,39 @@ export type Database = {
           },
         ]
       }
+      shipment_watchlist: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          pinned: boolean
+          priority: string
+          shipment_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          pinned?: boolean
+          priority?: string
+          shipment_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          pinned?: boolean
+          priority?: string
+          shipment_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       shipments: {
         Row: {
           assigned_broker: string | null
