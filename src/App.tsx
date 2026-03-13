@@ -24,6 +24,7 @@ import ProductClassification from "./pages/ProductClassification";
 import DocumentValidator from "./pages/DocumentValidator";
 import DecisionTwin from "./pages/DecisionTwin";
 import RouteBuilder from "./pages/RouteBuilder";
+import TeamChat from "./pages/TeamChat";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
