@@ -32,3 +32,9 @@ verify_jwt = false
 
 [functions.reeval-stale-twins]
 verify_jwt = false
+
+[functions.make-dispatch]
+verify_jwt = false
+
+[functions.make-callback]
+verify_jwt = false

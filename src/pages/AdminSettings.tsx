@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useRole, AppRole } from "@/hooks/useRole";
+import MakeIntegrationPanel from "@/components/MakeIntegrationPanel";
 
 const ROLE_LABELS: Record<AppRole, string> = {
   admin: "Admin",
@@ -372,7 +373,7 @@ export default function AdminSettings() {
             </div>
           </TabsContent>
 
-          <TabsContent value="integrations" className="mt-4">
+          <TabsContent value="integrations" className="mt-4 space-y-6">
             <div className="rounded-lg border border-border bg-card p-6 space-y-4">
               <h3 className="font-mono text-xs text-muted-foreground">API INTEGRATION STATUS</h3>
               <div className="space-y-3">
@@ -381,14 +382,13 @@ export default function AdminSettings() {
                   <span className="font-mono text-xs text-risk-medium">PENDING SETUP</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span>Make.com Webhook</span>
-                  <span className="font-mono text-xs text-risk-safe">ACTIVE</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
                   <span>Legal Scraper (Make.com)</span>
                   <span className="font-mono text-xs text-risk-medium">PENDING SETUP</span>
                 </div>
               </div>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-6">
+              <MakeIntegrationPanel />
             </div>
           </TabsContent>
         </Tabs>
