@@ -60,9 +60,11 @@ interface CreatorMapProps {
   overlays: { weather: boolean; military: boolean; congestion: boolean; warnings: boolean };
   sensitivity: string;
   hideCounterparties: boolean;
+  checkpoints?: HandoffCheckpoint[];
+  onCheckpointClick?: (id: string) => void;
 }
 
-export default function CreatorMap({ layers, overlays, sensitivity, hideCounterparties }: CreatorMapProps) {
+export default function CreatorMap({ layers, overlays, sensitivity, hideCounterparties, checkpoints = [], onCheckpointClick }: CreatorMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [loadError, setLoadError] = useState(false);
