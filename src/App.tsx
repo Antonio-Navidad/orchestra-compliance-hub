@@ -77,6 +77,7 @@ const App = () => (
           <Route path="/decision-twin" element={<ProtectedRoute><DecisionTwin /></ProtectedRoute>} />
           <Route path="/decision-twin/:id" element={<ProtectedRoute><DecisionTwin /></ProtectedRoute>} />
           <Route path="/creator-mode" element={<ProtectedRoute><CreatorMode /></ProtectedRoute>} />
+          <Route path="/watch-mode" element={<ProtectedRoute><WatchMode /></ProtectedRoute>} />
           <Route path="/seller-mode" element={<ProtectedRoute><MicroSellerMode /></ProtectedRoute>} />
           <Route path="/teams" element={<ProtectedRoute><TeamsBlackTier /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
