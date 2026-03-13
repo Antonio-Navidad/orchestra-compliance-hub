@@ -231,18 +231,85 @@ export default function CreatorMap({ layers, overlays, sensitivity, hideCounterp
         },
       });
 
+      // ── CHECKPOINT LAYERS ─────────────────────────────
+      map.addSource("checkpoints", { type: "geojson", data: checkpointsToGeoJSON([]) });
+      map.addSource("checkpoint-flow", { type: "geojson", data: checkpointsToFlowGeoJSON([]) });
+
+      map.addLayer({
+        id: "checkpoint-flow-line", type: "line", source: "checkpoint-flow",
+        paint: { "line-color": "#f59e0b", "line-width": 2, "line-opacity": 0.4, "line-dasharray": [3, 3] },
+      });
+      map.addLayer({
+        id: "checkpoint-ring", type: "circle", source: "checkpoints",
+        paint: {
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 2, 7, 6, 12, 10, 16],
+          "circle-color": "transparent",
+          "circle-stroke-color": [
+            "match", ["get", "status"],
+            "completed", "#22c55e", "verified", "#22c55e",
+            "issue_flagged", "#ef4444",
+            "awaiting_sender", "#eab308", "awaiting_receiver", "#eab308",
+            "upcoming", "#3b82f6",
+            "#64748b"
+          ],
+          "circle-stroke-width": 2,
+          "circle-stroke-opacity": 0.7,
+        },
+      });
+      map.addLayer({
+        id: "checkpoint-dot", type: "circle", source: "checkpoints",
+        paint: {
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 2, 3, 6, 5, 10, 8],
+          "circle-color": [
+            "match", ["get", "status"],
+            "completed", "#22c55e", "verified", "#22c55e",
+            "issue_flagged", "#ef4444",
+            "awaiting_sender", "#eab308", "awaiting_receiver", "#eab308",
+            "upcoming", "#3b82f6",
+            "#64748b"
+          ],
+          "circle-opacity": 0.9,
+        },
+      });
+      map.addLayer({
+        id: "checkpoint-labels", type: "symbol", source: "checkpoints",
+        layout: {
+          "text-field": ["concat", "#", ["to-string", ["get", "sequence"]], " ", ["get", "name"]],
+          "text-font": ["Open Sans Regular"],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 2, 0, 4, 9, 8, 11],
+          "text-offset": [0, 1.5],
+          "text-anchor": "top",
+          "text-optional": true,
+        },
+        paint: {
+          "text-color": "#f59e0b",
+          "text-halo-color": "rgba(10, 15, 30, 0.9)",
+          "text-halo-width": 1.5,
+        },
+      });
+
+      // Checkpoint click handler
+      map.on("click", "checkpoint-dot", (e) => {
+        const id = e.features?.[0]?.properties?.id;
+        if (id && onCheckpointClick) onCheckpointClick(id);
+      });
+      map.on("mouseenter", "checkpoint-dot", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "checkpoint-dot", () => { map.getCanvas().style.cursor = ""; });
+
       // ── HOVER INTERACTIONS ────────────────────────────
       const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: "orchestra-popup" });
 
-      for (const layerId of ["hub-inner", "sea-line", "air-line", "land-line", "condor-line"]) {
+      for (const layerId of ["hub-inner", "sea-line", "air-line", "land-line", "condor-line", "checkpoint-dot"]) {
         map.on("mouseenter", layerId, (e) => {
           map.getCanvas().style.cursor = "pointer";
           const f = e.features?.[0];
           if (!f) return;
           const props = f.properties;
-          const html = props.name
-            ? `<strong>${props.name}</strong><br/><span style="opacity:0.7">${props.type} • ${props.country}</span>`
-            : `<strong>${props.label}</strong><br/><span style="opacity:0.7">${props.mode} • Risk: ${props.risk_score}%</span>`;
+          const html = layerId === "checkpoint-dot"
+            ? `<strong>#${props.sequence} ${props.name}</strong><br/><span style="opacity:0.7">${props.type_label} • ${props.status_label}</span>`
+            : props.name
+              ? `<strong>${props.name}</strong><br/><span style="opacity:0.7">${props.type} • ${props.country}</span>`
+              : `<strong>${props.label}</strong><br/><span style="opacity:0.7">${props.mode} • Risk: ${props.risk_score}%</span>`;
           popup.setLngLat(e.lngLat).setHTML(html).addTo(map);
         });
         map.on("mouseleave", layerId, () => {
@@ -255,7 +322,7 @@ export default function CreatorMap({ layers, overlays, sensitivity, hideCounterp
     });
 
     return () => { map.remove(); };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── TOGGLE VISIBILITY reactively ──────────────────────────
   const setVisibility = useCallback((ids: string[], visible: boolean) => {
