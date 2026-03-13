@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,10 +10,24 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { title, description, materials, dimensions, weight, originCountry, destinationCountry, imageUrl, productUrl } = await req.json();
+    const { title, description, materials, dimensions, weight, originCountry, destinationCountry, imageUrl, productUrl, shipmentId, productId, workspaceId } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // Auth check
+    const authHeader = req.headers.get("Authorization");
+    let userId: string | null = null;
+    if (authHeader?.startsWith("Bearer ")) {
+      const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: claimsData } = await userClient.auth.getClaims(authHeader.replace("Bearer ", ""));
+      userId = claimsData?.claims?.sub as string || null;
+    }
 
     const userPrompt = `Classify this product for customs/trade purposes.
 
@@ -120,14 +135,47 @@ Provide your classification analysis.`;
 
     const data = await response.json();
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-
-    if (!toolCall) {
-      throw new Error("AI did not return a classification result");
-    }
+    if (!toolCall) throw new Error("AI did not return a classification result");
 
     const result = JSON.parse(toolCall.function.arguments);
 
-    return new Response(JSON.stringify(result), {
+    // Persist to product_classifications table
+    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const candidateCodes = [
+      { code: result.primaryCode, description: result.primaryDescription, confidence: result.confidence, reason: result.reasoning },
+      ...(result.alternateCodes || []),
+    ];
+
+    const { data: classRecord, error: insertError } = await adminClient
+      .from("product_classifications")
+      .insert({
+        shipment_id: shipmentId || null,
+        product_id: productId || null,
+        candidate_codes: candidateCodes,
+        confidence: result.confidence / 100,
+        accepted_code: result.primaryCode,
+        status: "classified",
+        ai_model_version: "google/gemini-3-flash-preview",
+        restricted_flags: result.restrictedFlags || [],
+        evidence: {
+          reasoning: result.reasoning,
+          estimatedDutyRange: result.estimatedDutyRange,
+          estimatedTaxes: result.estimatedTaxes,
+          requiredDocuments: result.requiredDocuments,
+          warnings: result.warnings || [],
+          missingInfo: result.missingInfo || [],
+          input: { title, description, materials, originCountry, destinationCountry },
+        },
+      })
+      .select("id")
+      .single();
+
+    if (insertError) {
+      console.error("Failed to persist classification:", insertError);
+    }
+
+    return new Response(JSON.stringify({ ...result, classificationId: classRecord?.id }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

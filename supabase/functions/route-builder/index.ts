@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,10 +10,13 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { origin, destination, mode, priority, cargoType, shipmentValue, weightKg, deadline, incoterm } = await req.json();
+    const { origin, destination, mode, priority, cargoType, shipmentValue, weightKg, deadline, incoterm, shipmentId, workspaceId } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const systemPrompt = `You are an expert logistics route planner and freight advisor. Given origin, destination, transport mode, and priority, recommend optimal shipping routes.
 
@@ -156,6 +160,51 @@ Incoterm: ${incoterm || "Not specified"}`;
     if (!toolCall) throw new Error("No route recommendation returned");
 
     const result = JSON.parse(toolCall.function.arguments);
+
+    // Persist to route_recommendations
+    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const allRoutes = [result.recommended_route, ...(result.alternate_routes || [])];
+    const options = allRoutes.map((r: any, i: number) => ({
+      label: r.label,
+      summary: r.summary,
+      legs: r.legs,
+      total_transit_days: r.total_transit_days,
+      estimated_cost_usd_min: r.estimated_cost_usd_min,
+      estimated_cost_usd_max: r.estimated_cost_usd_max,
+      eta_confidence: r.eta_confidence,
+      customs_hold_risk: r.customs_hold_risk,
+      route_risk: r.route_risk,
+      delay_risk: r.delay_risk,
+      explanation: r.explanation,
+      rank: i + 1,
+    }));
+
+    const avgConfidence = options.reduce((sum: number, o: any) => sum + (o.eta_confidence || 50), 0) / Math.max(options.length, 1);
+
+    const { data: rec, error: recErr } = await adminClient
+      .from("route_recommendations")
+      .insert({
+        shipment_id: shipmentId || null,
+        workspace_id: workspaceId || null,
+        mode: mode || "sea",
+        origin: typeof origin === "string" ? { label: origin } : origin,
+        destination: typeof destination === "string" ? { label: destination } : destination,
+        priority: priority || "balanced",
+        options,
+        confidence: avgConfidence / 100,
+        selected_option_index: 0,
+        constraints: { cargoType, shipmentValue, weightKg, deadline, incoterm },
+        ai_model_version: "google/gemini-3-flash-preview",
+      })
+      .select("id")
+      .single();
+
+    if (recErr) {
+      console.error("Failed to persist route recommendation:", recErr);
+    } else {
+      result.recommendationId = rec?.id;
+    }
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,10 +10,13 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { documents, shipmentMode, originCountry, destinationCountry, hsCode, declaredValue } = await req.json();
+    const { documents, shipmentMode, originCountry, destinationCountry, hsCode, declaredValue, shipmentId, workspaceId } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const docSummary = (documents || []).map((d: any, i: number) =>
       `Document ${i + 1}: Type=${d.type}, Name=${d.name}, Fields=${JSON.stringify(d.extractedFields || {})}`
@@ -57,7 +61,7 @@ Analyze completeness and consistency.`;
                 properties: {
                   completenessScore: { type: "number", description: "0-100 packet completeness score" },
                   consistencyScore: { type: "number", description: "0-100 cross-document consistency score" },
-                  overallReadiness: { type: "string", enum: ["ready", "needs_attention", "not_ready", "critical"], description: "Overall filing readiness" },
+                  overallReadiness: { type: "string", enum: ["ready", "needs_attention", "not_ready", "critical"] },
                   missingDocuments: {
                     type: "array",
                     items: {
@@ -125,6 +129,65 @@ Analyze completeness and consistency.`;
     if (!toolCall) throw new Error("AI did not return a validation result");
 
     const result = JSON.parse(toolCall.function.arguments);
+
+    // Persist to document_packets + document_issues
+    if (shipmentId) {
+      const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+      const readinessMap: Record<string, string> = {
+        ready: "ready",
+        needs_attention: "incomplete",
+        not_ready: "incomplete",
+        critical: "inconsistent",
+      };
+
+      const { data: packet, error: packetErr } = await adminClient
+        .from("document_packets")
+        .insert({
+          shipment_id: shipmentId,
+          workspace_id: workspaceId || null,
+          status: readinessMap[result.overallReadiness] || "draft",
+          completeness_score: result.completenessScore / 100,
+          filing_readiness_score: result.consistencyScore / 100,
+          country_requirements: {
+            requirements: result.countryRequirements || [],
+            missingDocuments: result.missingDocuments || [],
+            recommendations: result.recommendations || [],
+          },
+        })
+        .select("id")
+        .single();
+
+      if (packetErr) {
+        console.error("Failed to persist document packet:", packetErr);
+      } else if (packet && result.issues?.length) {
+        const issueRows = result.issues.map((issue: any) => ({
+          packet_id: packet.id,
+          issue_type: "validation",
+          severity: issue.severity,
+          field_name: issue.field,
+          description: issue.description,
+          suggestion: issue.suggestion,
+        }));
+
+        const { error: issueErr } = await adminClient
+          .from("document_issues")
+          .insert(issueRows);
+
+        if (issueErr) console.error("Failed to persist document issues:", issueErr);
+
+        result.packetId = packet.id;
+      }
+
+      // Update shipment packet_score
+      const { error: shipErr } = await adminClient
+        .from("shipments")
+        .update({ packet_score: result.completenessScore })
+        .eq("shipment_id", shipmentId);
+
+      if (shipErr) console.error("Failed to update shipment packet_score:", shipErr);
+    }
+
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
