@@ -298,11 +298,11 @@ export default function DocumentValidator() {
 
   const handleDrop = (e: React.DragEvent) => { e.preventDefault(); handleFiles(e.dataTransfer.files); };
 
-  // Run cross-doc matching whenever documents change
+  // Run cross-doc matching whenever documents change (exclude packet parents)
   useEffect(() => {
-    const extracted = documents.filter((d) => d.status === "extracted");
+    const extracted = documents.filter((d) => d.status === "extracted" && !d.isMultiDocument);
     if (extracted.length >= 2) {
-      setCrossDocMismatches(detectCrossDocMismatches(documents));
+      setCrossDocMismatches(detectCrossDocMismatches(extracted));
     } else {
       setCrossDocMismatches([]);
     }
