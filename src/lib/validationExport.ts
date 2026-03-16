@@ -170,7 +170,16 @@ export function buildDetailExportRows(
 
   // Also export rule issues that are not field-level (missing docs, filings, advisories)
   if (ruleResult) {
+    // Build review lookup by rule_id
+    const reviewMap = new Map<string, FindingReviewExport>();
+    if (reviews) {
+      for (const r of reviews) {
+        reviewMap.set(r.rule_id, r); // last review wins
+      }
+    }
+
     for (const issue of ruleResult.issues) {
+      const review = reviewMap.get(issue.ruleId);
       rows.push({
         shipmentId: context.shipmentId || "N/A",
         packetHash: context.packetHash || "",
@@ -192,6 +201,11 @@ export function buildDetailExportRows(
         destination: context.destination,
         mode: context.mode,
         notes: `${issue.description} | ${issue.triggeredBecause}`,
+        reviewStatus: review?.status || "open",
+        reviewAction: review?.action || "",
+        reviewNote: review?.note || "",
+        reviewedBy: review?.user_email || "",
+        reviewedAt: review?.created_at || "",
         timestamp,
       });
     }
