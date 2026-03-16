@@ -108,10 +108,20 @@ export interface ExportAuditContext {
 
 // ── Detail export: one row per extracted field ────────────────────────
 
+export interface FindingReviewExport {
+  rule_id: string;
+  status: string;
+  action: string;
+  note: string | null;
+  user_email: string | null;
+  created_at: string;
+}
+
 export function buildDetailExportRows(
   documents: UploadedDocument[],
   ruleResult: RuleEngineResult | null,
   context: ExportAuditContext,
+  reviews?: FindingReviewExport[],
 ): Record<string, any>[] {
   const rows: Record<string, any>[] = [];
   const timestamp = ruleResult?.timestamp || new Date().toISOString();
