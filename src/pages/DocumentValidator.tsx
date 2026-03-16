@@ -392,10 +392,11 @@ export default function DocumentValidator() {
   };
   const removeDocument = (id: string) => setDocuments((prev) => prev.filter((d) => d.id !== id));
 
-  const allExtracted = documents.length > 0 && documents.every((d) => d.status === "extracted");
+  const allExtracted = documents.length > 0 && documents.filter(d => !d.isMultiDocument).length > 0 && documents.filter(d => !d.isMultiDocument).every((d) => d.status === "extracted");
   const anyExtracting = documents.some((d) => d.status === "extracting");
-  const totalFields = documents.reduce((sum, d) => sum + d.extractedFields.length, 0);
-  const highConfFields = documents.reduce((sum, d) => sum + d.extractedFields.filter((f) => f.confidence >= 0.8).length, 0);
+  const nonPacketDocs = documents.filter(d => !d.isMultiDocument);
+  const totalFields = nonPacketDocs.reduce((sum, d) => sum + d.extractedFields.length, 0);
+  const highConfFields = nonPacketDocs.reduce((sum, d) => sum + d.extractedFields.filter((f) => f.confidence >= 0.8).length, 0);
   const lowConfFields = totalFields - highConfFields;
 
   const exportContext = { shipmentId, origin: originCountry, destination: destinationCountry, mode: shipmentMode };
