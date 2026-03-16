@@ -2,6 +2,10 @@ import { type ExportColumn } from "./excelExport";
 
 export const VALIDATION_DETAIL_COLUMNS: ExportColumn[] = [
   { header: "Shipment ID", key: "shipmentId" },
+  { header: "Packet Hash", key: "packetHash" },
+  { header: "Rules Version", key: "rulesVersion" },
+  { header: "Model Version", key: "modelVersion" },
+  { header: "Workflow Stage", key: "workflowStage" },
   { header: "Validation ID", key: "validationId" },
   { header: "Document Type", key: "documentType" },
   { header: "Field Name", key: "fieldName" },
@@ -10,7 +14,9 @@ export const VALIDATION_DETAIL_COLUMNS: ExportColumn[] = [
   { header: "Confidence", key: "confidence", transform: (v) => v != null ? `${Math.round(v * 100)}%` : "" },
   { header: "Validation Status", key: "validationStatus" },
   { header: "Issue Type", key: "issueType" },
+  { header: "Issue Category", key: "issueCategory" },
   { header: "Severity", key: "severity" },
+  { header: "Evidence Source", key: "evidenceSource" },
   { header: "Origin", key: "origin" },
   { header: "Destination", key: "destination" },
   { header: "Mode", key: "mode" },
