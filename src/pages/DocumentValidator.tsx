@@ -142,6 +142,7 @@ export default function DocumentValidator() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const { sessions, loading: historyLoading, fetchSessions, saveSession } = useValidationHistory();
+  const { reviews, fetchReviews, submitReview, getStatus, getReviewsForRule } = useFindingReviews(savedSessionId);
 
   // Auto-fill shipment context from extracted fields
   const autoFillContext = useCallback((fields: ExtractedField[]) => {
