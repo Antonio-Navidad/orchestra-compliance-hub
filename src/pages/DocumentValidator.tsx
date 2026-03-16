@@ -401,8 +401,9 @@ export default function DocumentValidator() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setResult(data);
-      const disp = computeDisposition(data, crossDocMismatches, lowConfFields);
-      setDisposition(disp);
+      const dual = computeDualDisposition(data, crossDocMismatches, lowConfFields);
+      setDualDisp(dual);
+      setDisposition(dispositionFromDual(dual));
       setActiveTab("results");
       toast.success("Validation complete");
     } catch (e: any) {
