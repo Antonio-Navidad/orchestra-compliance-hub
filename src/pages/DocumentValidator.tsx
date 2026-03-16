@@ -457,16 +457,13 @@ export default function DocumentValidator() {
   const highConfFields = nonPacketDocs.reduce((sum, d) => sum + d.extractedFields.filter((f) => f.confidence >= 0.8).length, 0);
   const lowConfFields = totalFields - highConfFields;
 
-  const exportContext = { shipmentId, origin: originCountry, destination: destinationCountry, mode: shipmentMode };
-  const detailRows = ruleResult ? buildDetailExportRows(documents, { issues: ruleResult.issues.map((i) => ({ severity: i.severity, field: i.documentType, description: i.description, suggestion: i.suggestion })) }, exportContext) : [];
-  const summaryRows = ruleResult ? [buildSummaryExportRow(documents, {
-    completenessScore: ruleResult.completenessScore,
-    consistencyScore: ruleResult.consistencyScore,
-    overallReadiness: ruleResult.packetIntegrity,
-    missingDocuments: [],
-    issues: ruleResult.issues.map((i) => ({ severity: i.severity, field: i.documentType, description: i.description, suggestion: i.suggestion })),
-    recommendations: [],
-  }, exportContext)] : [];
+  const exportContext: import("@/lib/validationExport").ExportAuditContext = {
+    shipmentId, origin: originCountry, destination: destinationCountry, mode: shipmentMode,
+    packetHash: auditMeta?.packetHash, rulesVersion: auditMeta?.rulesVersion,
+    modelVersion: auditMeta?.modelVersion, workflowStage: auditMeta?.workflowStage,
+  };
+  const detailRows = ruleResult ? buildDetailExportRows(documents, ruleResult, exportContext) : [];
+  const summaryRows = ruleResult ? [buildSummaryExportRow(documents, ruleResult, exportContext)] : [];
 
   const filteredSessions = sessions.filter((s) => {
     if (!historySearch) return true;
