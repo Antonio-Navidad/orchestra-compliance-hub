@@ -429,9 +429,26 @@ export default function DocumentValidator() {
     setDeclaredValue(session.declared_value || "");
     setCrossDocMismatches(session.cross_doc_mismatches || []);
     setSavedSessionId(session.id);
+
+    // Restore deterministic rule result from saved session
+    const savedResult = session.validation_result as RuleEngineResult | null;
+    if (savedResult && savedResult.rulesVersion) {
+      setRuleResult(savedResult);
+    }
+
+    // Restore audit meta from notes field
+    try {
+      const meta = session.notes ? JSON.parse(session.notes) : null;
+      if (meta && meta.packetHash) {
+        setAuditMeta(meta);
+      }
+    } catch {
+      // notes is not JSON audit meta, ignore
+    }
+
     setShowHistory(false);
     setActiveTab("results");
-    toast.success("Session recalled");
+    toast.success("Session recalled — showing saved deterministic result");
   };
 
   const startEdit = (docId: string, fieldName: string, currentValue: string) => {
