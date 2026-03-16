@@ -764,14 +764,14 @@ export default function DocumentValidator() {
                     <TableHead className="text-[10px] font-mono">CONF</TableHead>
                     <TableHead className="text-[10px] font-mono">FIELD</TableHead>
                     <TableHead className="text-[10px] font-mono">VALUE</TableHead>
+                    <TableHead className="text-[10px] font-mono">DOC TYPE</TableHead>
                     <TableHead className="text-[10px] font-mono">SOURCE</TableHead>
-                    <TableHead className="text-[10px] font-mono">LOCATION</TableHead>
                     <TableHead className="text-[10px] font-mono">STATUS</TableHead>
                     <TableHead className="text-[10px] font-mono w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {documents.filter((d) => d.status === "extracted").flatMap((doc) =>
+                  {documents.filter((d) => d.status === "extracted" && !d.isMultiDocument).flatMap((doc) =>
                     doc.extractedFields.map((field) => (
                       <TableRow key={`${doc.id}-${field.fieldName}`}>
                         <TableCell className="py-2"><ConfidenceDot confidence={field.confidence} /></TableCell>
@@ -786,8 +786,12 @@ export default function DocumentValidator() {
                             <span className={field.confidence < 0.7 ? "text-risk-high" : ""}>{field.value}</span>
                           )}
                         </TableCell>
-                        <TableCell className="py-2 text-[10px] text-muted-foreground truncate max-w-[120px]">{doc.file.name}</TableCell>
-                        <TableCell className="py-2 text-[10px] text-muted-foreground">{field.sourceLocation || "—"}</TableCell>
+                        <TableCell className="py-2">
+                          <Badge variant="secondary" className="text-[10px] font-mono">
+                            {(field.sourceDocumentType || doc.detectedType || doc.type).replace(/_/g, " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-2 text-[10px] text-muted-foreground truncate max-w-[100px]">{doc.parentUploadId ? doc.name.split("→")[0]?.trim() : doc.file.name}</TableCell>
                         <TableCell className="py-2">
                           <Badge variant="outline" className={`text-[10px] font-mono ${
                             field.confidence >= 0.8 ? "border-risk-low/50 text-risk-low" :
