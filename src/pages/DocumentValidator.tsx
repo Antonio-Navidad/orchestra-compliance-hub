@@ -105,15 +105,18 @@ function ConfidenceDot({ confidence }: { confidence: number }) {
 function computeDisposition(result: ValidationResult, mismatches: CrossDocMismatch[], lowConfFields: number): string {
   const critIssues = result.issues.filter((i) => i.severity === "critical").length;
   const highIssues = result.issues.filter((i) => i.severity === "high").length;
-  const critMismatches = mismatches.filter((m) => m.severity === "critical").length;
+  // Only true conflicts count toward disposition escalation
+  const trueConflicts = mismatches.filter((m) => m.mismatchType === "true_conflict");
+  const critMismatches = trueConflicts.filter((m) => m.severity === "critical").length;
+  const highMismatches = trueConflicts.filter((m) => m.severity === "high").length;
   const requiredMissing = result.missingDocuments.filter((d) => d.importance === "required").length;
 
   if (critIssues > 0 || critMismatches > 0) return "high_risk";
   if (requiredMissing > 0) return "missing_required_docs";
-  if (critMismatches > 0 || mismatches.filter((m) => m.severity === "high").length > 0) return "data_mismatch";
+  if (highMismatches > 0) return "data_mismatch";
   if (lowConfFields > 3) return "low_confidence";
   if (highIssues > 0) return "needs_review";
-  if (result.issues.length > 0 || lowConfFields > 0) return "cleared_warnings";
+  if (result.issues.length > 0 || lowConfFields > 0 || mismatches.length > 0) return "cleared_warnings";
   return "ready_to_ship";
 }
 
@@ -515,7 +518,12 @@ export default function DocumentValidator() {
           </CardContent></Card>
           <Card className="border-border bg-card"><CardContent className="py-3 px-4">
             <p className="text-[10px] font-mono text-muted-foreground">MISMATCHES</p>
-            <p className="text-2xl font-bold font-mono text-risk-high">{crossDocMismatches.length}</p>
+            <p className="text-2xl font-bold font-mono text-risk-high">
+              {crossDocMismatches.filter(m => m.mismatchType === "true_conflict").length}
+            </p>
+            {crossDocMismatches.filter(m => m.mismatchType !== "true_conflict").length > 0 && (
+              <p className="text-[10px] font-mono text-muted-foreground">+{crossDocMismatches.filter(m => m.mismatchType !== "true_conflict").length} info</p>
+            )}
           </CardContent></Card>
         </div>
       )}
@@ -818,20 +826,28 @@ export default function DocumentValidator() {
 
         {/* CROSS-DOC MISMATCHES TAB */}
         <TabsContent value="mismatches" className="mt-4 space-y-3">
-          <Card className="border-risk-high/20 bg-risk-high/5">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-mono text-risk-high">
-                CROSS-DOCUMENT MISMATCHES — {crossDocMismatches.length} conflicts detected
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {crossDocMismatches.map((mm, i) => (
-                <div key={i} className="p-3 rounded border border-border bg-card">
-                  <div className="flex items-center gap-2 mb-2">
+          {(() => {
+            const trueConflicts = crossDocMismatches.filter(m => m.mismatchType === "true_conflict");
+            const infoItems = crossDocMismatches.filter(m => m.mismatchType !== "true_conflict");
+            const MISMATCH_TYPE_LABELS: Record<string, { label: string; color: string }> = {
+              true_conflict: { label: "TRUE CONFLICT", color: "text-risk-high" },
+              semantic_variant: { label: "SEMANTIC VARIANT", color: "text-muted-foreground" },
+              unit_conversion: { label: "UNIT CONVERSION", color: "text-muted-foreground" },
+              expected_difference: { label: "EXPECTED DIFFERENCE", color: "text-muted-foreground" },
+            };
+            const renderMismatchCard = (mm: CrossDocMismatch, i: number) => {
+              const isConflict = mm.mismatchType === "true_conflict";
+              return (
+                <div key={i} className={`p-3 rounded border ${isConflict ? 'border-risk-high/30 bg-risk-high/5' : 'border-border bg-card'}`}>
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <Badge variant={mm.severity === "critical" ? "destructive" : "outline"} className="text-[10px] font-mono uppercase">{mm.severity}</Badge>
+                    <Badge variant="secondary" className={`text-[10px] font-mono ${MISMATCH_TYPE_LABELS[mm.mismatchType]?.color || ''}`}>
+                      {MISMATCH_TYPE_LABELS[mm.mismatchType]?.label || mm.mismatchType}
+                    </Badge>
                     <span className="text-sm font-mono">{mm.fieldName.replace(/_/g, " ")}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-2">{mm.description}</p>
+                  <p className="text-xs text-muted-foreground mb-1">{mm.description}</p>
+                  <p className="text-xs text-foreground/70 mb-2 italic">{mm.reason}</p>
                   <div className="space-y-1">
                     {mm.documents.map((d, j) => (
                       <div key={j} className="flex items-center gap-2 text-xs">
@@ -843,9 +859,42 @@ export default function DocumentValidator() {
                     ))}
                   </div>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
+              );
+            };
+            return (
+              <>
+                {trueConflicts.length > 0 && (
+                  <Card className="border-risk-high/20 bg-risk-high/5">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-xs font-mono text-risk-high">
+                        TRUE CONFLICTS — {trueConflicts.length} material discrepancies
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {trueConflicts.map(renderMismatchCard)}
+                    </CardContent>
+                  </Card>
+                )}
+                {infoItems.length > 0 && (
+                  <Card className="border-border bg-card">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-xs font-mono text-muted-foreground">
+                        INFORMATIONAL — {infoItems.length} normalized differences (no action required)
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {infoItems.map(renderMismatchCard)}
+                    </CardContent>
+                  </Card>
+                )}
+                {crossDocMismatches.length === 0 && (
+                  <Card className="border-border bg-card">
+                    <CardContent className="py-8 text-center text-sm text-muted-foreground">No cross-document mismatches detected.</CardContent>
+                  </Card>
+                )}
+              </>
+            );
+          })()}
         </TabsContent>
 
         {/* VALIDATION RESULTS TAB */}
@@ -924,23 +973,34 @@ export default function DocumentValidator() {
                 )}
 
                 {/* Cross-doc mismatches summary in results */}
-                {crossDocMismatches.length > 0 && (
-                  <Card className="border-risk-high/20 bg-risk-high/5">
-                    <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                      <CardTitle className="text-xs font-mono text-risk-high">CROSS-DOCUMENT MISMATCHES ({crossDocMismatches.length})</CardTitle>
-                      <Button variant="ghost" size="sm" className="text-[10px] font-mono" onClick={() => setActiveTab("mismatches")}>View All</Button>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      {crossDocMismatches.slice(0, 3).map((mm, i) => (
-                        <div key={i} className="flex items-center gap-2 text-xs">
-                          <Badge variant={mm.severity === "critical" ? "destructive" : "outline"} className="text-[10px] font-mono">{mm.severity}</Badge>
-                          <span className="font-mono">{mm.fieldName.replace(/_/g, " ")}</span>
-                          <span className="text-muted-foreground">— {mm.documents.length} conflicting values</span>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                )}
+                {crossDocMismatches.length > 0 && (() => {
+                  const trueConflicts = crossDocMismatches.filter(m => m.mismatchType === "true_conflict");
+                  const infoCount = crossDocMismatches.length - trueConflicts.length;
+                  const borderColor = trueConflicts.length > 0 ? "border-risk-high/20 bg-risk-high/5" : "border-border bg-card";
+                  const titleColor = trueConflicts.length > 0 ? "text-risk-high" : "text-muted-foreground";
+                  return (
+                    <Card className={borderColor}>
+                      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                        <CardTitle className={`text-xs font-mono ${titleColor}`}>
+                          CROSS-DOCUMENT COMPARISON ({trueConflicts.length} conflict{trueConflicts.length !== 1 ? 's' : ''}{infoCount > 0 ? `, ${infoCount} info` : ''})
+                        </CardTitle>
+                        <Button variant="ghost" size="sm" className="text-[10px] font-mono" onClick={() => setActiveTab("mismatches")}>View All</Button>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {trueConflicts.slice(0, 3).map((mm, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs">
+                            <Badge variant={mm.severity === "critical" ? "destructive" : "outline"} className="text-[10px] font-mono">{mm.severity}</Badge>
+                            <span className="font-mono">{mm.fieldName.replace(/_/g, " ")}</span>
+                            <span className="text-muted-foreground">— {mm.reason.slice(0, 60)}</span>
+                          </div>
+                        ))}
+                        {trueConflicts.length === 0 && (
+                          <p className="text-xs text-muted-foreground">No material conflicts. {infoCount} normalized difference{infoCount !== 1 ? 's' : ''} detected.</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
 
                 {/* Issues */}
                 {result.issues.length > 0 && (
