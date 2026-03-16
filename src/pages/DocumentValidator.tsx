@@ -999,8 +999,28 @@ export default function DocumentValidator() {
           {result && (() => {
             const rc = readinessConfig[result.overallReadiness];
             const StatusIcon = rc.icon;
+
+            // Categorize missing docs
+            const missingUploaded = result.missingDocuments.filter(
+              (d) => !DOWNSTREAM_DOC_TYPES.has(d.documentType.toLowerCase()) && !EXTERNAL_FILING_TYPES.has(d.documentType.toLowerCase())
+            );
+            const externalFilings = result.missingDocuments.filter(
+              (d) => EXTERNAL_FILING_TYPES.has(d.documentType.toLowerCase())
+            );
+            const downstreamDocs = result.missingDocuments.filter(
+              (d) => DOWNSTREAM_DOC_TYPES.has(d.documentType.toLowerCase())
+            );
+
+            // Categorize issues
+            const regulatoryIssues = result.issues.filter(i => i.severity === "critical" || i.severity === "high");
+            const advisoryIssues = result.issues.filter(i => i.severity !== "critical" && i.severity !== "high");
+
+            const trueConflicts = crossDocMismatches.filter(m => m.mismatchType === "true_conflict");
+            const infoCount = crossDocMismatches.length - trueConflicts.length;
+
             return (
               <>
+                {/* Scores Card */}
                 <Card className={`border ${rc.bg}`}>
                   <CardContent className="pt-5 pb-4">
                     <div className="flex items-center gap-3 mb-4">
@@ -1030,6 +1050,138 @@ export default function DocumentValidator() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* ═══ SECTION 1: DOCUMENT MISMATCHES ═══ */}
+                {crossDocMismatches.length > 0 && (() => {
+                  const borderColor = trueConflicts.length > 0 ? "border-risk-high/20 bg-risk-high/5" : "border-risk-low/20 bg-risk-low/5";
+                  const titleColor = trueConflicts.length > 0 ? "text-risk-high" : "text-risk-low";
+                  const titleText = trueConflicts.length > 0
+                    ? `DOCUMENT MISMATCHES — ${trueConflicts.length} conflict${trueConflicts.length !== 1 ? 's' : ''}`
+                    : `DOCUMENT CONSISTENCY — No conflicts`;
+                  return (
+                    <Card className={borderColor}>
+                      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                        <CardTitle className={`text-xs font-mono ${titleColor}`}>{titleText}</CardTitle>
+                        <Button variant="ghost" size="sm" className="text-[10px] font-mono" onClick={() => setActiveTab("mismatches")}>View All</Button>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {trueConflicts.length > 0 ? trueConflicts.slice(0, 3).map((mm, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs">
+                            <Badge variant={mm.severity === "critical" ? "destructive" : "outline"} className="text-[10px] font-mono">{mm.severity}</Badge>
+                            <span className="font-mono">{mm.fieldName.replace(/_/g, " ")}</span>
+                            <span className="text-muted-foreground">— {mm.reason.slice(0, 60)}</span>
+                          </div>
+                        )) : (
+                          <p className="text-xs text-risk-low flex items-center gap-1.5">
+                            <CheckCircle size={12} /> All documents internally consistent.
+                            {infoCount > 0 && <span className="text-muted-foreground ml-1">({infoCount} normalized difference{infoCount !== 1 ? 's' : ''})</span>}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
+
+                {/* Clean packet confirmation when no conflicts */}
+                {crossDocMismatches.length === 0 && (
+                  <Card className="border-risk-low/20 bg-risk-low/5">
+                    <CardContent className="py-4">
+                      <p className="text-xs text-risk-low flex items-center gap-1.5 font-mono">
+                        <CheckCircle size={14} /> DOCUMENT CONSISTENCY — No cross-document mismatches detected
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* ═══ SECTION 2: MISSING UPLOADED DOCUMENTS ═══ */}
+                {missingUploaded.length > 0 && (
+                  <Card className="border-risk-high/20 bg-risk-high/5">
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-risk-high">MISSING UPLOADED DOCUMENTS — {missingUploaded.length}</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                      {missingUploaded.map((doc, i) => (
+                        <div key={i} className="flex items-start gap-2 p-2 rounded border border-risk-high/20">
+                          <FileText size={14} className={doc.importance === "required" ? "text-risk-critical" : "text-risk-medium"} />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-mono">{doc.documentType.replace(/_/g, " ").toUpperCase()}</span>
+                              <Badge variant={doc.importance === "required" ? "destructive" : "outline"} className="text-[10px]">{doc.importance}</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">{doc.reason}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* ═══ SECTION 3: EXTERNAL FILING REQUIREMENTS ═══ */}
+                {externalFilings.length > 0 && (
+                  <Card className="border-risk-medium/20 bg-risk-medium/5">
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-risk-medium">EXTERNAL FILING REQUIREMENTS — {externalFilings.length}</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                      {externalFilings.map((doc, i) => (
+                        <div key={i} className="flex items-start gap-2 p-2 rounded border border-risk-medium/20">
+                          <ShieldAlert size={14} className="text-risk-medium shrink-0" />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-mono">{doc.documentType.replace(/_/g, " ").toUpperCase()}</span>
+                              <Badge variant="outline" className="text-[10px] border-risk-medium/50 text-risk-medium">external filing</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">{doc.reason}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* ═══ SECTION 4: REGULATORY ADVISORIES / ISSUES ═══ */}
+                {regulatoryIssues.length > 0 && (
+                  <Card className="border-risk-high/20 bg-risk-high/5">
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-risk-high">REGULATORY ISSUES — {regulatoryIssues.length}</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                      {regulatoryIssues.map((issue, i) => (
+                        <div key={i} className="p-3 rounded border border-risk-high/20">
+                          <div className="flex items-start gap-2">
+                            {issue.severity === "critical" ? <XCircle size={14} className="text-risk-critical shrink-0" />
+                              : <AlertTriangle size={14} className="text-risk-high shrink-0" />}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-[10px] font-mono uppercase">{issue.severity}</Badge>
+                                <span className="text-xs font-mono text-muted-foreground">{issue.field}</span>
+                              </div>
+                              <p className="text-sm mt-1">{issue.description}</p>
+                              <p className="text-xs text-primary mt-1">💡 {issue.suggestion}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {advisoryIssues.length > 0 && (
+                  <Card className="border-border bg-card">
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-muted-foreground">ADVISORIES — {advisoryIssues.length}</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                      {advisoryIssues.map((issue, i) => (
+                        <div key={i} className="p-3 rounded border border-border bg-secondary/30">
+                          <div className="flex items-start gap-2">
+                            <Info size={14} className="text-muted-foreground shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-[10px] font-mono">{issue.severity}</Badge>
+                                <span className="text-xs font-mono text-muted-foreground">{issue.field}</span>
+                              </div>
+                              <p className="text-sm mt-1">{issue.description}</p>
+                              <p className="text-xs text-primary mt-1">💡 {issue.suggestion}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Exception Queue */}
                 {lowConfFields > 0 && (
@@ -1069,112 +1221,26 @@ export default function DocumentValidator() {
                   </Card>
                 )}
 
-                {/* Cross-doc mismatches summary in results */}
-                {crossDocMismatches.length > 0 && (() => {
-                  const trueConflicts = crossDocMismatches.filter(m => m.mismatchType === "true_conflict");
-                  const infoCount = crossDocMismatches.length - trueConflicts.length;
-                  const borderColor = trueConflicts.length > 0 ? "border-risk-high/20 bg-risk-high/5" : "border-border bg-card";
-                  const titleColor = trueConflicts.length > 0 ? "text-risk-high" : "text-muted-foreground";
-                  return (
-                    <Card className={borderColor}>
-                      <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                        <CardTitle className={`text-xs font-mono ${titleColor}`}>
-                          CROSS-DOCUMENT COMPARISON ({trueConflicts.length} conflict{trueConflicts.length !== 1 ? 's' : ''}{infoCount > 0 ? `, ${infoCount} info` : ''})
-                        </CardTitle>
-                        <Button variant="ghost" size="sm" className="text-[10px] font-mono" onClick={() => setActiveTab("mismatches")}>View All</Button>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        {trueConflicts.slice(0, 3).map((mm, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs">
-                            <Badge variant={mm.severity === "critical" ? "destructive" : "outline"} className="text-[10px] font-mono">{mm.severity}</Badge>
-                            <span className="font-mono">{mm.fieldName.replace(/_/g, " ")}</span>
-                            <span className="text-muted-foreground">— {mm.reason.slice(0, 60)}</span>
-                          </div>
-                        ))}
-                        {trueConflicts.length === 0 && (
-                          <p className="text-xs text-muted-foreground">No material conflicts. {infoCount} normalized difference{infoCount !== 1 ? 's' : ''} detected.</p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })()}
-
-                {/* Issues */}
-                {result.issues.length > 0 && (
+                {/* ═══ SECTION 5: RECOMMENDED OPTIONAL DOCUMENTS ═══ */}
+                {downstreamDocs.length > 0 && (
                   <Card className="border-border bg-card">
-                    <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-muted-foreground">ISSUES ({result.issues.length})</CardTitle></CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-muted-foreground">RECOMMENDED / LATER-STAGE DOCUMENTS</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
-                      {result.issues.map((issue, i) => (
-                        <div key={i} className="p-3 rounded border border-border bg-secondary/30">
-                          <div className="flex items-start gap-2">
-                            {issue.severity === "critical" ? <XCircle size={14} className="text-risk-critical shrink-0" />
-                              : issue.severity === "high" ? <AlertTriangle size={14} className="text-risk-high shrink-0" />
-                              : <AlertTriangle size={14} className="text-risk-medium shrink-0" />}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-[10px] font-mono uppercase">{issue.severity}</Badge>
-                                <span className="text-xs font-mono text-muted-foreground">{issue.field}</span>
-                              </div>
-                              <p className="text-sm mt-1">{issue.description}</p>
-                              <p className="text-xs text-primary mt-1">💡 {issue.suggestion}</p>
+                      {downstreamDocs.map((doc, i) => (
+                        <div key={i} className="flex items-start gap-2 p-2 rounded border border-border/50 opacity-60">
+                          <FileText size={14} className="text-muted-foreground" />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-mono">{doc.documentType.replace(/_/g, " ").toUpperCase()}</span>
+                              <Badge variant="outline" className="text-[10px]">later stage</Badge>
                             </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">{doc.reason}</p>
                           </div>
                         </div>
                       ))}
                     </CardContent>
                   </Card>
                 )}
-
-                {/* Missing Documents — lifecycle-aware filtering */}
-                {result.missingDocuments.length > 0 && (() => {
-                  // Downstream docs that should only matter at later lifecycle stages
-                  const DOWNSTREAM_DOC_TYPES = new Set([
-                    "arrival notice", "delivery order", "cargo release order",
-                    "customs release", "proof of delivery", "import declaration",
-                  ]);
-                  const preShipmentDocs = result.missingDocuments.filter(
-                    (d) => !DOWNSTREAM_DOC_TYPES.has(d.documentType.toLowerCase())
-                  );
-                  const downstreamDocs = result.missingDocuments.filter(
-                    (d) => DOWNSTREAM_DOC_TYPES.has(d.documentType.toLowerCase())
-                  );
-                  return (
-                    <Card className="border-border bg-card">
-                      <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-muted-foreground">MISSING DOCUMENTS</CardTitle></CardHeader>
-                      <CardContent className="space-y-2">
-                        {preShipmentDocs.map((doc, i) => (
-                          <div key={i} className="flex items-start gap-2 p-2 rounded border border-border">
-                            <FileText size={14} className={doc.importance === "required" ? "text-risk-critical" : "text-risk-medium"} />
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-mono">{doc.documentType.replace(/_/g, " ").toUpperCase()}</span>
-                                <Badge variant={doc.importance === "required" ? "destructive" : "outline"} className="text-[10px]">{doc.importance}</Badge>
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-0.5">{doc.reason}</p>
-                            </div>
-                          </div>
-                        ))}
-                        {downstreamDocs.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-border">
-                            <p className="text-[10px] font-mono text-muted-foreground mb-2">POST-ARRIVAL / DOWNSTREAM (not required at this stage)</p>
-                            {downstreamDocs.map((doc, i) => (
-                              <div key={i} className="flex items-start gap-2 p-2 rounded border border-border/50 opacity-60">
-                                <FileText size={14} className="text-muted-foreground" />
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-mono">{doc.documentType.replace(/_/g, " ").toUpperCase()}</span>
-                                    <Badge variant="outline" className="text-[10px]">later stage</Badge>
-                                  </div>
-                                  <p className="text-xs text-muted-foreground mt-0.5">{doc.reason}</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })()}
 
                 {/* Recommendations */}
                 {result.recommendations.length > 0 && (
