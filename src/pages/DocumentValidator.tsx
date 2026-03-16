@@ -1179,7 +1179,7 @@ export default function DocumentValidator() {
                     <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-risk-medium">3. EXTERNAL FILING REQUIREMENTS — {ruleResult.externalFilings.length}</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
                       {ruleResult.externalFilings.map((issue, i) => (
-                        <RuleIssueRow key={i} issue={issue} />
+                        <RuleIssueRow key={i} issue={issue} reviewProps={savedSessionId ? { status: getStatus(issue.ruleId), history: getReviewsForRule(issue.ruleId), onSubmit: submitReview } : undefined} />
                       ))}
                     </CardContent>
                   </Card>
