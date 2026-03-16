@@ -22,6 +22,11 @@ export const VALIDATION_DETAIL_COLUMNS: ExportColumn[] = [
   { header: "Destination", key: "destination" },
   { header: "Mode", key: "mode" },
   { header: "Notes", key: "notes" },
+  { header: "Review Status", key: "reviewStatus" },
+  { header: "Review Action", key: "reviewAction" },
+  { header: "Review Note", key: "reviewNote" },
+  { header: "Reviewed By", key: "reviewedBy" },
+  { header: "Reviewed At", key: "reviewedAt", transform: (v) => v ? new Date(v).toLocaleString() : "" },
   { header: "Timestamp", key: "timestamp", transform: (v) => v ? new Date(v).toLocaleString() : "" },
 ];
 
