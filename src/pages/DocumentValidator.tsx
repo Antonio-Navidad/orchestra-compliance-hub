@@ -1434,26 +1434,3 @@ function RuleIssueRow({ issue, reviewProps }: {
     </div>
   );
 }
-  const severityIcon = issue.severity === "critical" ? <XCircle size={14} className="text-risk-critical shrink-0" />
-    : issue.severity === "high" ? <AlertTriangle size={14} className="text-risk-high shrink-0" />
-    : <Info size={14} className="text-muted-foreground shrink-0" />;
-
-  return (
-    <div className="p-3 rounded border border-border">
-      <div className="flex items-start gap-2">
-        {severityIcon}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant={issue.severity === "critical" ? "destructive" : "outline"} className="text-[10px] font-mono uppercase">{issue.severity}</Badge>
-            <span className="text-sm font-mono">{issue.documentType.replace(/_/g, " ").toUpperCase() || issue.ruleName}</span>
-            <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground">{issue.ruleId}</Badge>
-            <Badge variant="secondary" className="text-[10px]">{issue.category.replace(/_/g, " ")}</Badge>
-          </div>
-          <p className="text-sm mt-1">{issue.description}</p>
-          <p className="text-xs text-primary mt-1">💡 {issue.suggestion}</p>
-          <p className="text-[10px] text-muted-foreground mt-1 italic">Triggered: {issue.triggeredBecause}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
