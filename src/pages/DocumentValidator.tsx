@@ -68,16 +68,39 @@ interface ValidationResult {
   recommendations: string[];
 }
 
-const DISPOSITION_LABELS: Record<string, { label: string; color: string }> = {
-  ready_to_ship: { label: "READY TO SHIP", color: "text-risk-low" },
-  missing_required_docs: { label: "MISSING REQUIRED DOCS", color: "text-risk-high" },
-  needs_review: { label: "NEEDS REVIEW", color: "text-risk-medium" },
-  data_mismatch: { label: "DATA MISMATCH DETECTED", color: "text-risk-high" },
-  low_confidence: { label: "LOW CONFIDENCE EXTRACTION", color: "text-risk-medium" },
-  high_risk: { label: "HIGH-RISK COMPLIANCE ISSUE", color: "text-risk-critical" },
-  cleared_warnings: { label: "CLEARED WITH WARNINGS", color: "text-risk-low" },
-  escalate: { label: "ESCALATE TO BROKER / CUSTOMS", color: "text-risk-critical" },
-  pending: { label: "PENDING VALIDATION", color: "text-muted-foreground" },
+// External filing requirement types — not part of packet integrity
+const EXTERNAL_FILING_TYPES = new Set([
+  "isf filing", "isf filing confirmation", "importer security filing",
+  "ams filing", "aci filing", "ens filing", "customs bond",
+  "entry summary", "prior notice", "fda prior notice",
+  "lacey act declaration", "tsca certification",
+]);
+
+const DOWNSTREAM_DOC_TYPES = new Set([
+  "arrival notice", "delivery order", "cargo release order",
+  "customs release", "proof of delivery", "import declaration",
+]);
+
+interface DualDisposition {
+  packetIntegrity: 'clean' | 'warnings' | 'conflicts' | 'incomplete';
+  complianceReadiness: 'ready' | 'action_required' | 'not_ready' | 'pending';
+  packetLabel: string;
+  complianceLabel: string;
+  complianceDetail?: string;
+}
+
+const PACKET_CONFIG: Record<string, { label: string; color: string; bg: string; icon: typeof CheckCircle }> = {
+  clean: { label: "PACKET CLEAN", color: "text-risk-low", bg: "border-risk-low/30 bg-risk-low/10", icon: CheckCircle },
+  warnings: { label: "PACKET OK — MINOR NOTES", color: "text-risk-medium", bg: "border-risk-medium/30 bg-risk-medium/10", icon: AlertTriangle },
+  conflicts: { label: "DOCUMENT CONFLICTS", color: "text-risk-high", bg: "border-risk-high/30 bg-risk-high/10", icon: XCircle },
+  incomplete: { label: "INCOMPLETE PACKET", color: "text-risk-critical", bg: "border-risk-critical/30 bg-risk-critical/10", icon: ShieldAlert },
+};
+
+const COMPLIANCE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  ready: { label: "FILING READY", color: "text-risk-low", bg: "border-risk-low/30 bg-risk-low/10" },
+  action_required: { label: "ACTION REQUIRED", color: "text-risk-medium", bg: "border-risk-medium/30 bg-risk-medium/10" },
+  not_ready: { label: "NOT FILING READY", color: "text-risk-high", bg: "border-risk-high/30 bg-risk-high/10" },
+  pending: { label: "PENDING", color: "text-muted-foreground", bg: "border-border bg-card" },
 };
 
 const readinessConfig = {
