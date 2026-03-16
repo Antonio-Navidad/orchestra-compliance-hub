@@ -1405,8 +1405,58 @@ export default function DocumentValidator() {
                 {f === "all" ? "All" : f === "templates" ? "Templates Only" : f === "validated" ? "Validated Lanes" : "Production Lanes"}
               </Badge>
             ))}
-            {lanesLoading && <Loader2 size={14} className="animate-spin text-muted-foreground" />}
+            {(lanesLoading || savedLanesLoading) && <Loader2 size={14} className="animate-spin text-muted-foreground" />}
+            <Button variant="outline" size="sm" className="ml-auto font-mono text-[10px] gap-1.5" onClick={() => setShowNewLane(!showNewLane)}>
+              <Plus size={12} /> New Lane
+            </Button>
           </div>
+
+          {showNewLane && (
+            <div className="border border-border rounded-md p-3 space-y-3 bg-muted/30">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <Label className="text-[10px] font-mono">Lane Name</Label>
+                  <Input value={newLaneName} onChange={(e) => setNewLaneName(e.target.value)} placeholder="e.g. Colombia → US East Coast" className="text-xs mt-1" />
+                </div>
+                <div>
+                  <Label className="text-[10px] font-mono">Origin</Label>
+                  <Input value={newLaneOrigin} onChange={(e) => setNewLaneOrigin(e.target.value)} placeholder="e.g. Colombia" className="text-xs mt-1" />
+                </div>
+                <div>
+                  <Label className="text-[10px] font-mono">Destination</Label>
+                  <Input value={newLaneDestination} onChange={(e) => setNewLaneDestination(e.target.value)} placeholder="e.g. United States" className="text-xs mt-1" />
+                </div>
+                <div>
+                  <Label className="text-[10px] font-mono">Mode</Label>
+                  <Select value={newLaneMode} onValueChange={setNewLaneMode}>
+                    <SelectTrigger className="text-xs mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sea">Sea</SelectItem>
+                      <SelectItem value="air">Air</SelectItem>
+                      <SelectItem value="land">Land</SelectItem>
+                      <SelectItem value="multimodal">Multimodal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-[10px] font-mono">Workflow Stage</Label>
+                  <Select value={newLaneStage} onValueChange={setNewLaneStage}>
+                    <SelectTrigger className="text-xs mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pre_shipment">Pre-Shipment</SelectItem>
+                      <SelectItem value="in_transit">In Transit</SelectItem>
+                      <SelectItem value="at_customs">At Customs</SelectItem>
+                      <SelectItem value="post_clearance">Post Clearance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" size="sm" className="text-xs" onClick={() => setShowNewLane(false)}>Cancel</Button>
+                <Button size="sm" className="text-xs font-mono" onClick={handleCreateNewLane}>Create Lane</Button>
+              </div>
+            </div>
+          )}
 
           <ScrollArea className="flex-1 mt-3 pr-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
