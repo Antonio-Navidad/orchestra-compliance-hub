@@ -191,19 +191,88 @@ export default function DocumentValidator() {
         throw new Error(err.error || `HTTP ${res.status}`);
       }
       const data = await res.json();
-      const fields: ExtractedField[] = (data.fields || []).map((f: any) => ({
-        fieldName: f.fieldName, value: f.value, confidence: f.confidence, sourceLocation: f.sourceLocation,
+      const allFields: ExtractedField[] = (data.fields || []).map((f: any) => ({
+        fieldName: f.fieldName, value: f.value, confidence: f.confidence,
+        sourceLocation: f.sourceLocation, sourceDocumentType: f.sourceDocumentType,
       }));
+      const detectedDocs: DetectedDocument[] = (data.detectedDocuments || []).map((d: any) => ({
+        documentType: d.documentType, pageRange: d.pageRange,
+        confidence: d.confidence, detectionMethod: d.detectionMethod || "direct",
+      }));
+      const isMulti = data.isMultiDocument === true && detectedDocs.length > 1;
 
-      setDocuments((prev) =>
-        prev.map((d) =>
-          d.id === doc.id
-            ? { ...d, status: "extracted", extractedFields: fields, detectedType: data.detectedDocumentType, overallQuality: data.overallQuality, parseWarnings: data.parseWarnings, rawTextSummary: data.rawTextSummary, extractionId: data.extractionId }
-            : d
-        )
-      );
-      autoFillContext(fields);
-      toast.success(`Extracted ${fields.length} fields from ${doc.file.name}`);
+      if (isMulti) {
+        // Split into virtual sub-documents per detected document type
+        const subDocs: UploadedDocument[] = detectedDocs.map((dd) => {
+          const subFields = allFields.filter(
+            (f) => f.sourceDocumentType?.toLowerCase() === dd.documentType.toLowerCase()
+          );
+          return {
+            id: crypto.randomUUID(),
+            file: doc.file,
+            type: dd.documentType,
+            name: `${doc.file.name} → ${dd.documentType.replace(/_/g, " ")}`,
+            status: "extracted" as const,
+            extractedFields: subFields,
+            detectedType: dd.documentType,
+            overallQuality: data.overallQuality,
+            parseWarnings: [],
+            rawTextSummary: "",
+            extractionId: data.extractionId,
+            parentUploadId: doc.id,
+            isMultiDocument: false,
+            detectedDocuments: [],
+          };
+        });
+
+        // Also collect any unattributed fields
+        const attributedTypes = new Set(detectedDocs.map((d) => d.documentType.toLowerCase()));
+        const unattributed = allFields.filter(
+          (f) => !f.sourceDocumentType || !attributedTypes.has(f.sourceDocumentType.toLowerCase())
+        );
+
+        // Replace the parent doc with a packet marker + sub-docs
+        setDocuments((prev) => {
+          const withoutParent = prev.filter((d) => d.id !== doc.id);
+          const parentMarker: UploadedDocument = {
+            ...doc,
+            status: "extracted",
+            extractedFields: unattributed,
+            detectedType: "multi_document_packet",
+            overallQuality: data.overallQuality,
+            parseWarnings: data.parseWarnings || [],
+            rawTextSummary: data.rawTextSummary || "",
+            extractionId: data.extractionId,
+            isMultiDocument: true,
+            detectedDocuments: detectedDocs,
+          };
+          return [...withoutParent, parentMarker, ...subDocs];
+        });
+
+        // Auto-fill from all fields
+        autoFillContext(allFields);
+        toast.success(`Detected ${detectedDocs.length} documents in ${doc.file.name}, extracted ${allFields.length} fields`);
+      } else {
+        // Single document handling (existing behavior)
+        setDocuments((prev) =>
+          prev.map((d) =>
+            d.id === doc.id
+              ? {
+                  ...d, status: "extracted", extractedFields: allFields,
+                  detectedType: data.detectedDocumentType,
+                  overallQuality: data.overallQuality,
+                  parseWarnings: data.parseWarnings,
+                  rawTextSummary: data.rawTextSummary,
+                  extractionId: data.extractionId,
+                  isMultiDocument: false,
+                  detectedDocuments: detectedDocs.length > 0 ? detectedDocs : [{ documentType: data.detectedDocumentType || doc.type, confidence: 1, detectionMethod: "direct" as const }],
+                }
+              : d
+          )
+        );
+        autoFillContext(allFields);
+        toast.success(`Extracted ${allFields.length} fields from ${doc.file.name}`);
+      }
     } catch (e: any) {
       setDocuments((prev) =>
         prev.map((d) => (d.id === doc.id ? { ...d, status: "error", error: e.message } : d))
