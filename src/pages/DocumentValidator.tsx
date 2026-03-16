@@ -1263,8 +1263,12 @@ export default function DocumentValidator() {
                       <CardContent className="py-3 px-4">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-xs font-mono font-bold">{s.shipment_id || "Draft"}</span>
-                          <Badge variant="outline" className={`text-[10px] font-mono ${DISPOSITION_LABELS[s.disposition || "pending"]?.color || ""}`}>
-                            {DISPOSITION_LABELS[s.disposition || "pending"]?.label || s.disposition}
+                          <Badge variant="outline" className={`text-[10px] font-mono ${
+                            s.disposition === "ready_to_ship" ? "text-risk-low" :
+                            s.disposition === "high_risk" || s.disposition === "data_mismatch" ? "text-risk-high" :
+                            "text-risk-medium"
+                          }`}>
+                            {(s.disposition || "pending").replace(/_/g, " ").toUpperCase()}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
