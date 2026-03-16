@@ -1158,7 +1158,7 @@ export default function DocumentValidator() {
                     <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-risk-high">2. MISSING PACKET DOCUMENTS — {ruleResult.packetRequirements.length}</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
                       {ruleResult.packetRequirements.map((issue, i) => (
-                        <RuleIssueRow key={i} issue={issue} />
+                        <RuleIssueRow key={i} issue={issue} reviewProps={savedSessionId ? { status: getStatus(issue.ruleId), history: getReviewsForRule(issue.ruleId), onSubmit: submitReview } : undefined} />
                       ))}
                     </CardContent>
                   </Card>
