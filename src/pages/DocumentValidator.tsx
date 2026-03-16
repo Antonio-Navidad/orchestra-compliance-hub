@@ -423,6 +423,15 @@ export default function DocumentValidator() {
     toast("Workspace reset");
   };
 
+  // Load reviews when a saved session is set
+  const prevSessionRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (savedSessionId && savedSessionId !== prevSessionRef.current) {
+      prevSessionRef.current = savedSessionId;
+      fetchReviews();
+    }
+  }, [savedSessionId, fetchReviews]);
+
   const handleRecallSession = (session: ValidationSession) => {
     setShipmentId(session.shipment_id || "");
     setShipmentMode(session.shipment_mode || "sea");
