@@ -417,7 +417,47 @@ export default function DocumentValidator() {
     if (id) setSavedSessionId(id);
   };
 
-  const handleLoadTemplate = (t: ShipmentTemplate) => {
+  const handleSaveAsLane = async () => {
+    if (!originCountry || !destinationCountry) {
+      toast.error("Origin and destination are required to save a lane");
+      return;
+    }
+    const laneName = `${originCountry} → ${destinationCountry} (${shipmentMode})`;
+    const id = await createLane({
+      name: laneName,
+      origin: originCountry,
+      destination: destinationCountry,
+      mode: shipmentMode,
+      workflow_stage: workflowStage,
+      rules_version: auditMeta?.rulesVersion,
+      source_type: "saved_from_validation",
+      status: "validated",
+    });
+    if (id) fetchLanes();
+  };
+
+  const handleCreateNewLane = async () => {
+    if (!newLaneName.trim() || !newLaneOrigin.trim() || !newLaneDestination.trim()) {
+      toast.error("Name, origin, and destination are required");
+      return;
+    }
+    const id = await createLane({
+      name: newLaneName,
+      origin: newLaneOrigin,
+      destination: newLaneDestination,
+      mode: newLaneMode,
+      workflow_stage: newLaneStage,
+      source_type: "manual",
+      status: "template_only",
+    });
+    if (id) {
+      setShowNewLane(false);
+      setNewLaneName(""); setNewLaneOrigin(""); setNewLaneDestination("");
+      setNewLaneMode("sea"); setNewLaneStage("pre_shipment");
+      fetchLanes();
+    }
+  };
+
     setSelectedTemplate(t);
     setShipmentMode(t.mode);
     if (t.origin) setOriginCountry(t.origin);
