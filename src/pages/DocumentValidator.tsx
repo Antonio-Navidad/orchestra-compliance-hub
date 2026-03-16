@@ -71,9 +71,9 @@ function guessDocType(filename: string): string {
 // ── Packet / Compliance status configs ────────────────────────────────
 
 const PACKET_CONFIG: Record<string, { label: string; color: string; bg: string; icon: typeof CheckCircle }> = {
-  clean: { label: "PACKET CLEAN", color: "text-risk-low", bg: "border-risk-low/30 bg-risk-low/10", icon: CheckCircle },
+  clean: { label: "PACKET COMPLETE", color: "text-risk-low", bg: "border-risk-low/30 bg-risk-low/10", icon: CheckCircle },
   warnings: { label: "PACKET OK — MINOR NOTES", color: "text-risk-medium", bg: "border-risk-medium/30 bg-risk-medium/10", icon: AlertTriangle },
-  conflicts: { label: "DOCUMENT CONFLICTS", color: "text-risk-high", bg: "border-risk-high/30 bg-risk-high/10", icon: XCircle },
+  conflicts: { label: "PACKET CONFLICTS", color: "text-risk-high", bg: "border-risk-high/30 bg-risk-high/10", icon: XCircle },
   incomplete: { label: "INCOMPLETE PACKET", color: "text-risk-critical", bg: "border-risk-critical/30 bg-risk-critical/10", icon: ShieldAlert },
 };
 
@@ -553,6 +553,42 @@ export default function DocumentValidator() {
       {/* ═══ DUAL DISPOSITION BANNER ═══ */}
       {ruleResult && (
         <div className="space-y-3">
+          {/* Top summary sentence */}
+          {(() => {
+            const packetOk = ruleResult.packetIntegrity === "clean" || ruleResult.packetIntegrity === "warnings";
+            const filingOk = ruleResult.complianceReadiness === "ready";
+            if (packetOk && filingOk) {
+              return (
+                <div className="px-4 py-2 rounded-lg border border-risk-low/30 bg-risk-low/5 text-xs text-foreground">
+                  <span className="font-semibold text-risk-low">✓ Shipment Ready</span>
+                  <span className="text-muted-foreground ml-2">— Uploaded packet is complete and all filing requirements are met.</span>
+                </div>
+              );
+            }
+            if (packetOk && !filingOk) {
+              return (
+                <div className="px-4 py-2 rounded-lg border border-risk-medium/30 bg-risk-medium/5 text-xs text-foreground">
+                  <span className="font-semibold text-risk-medium">⚠ Partial Readiness</span>
+                  <span className="text-muted-foreground ml-2">— Uploaded packet is internally complete, but external filing actions are still required before shipment clearance.</span>
+                </div>
+              );
+            }
+            if (!packetOk && filingOk) {
+              return (
+                <div className="px-4 py-2 rounded-lg border border-risk-high/30 bg-risk-high/5 text-xs text-foreground">
+                  <span className="font-semibold text-risk-high">⚠ Packet Issues</span>
+                  <span className="text-muted-foreground ml-2">— Filing requirements are met, but the uploaded packet has missing documents or data conflicts that need resolution.</span>
+                </div>
+              );
+            }
+            return (
+              <div className="px-4 py-2 rounded-lg border border-risk-critical/30 bg-risk-critical/5 text-xs text-foreground">
+                <span className="font-semibold text-risk-critical">✗ Not Ready</span>
+                <span className="text-muted-foreground ml-2">— Both the uploaded packet and external filing requirements need attention before this shipment can proceed.</span>
+              </div>
+            );
+          })()}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {/* Packet Integrity */}
             {(() => {
@@ -565,11 +601,11 @@ export default function DocumentValidator() {
                     <p className={`font-mono text-xs font-bold ${pc.color}`}>{pc.label}</p>
                     <p className="text-[10px] text-muted-foreground truncate">{ruleResult.packetLabel}</p>
                   </div>
-                  <Badge variant="outline" className="text-[9px] font-mono shrink-0">PACKET</Badge>
+                  <Badge variant="outline" className="text-[9px] font-mono shrink-0">UPLOADED PACKET</Badge>
                 </div>
               );
             })()}
-            {/* Compliance Readiness */}
+            {/* Compliance / Filing Readiness */}
             {(() => {
               const cc = COMPLIANCE_CONFIG[ruleResult.complianceReadiness];
               return (
@@ -579,7 +615,7 @@ export default function DocumentValidator() {
                     <p className={`font-mono text-xs font-bold ${cc.color}`}>{cc.label}</p>
                     <p className="text-[10px] text-muted-foreground truncate">{ruleResult.complianceDetail || ruleResult.complianceLabel}</p>
                   </div>
-                  <Badge variant="outline" className="text-[9px] font-mono shrink-0">FILING</Badge>
+                  <Badge variant="outline" className="text-[9px] font-mono shrink-0">EXTERNAL FILING</Badge>
                 </div>
               );
             })()}

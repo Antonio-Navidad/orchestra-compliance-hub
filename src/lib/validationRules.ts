@@ -489,7 +489,7 @@ export function evaluateRules(
 
   // 5. Compute dual disposition (deterministic)
   let packetIntegrity: RuleEngineResult["packetIntegrity"] = "clean";
-  let packetLabel = "Documentation Internally Consistent";
+  let packetLabel = "All Packet Documents Present — No Conflicts";
 
   if (trueConflictCount > 0) {
     packetIntegrity = "conflicts";
