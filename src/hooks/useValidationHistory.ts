@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { UploadedDocument } from "@/lib/validationExport";
 import type { CrossDocMismatch } from "@/lib/crossDocMatching";
+import type { RuleEngineResult } from "@/lib/validationRules";
 
 export interface ValidationSession {
   id: string;
@@ -24,6 +25,42 @@ export interface ValidationSession {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  // New: full deterministic result preserved
+  rule_engine_result?: RuleEngineResult | null;
+  audit_meta?: {
+    packetHash: string;
+    rulesVersion: string;
+    engineId: string;
+    modelVersion: string;
+    workflowStage: string;
+    validationTimestamp: string;
+    fieldCount: number;
+    docCount: number;
+  } | null;
+}
+
+export interface SaveSessionParams {
+  shipmentId: string;
+  templateId?: string;
+  shipmentMode: string;
+  originCountry: string;
+  destinationCountry: string;
+  hsCode: string;
+  declaredValue: string;
+  documents: UploadedDocument[];
+  ruleEngineResult: RuleEngineResult;
+  crossDocMismatches: CrossDocMismatch[];
+  disposition: string;
+  auditMeta: {
+    packetHash: string;
+    rulesVersion: string;
+    engineId: string;
+    modelVersion: string;
+    workflowStage: string;
+    validationTimestamp: string;
+    fieldCount: number;
+    docCount: number;
+  };
 }
 
 export function useValidationHistory() {
@@ -46,19 +83,7 @@ export function useValidationHistory() {
     setLoading(false);
   }, []);
 
-  const saveSession = useCallback(async (params: {
-    shipmentId: string;
-    templateId?: string;
-    shipmentMode: string;
-    originCountry: string;
-    destinationCountry: string;
-    hsCode: string;
-    declaredValue: string;
-    documents: UploadedDocument[];
-    validationResult: any;
-    crossDocMismatches: CrossDocMismatch[];
-    disposition: string;
-  }) => {
+  const saveSession = useCallback(async (params: SaveSessionParams) => {
     const docsSerialized = params.documents.map((d) => ({
       id: d.id,
       name: d.name,
@@ -69,6 +94,8 @@ export function useValidationHistory() {
       extractionId: d.extractionId,
       parseWarnings: d.parseWarnings,
       rawTextSummary: d.rawTextSummary,
+      isMultiDocument: d.isMultiDocument,
+      parentUploadId: d.parentUploadId,
     }));
 
     const { data, error } = await supabase
@@ -82,13 +109,14 @@ export function useValidationHistory() {
         hs_code: params.hsCode || null,
         declared_value: params.declaredValue || null,
         status: "validated",
-        completeness_score: params.validationResult?.completenessScore || null,
-        consistency_score: params.validationResult?.consistencyScore || null,
-        overall_readiness: params.validationResult?.overallReadiness || null,
+        completeness_score: params.ruleEngineResult.completenessScore,
+        consistency_score: params.ruleEngineResult.consistencyScore,
+        overall_readiness: params.ruleEngineResult.packetIntegrity,
         documents: docsSerialized,
-        validation_result: params.validationResult,
+        validation_result: params.ruleEngineResult as any,
         cross_doc_mismatches: params.crossDocMismatches,
         disposition: params.disposition,
+        notes: JSON.stringify(params.auditMeta),
       } as any)
       .select("id")
       .single();
