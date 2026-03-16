@@ -518,7 +518,12 @@ export default function DocumentValidator() {
           </CardContent></Card>
           <Card className="border-border bg-card"><CardContent className="py-3 px-4">
             <p className="text-[10px] font-mono text-muted-foreground">MISMATCHES</p>
-            <p className="text-2xl font-bold font-mono text-risk-high">{crossDocMismatches.length}</p>
+            <p className="text-2xl font-bold font-mono text-risk-high">
+              {crossDocMismatches.filter(m => m.mismatchType === "true_conflict").length}
+            </p>
+            {crossDocMismatches.filter(m => m.mismatchType !== "true_conflict").length > 0 && (
+              <p className="text-[10px] font-mono text-muted-foreground">+{crossDocMismatches.filter(m => m.mismatchType !== "true_conflict").length} info</p>
+            )}
           </CardContent></Card>
         </div>
       )}
