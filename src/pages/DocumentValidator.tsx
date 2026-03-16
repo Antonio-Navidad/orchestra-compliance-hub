@@ -383,6 +383,7 @@ export default function DocumentValidator() {
 
   const handleSaveSession = async () => {
     if (!ruleResult) return;
+    if (!auditMeta) return;
     const legacyDisposition = ruleResult.packetIntegrity === "conflicts" ? "data_mismatch"
       : ruleResult.packetIntegrity === "incomplete" ? "missing_required_docs"
       : ruleResult.complianceReadiness === "not_ready" ? "high_risk"
@@ -393,15 +394,9 @@ export default function DocumentValidator() {
     const id = await saveSession({
       shipmentId, templateId: selectedTemplate?.id, shipmentMode, originCountry, destinationCountry,
       hsCode, declaredValue, documents,
-      validationResult: {
-        completenessScore: ruleResult.completenessScore,
-        consistencyScore: ruleResult.consistencyScore,
-        overallReadiness: ruleResult.packetIntegrity === "clean" ? "ready" : "needs_attention",
-        missingDocuments: [],
-        issues: ruleResult.issues.map((i) => ({ severity: i.severity, field: i.documentType, description: i.description, suggestion: i.suggestion })),
-        recommendations: aiNarrative?.recommendations || [],
-      },
+      ruleEngineResult: ruleResult,
       crossDocMismatches, disposition: legacyDisposition,
+      auditMeta,
     });
     if (id) setSavedSessionId(id);
   };
