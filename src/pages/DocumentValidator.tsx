@@ -555,20 +555,40 @@ export default function DocumentValidator() {
         </div>
       </div>
 
-      {/* Disposition Banner */}
-      {result && (
-        <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${
-          disposition === "ready_to_ship" ? "border-risk-low/30 bg-risk-low/10" :
-          disposition === "high_risk" || disposition === "escalate" ? "border-risk-critical/30 bg-risk-critical/10" :
-          disposition === "missing_required_docs" || disposition === "data_mismatch" ? "border-risk-high/30 bg-risk-high/10" :
-          "border-risk-medium/30 bg-risk-medium/10"
-        }`}>
-          {modeIcon}
-          <span className={`font-mono text-sm font-bold ${DISPOSITION_LABELS[disposition]?.color || "text-muted-foreground"}`}>
-            {DISPOSITION_LABELS[disposition]?.label || disposition}
-          </span>
+      {/* Dual Disposition Banner */}
+      {result && dualDisp && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Packet Integrity */}
+          {(() => {
+            const pc = PACKET_CONFIG[dualDisp.packetIntegrity];
+            const PIcon = pc.icon;
+            return (
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${pc.bg}`}>
+                <PIcon size={18} className={pc.color} />
+                <div className="flex-1 min-w-0">
+                  <p className={`font-mono text-xs font-bold ${pc.color}`}>{pc.label}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{dualDisp.packetLabel}</p>
+                </div>
+                <Badge variant="outline" className="text-[9px] font-mono shrink-0">PACKET</Badge>
+              </div>
+            );
+          })()}
+          {/* Compliance Readiness */}
+          {(() => {
+            const cc = COMPLIANCE_CONFIG[dualDisp.complianceReadiness];
+            return (
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${cc.bg}`}>
+                <ShieldAlert size={18} className={cc.color} />
+                <div className="flex-1 min-w-0">
+                  <p className={`font-mono text-xs font-bold ${cc.color}`}>{cc.label}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{dualDisp.complianceDetail || dualDisp.complianceLabel}</p>
+                </div>
+                <Badge variant="outline" className="text-[9px] font-mono shrink-0">FILING</Badge>
+              </div>
+            );
+          })()}
           {selectedTemplate && (
-            <Badge variant="secondary" className="text-[10px] font-mono ml-auto">{selectedTemplate.name}</Badge>
+            <Badge variant="secondary" className="text-[10px] font-mono md:col-span-2 w-fit">{selectedTemplate.name}</Badge>
           )}
         </div>
       )}
