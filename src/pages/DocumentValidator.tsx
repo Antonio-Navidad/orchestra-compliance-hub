@@ -458,6 +458,7 @@ export default function DocumentValidator() {
     }
   };
 
+  const handleLoadTemplate = (t: ShipmentTemplate) => {
     setSelectedTemplate(t);
     setShipmentMode(t.mode);
     if (t.origin) setOriginCountry(t.origin);
