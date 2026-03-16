@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,9 +9,14 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   FileText, Upload, Loader2, CheckCircle, AlertTriangle, XCircle,
-  ShieldAlert, Info, Camera, Image, Download, Eye, Pencil, RefreshCw
+  ShieldAlert, Info, Camera, Download, Eye, Pencil, RefreshCw,
+  Save, History, LayoutTemplate, GitCompare, RotateCcw, Copy,
+  Package, Truck, Plane, Ship, Search
 } from "lucide-react";
 import { toast } from "sonner";
 import { ExportButton } from "@/components/ExportButton";
@@ -20,14 +25,38 @@ import {
   VALIDATION_DETAIL_COLUMNS, VALIDATION_SUMMARY_COLUMNS,
   buildDetailExportRows, buildSummaryExportRow,
 } from "@/lib/validationExport";
+import { SHIPMENT_TEMPLATES, type ShipmentTemplate } from "@/lib/shipmentTemplates";
+import { detectCrossDocMismatches, type CrossDocMismatch } from "@/lib/crossDocMatching";
+import { useValidationHistory, type ValidationSession } from "@/hooks/useValidationHistory";
 
 const DOC_TYPES = [
   "commercial_invoice", "packing_list", "bill_of_lading", "air_waybill",
   "certificate_of_origin", "customs_declaration", "export_license",
   "import_permit", "insurance_certificate", "inspection_certificate",
   "phytosanitary_certificate", "fumigation_certificate",
-  "dangerous_goods_declaration", "product_photo", "other",
+  "dangerous_goods_declaration", "product_photo", "shipping_label", "other",
 ];
+
+// Auto-detect doc type from filename
+function guessDocType(filename: string): string {
+  const fn = filename.toLowerCase();
+  if (fn.includes("invoice") || fn.includes("factura")) return "commercial_invoice";
+  if (fn.includes("packing") || fn.includes("pack_list")) return "packing_list";
+  if (fn.includes("bill_of_lading") || fn.includes("bol") || fn.includes("bl_")) return "bill_of_lading";
+  if (fn.includes("airway") || fn.includes("awb")) return "air_waybill";
+  if (fn.includes("origin") || fn.includes("coo")) return "certificate_of_origin";
+  if (fn.includes("customs") || fn.includes("declaration")) return "customs_declaration";
+  if (fn.includes("export_lic")) return "export_license";
+  if (fn.includes("import_perm")) return "import_permit";
+  if (fn.includes("insurance")) return "insurance_certificate";
+  if (fn.includes("inspect")) return "inspection_certificate";
+  if (fn.includes("phyto")) return "phytosanitary_certificate";
+  if (fn.includes("fumigat")) return "fumigation_certificate";
+  if (fn.includes("dangerous") || fn.includes("dg_")) return "dangerous_goods_declaration";
+  if (fn.includes("label") || fn.includes("shipping_label")) return "shipping_label";
+  if (fn.includes("product") || fn.includes("photo")) return "product_photo";
+  return "commercial_invoice";
+}
 
 interface ValidationResult {
   completenessScore: number;
@@ -38,6 +67,18 @@ interface ValidationResult {
   countryRequirements?: string[];
   recommendations: string[];
 }
+
+const DISPOSITION_LABELS: Record<string, { label: string; color: string }> = {
+  ready_to_ship: { label: "READY TO SHIP", color: "text-risk-low" },
+  missing_required_docs: { label: "MISSING REQUIRED DOCS", color: "text-risk-high" },
+  needs_review: { label: "NEEDS REVIEW", color: "text-risk-medium" },
+  data_mismatch: { label: "DATA MISMATCH DETECTED", color: "text-risk-high" },
+  low_confidence: { label: "LOW CONFIDENCE EXTRACTION", color: "text-risk-medium" },
+  high_risk: { label: "HIGH-RISK COMPLIANCE ISSUE", color: "text-risk-critical" },
+  cleared_warnings: { label: "CLEARED WITH WARNINGS", color: "text-risk-low" },
+  escalate: { label: "ESCALATE TO BROKER / CUSTOMS", color: "text-risk-critical" },
+  pending: { label: "PENDING VALIDATION", color: "text-muted-foreground" },
+};
 
 const readinessConfig = {
   ready: { label: "READY TO FILE", color: "text-risk-low", bg: "bg-risk-low/10 border-risk-low/30", icon: CheckCircle },
@@ -61,6 +102,21 @@ function ConfidenceDot({ confidence }: { confidence: number }) {
   );
 }
 
+function computeDisposition(result: ValidationResult, mismatches: CrossDocMismatch[], lowConfFields: number): string {
+  const critIssues = result.issues.filter((i) => i.severity === "critical").length;
+  const highIssues = result.issues.filter((i) => i.severity === "high").length;
+  const critMismatches = mismatches.filter((m) => m.severity === "critical").length;
+  const requiredMissing = result.missingDocuments.filter((d) => d.importance === "required").length;
+
+  if (critIssues > 0 || critMismatches > 0) return "high_risk";
+  if (requiredMissing > 0) return "missing_required_docs";
+  if (critMismatches > 0 || mismatches.filter((m) => m.severity === "high").length > 0) return "data_mismatch";
+  if (lowConfFields > 3) return "low_confidence";
+  if (highIssues > 0) return "needs_review";
+  if (result.issues.length > 0 || lowConfFields > 0) return "cleared_warnings";
+  return "ready_to_ship";
+}
+
 export default function DocumentValidator() {
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
   const [shipmentMode, setShipmentMode] = useState("sea");
@@ -74,88 +130,78 @@ export default function DocumentValidator() {
   const [activeTab, setActiveTab] = useState("upload");
   const [editingField, setEditingField] = useState<{ docId: string; fieldName: string } | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [crossDocMismatches, setCrossDocMismatches] = useState<CrossDocMismatch[]>([]);
+  const [disposition, setDisposition] = useState("pending");
+  const [selectedTemplate, setSelectedTemplate] = useState<ShipmentTemplate | null>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historySearch, setHistorySearch] = useState("");
+  const [savedSessionId, setSavedSessionId] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  const { sessions, loading: historyLoading, fetchSessions, saveSession } = useValidationHistory();
 
   // Auto-fill shipment context from extracted fields
   const autoFillContext = useCallback((fields: ExtractedField[]) => {
     for (const f of fields) {
       const name = f.fieldName.toLowerCase();
-      if (name.includes("origin_country") && !originCountry && f.confidence >= 0.6) {
+      if (name.includes("origin_country") && !originCountry && f.confidence >= 0.6)
         setOriginCountry(f.value);
-      }
-      if (name.includes("destination_country") && !destinationCountry && f.confidence >= 0.6) {
+      if (name.includes("destination_country") && !destinationCountry && f.confidence >= 0.6)
         setDestinationCountry(f.value);
-      }
-      if (name.includes("hs_code") && !hsCode && f.confidence >= 0.6) {
+      if (name.includes("hs_code") && !hsCode && f.confidence >= 0.6)
         setHsCode(f.value);
-      }
-      if (name.includes("declared_value") && !declaredValue && f.confidence >= 0.6) {
+      if ((name.includes("declared_value") || name.includes("total_value")) && !declaredValue && f.confidence >= 0.6)
         setDeclaredValue(f.value);
-      }
+      if (name.includes("shipment_id") && !shipmentId && f.confidence >= 0.6)
+        setShipmentId(f.value);
       if (name.includes("transport_mode") && f.confidence >= 0.6) {
         const val = f.value.toLowerCase();
         if (val.includes("air")) setShipmentMode("air");
         else if (val.includes("sea") || val.includes("ocean")) setShipmentMode("sea");
         else if (val.includes("land") || val.includes("truck") || val.includes("road")) setShipmentMode("land");
       }
+      if (name.includes("invoice_number") && !shipmentId && f.confidence >= 0.6)
+        setShipmentId(f.value);
     }
-  }, [originCountry, destinationCountry, hsCode, declaredValue]);
+  }, [originCountry, destinationCountry, hsCode, declaredValue, shipmentId]);
 
   const extractDocument = async (doc: UploadedDocument) => {
     setDocuments((prev) =>
       prev.map((d) => (d.id === doc.id ? { ...d, status: "extracting" } : d))
     );
-
     try {
       const formData = new FormData();
       formData.append("file", doc.file);
       formData.append("documentType", doc.type);
-      formData.append("shipmentContext", JSON.stringify({
-        shipmentMode, originCountry, destinationCountry,
-      }));
+      formData.append("shipmentContext", JSON.stringify({ shipmentMode, originCountry, destinationCountry }));
 
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extract-document`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
+          headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
           body: formData,
         }
       );
-
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Extraction failed" }));
         throw new Error(err.error || `HTTP ${res.status}`);
       }
-
       const data = await res.json();
       const fields: ExtractedField[] = (data.fields || []).map((f: any) => ({
-        fieldName: f.fieldName,
-        value: f.value,
-        confidence: f.confidence,
-        sourceLocation: f.sourceLocation,
+        fieldName: f.fieldName, value: f.value, confidence: f.confidence, sourceLocation: f.sourceLocation,
       }));
 
       setDocuments((prev) =>
         prev.map((d) =>
           d.id === doc.id
-            ? {
-                ...d,
-                status: "extracted",
-                extractedFields: fields,
-                detectedType: data.detectedDocumentType,
-                overallQuality: data.overallQuality,
-                parseWarnings: data.parseWarnings,
-                rawTextSummary: data.rawTextSummary,
-                extractionId: data.extractionId,
-              }
+            ? { ...d, status: "extracted", extractedFields: fields, detectedType: data.detectedDocumentType, overallQuality: data.overallQuality, parseWarnings: data.parseWarnings, rawTextSummary: data.rawTextSummary, extractionId: data.extractionId }
             : d
         )
       );
-
       autoFillContext(fields);
       toast.success(`Extracted ${fields.length} fields from ${doc.file.name}`);
     } catch (e: any) {
@@ -171,237 +217,290 @@ export default function DocumentValidator() {
     const newDocs: UploadedDocument[] = [];
     for (const file of Array.from(files)) {
       const isValid = file.type.startsWith("image/") || file.type === "application/pdf";
-      if (!isValid) {
-        toast.error(`${file.name}: unsupported format. Use PDF or image.`);
-        continue;
-      }
+      if (!isValid) { toast.error(`${file.name}: unsupported format`); continue; }
       newDocs.push({
-        id: crypto.randomUUID(),
-        file,
-        type: "commercial_invoice",
-        name: file.name,
-        status: "uploading",
-        extractedFields: [],
+        id: crypto.randomUUID(), file, type: guessDocType(file.name), name: file.name,
+        status: "uploading", extractedFields: [],
       });
     }
     setDocuments((prev) => [...prev, ...newDocs]);
+    for (const doc of newDocs) await extractDocument(doc);
+  };
 
-    // Auto-extract each
-    for (const doc of newDocs) {
-      await extractDocument(doc);
+  const handleDrop = (e: React.DragEvent) => { e.preventDefault(); handleFiles(e.dataTransfer.files); };
+
+  // Run cross-doc matching whenever documents change
+  useEffect(() => {
+    const extracted = documents.filter((d) => d.status === "extracted");
+    if (extracted.length >= 2) {
+      setCrossDocMismatches(detectCrossDocMismatches(documents));
+    } else {
+      setCrossDocMismatches([]);
     }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    handleFiles(e.dataTransfer.files);
-  };
+  }, [documents]);
 
   const handleValidate = async () => {
     const extracted = documents.filter((d) => d.status === "extracted");
-    if (extracted.length === 0) {
-      toast.error("Upload and extract at least one document first");
-      return;
-    }
-    setValidating(true);
-    setResult(null);
+    if (extracted.length === 0) { toast.error("Upload and extract at least one document first"); return; }
+    setValidating(true); setResult(null);
     try {
       const docsPayload = extracted.map((d) => ({
-        type: d.detectedType || d.type,
-        name: d.name,
+        type: d.detectedType || d.type, name: d.name,
         extractedFields: Object.fromEntries(d.extractedFields.map((f) => [f.fieldName, f.value])),
       }));
-
       const { data, error } = await supabase.functions.invoke("validate-documents", {
-        body: {
-          documents: docsPayload,
-          shipmentMode,
-          originCountry,
-          destinationCountry,
-          hsCode,
-          declaredValue,
-          shipmentId: shipmentId || undefined,
-        },
+        body: { documents: docsPayload, shipmentMode, originCountry, destinationCountry, hsCode, declaredValue, shipmentId: shipmentId || undefined },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setResult(data);
+      const disp = computeDisposition(data, crossDocMismatches, lowConfFields);
+      setDisposition(disp);
       setActiveTab("results");
       toast.success("Validation complete");
     } catch (e: any) {
       toast.error(e.message || "Validation failed");
-    } finally {
-      setValidating(false);
-    }
+    } finally { setValidating(false); }
+  };
+
+  const handleSaveSession = async () => {
+    if (!result) return;
+    const id = await saveSession({
+      shipmentId, templateId: selectedTemplate?.id, shipmentMode, originCountry, destinationCountry,
+      hsCode, declaredValue, documents, validationResult: result,
+      crossDocMismatches, disposition,
+    });
+    if (id) setSavedSessionId(id);
+  };
+
+  const handleLoadTemplate = (t: ShipmentTemplate) => {
+    setSelectedTemplate(t);
+    setShipmentMode(t.mode);
+    if (t.origin) setOriginCountry(t.origin);
+    if (t.destination) setDestinationCountry(t.destination);
+    setShowTemplates(false);
+    toast.success(`Template loaded: ${t.name}`);
+  };
+
+  const handleResetAll = () => {
+    setDocuments([]); setResult(null); setCrossDocMismatches([]);
+    setShipmentMode("sea"); setOriginCountry(""); setDestinationCountry("");
+    setHsCode(""); setDeclaredValue(""); setShipmentId("");
+    setSelectedTemplate(null); setDisposition("pending"); setSavedSessionId(null);
+    setActiveTab("upload");
+    toast("Workspace reset");
+  };
+
+  const handleRecallSession = (session: ValidationSession) => {
+    setShipmentId(session.shipment_id || "");
+    setShipmentMode(session.shipment_mode || "sea");
+    setOriginCountry(session.origin_country || "");
+    setDestinationCountry(session.destination_country || "");
+    setHsCode(session.hs_code || "");
+    setDeclaredValue(session.declared_value || "");
+    setResult(session.validation_result);
+    setCrossDocMismatches(session.cross_doc_mismatches || []);
+    setDisposition(session.disposition || "pending");
+    setSavedSessionId(session.id);
+    setShowHistory(false);
+    setActiveTab("results");
+    toast.success("Session recalled");
   };
 
   const startEdit = (docId: string, fieldName: string, currentValue: string) => {
-    setEditingField({ docId, fieldName });
-    setEditValue(currentValue);
+    setEditingField({ docId, fieldName }); setEditValue(currentValue);
   };
-
   const saveEdit = () => {
     if (!editingField) return;
     setDocuments((prev) =>
       prev.map((d) =>
         d.id === editingField.docId
-          ? {
-              ...d,
-              extractedFields: d.extractedFields.map((f) =>
-                f.fieldName === editingField.fieldName
-                  ? { ...f, value: editValue, confidence: 1.0 }
-                  : f
-              ),
-            }
+          ? { ...d, extractedFields: d.extractedFields.map((f) => f.fieldName === editingField.fieldName ? { ...f, value: editValue, confidence: 1.0 } : f) }
           : d
       )
     );
-    setEditingField(null);
-    setEditValue("");
+    setEditingField(null); setEditValue("");
   };
-
-  const removeDocument = (id: string) => {
-    setDocuments((prev) => prev.filter((d) => d.id !== id));
-  };
+  const removeDocument = (id: string) => setDocuments((prev) => prev.filter((d) => d.id !== id));
 
   const allExtracted = documents.length > 0 && documents.every((d) => d.status === "extracted");
   const anyExtracting = documents.some((d) => d.status === "extracting");
   const totalFields = documents.reduce((sum, d) => sum + d.extractedFields.length, 0);
-  const highConfFields = documents.reduce(
-    (sum, d) => sum + d.extractedFields.filter((f) => f.confidence >= 0.8).length,
-    0
-  );
+  const highConfFields = documents.reduce((sum, d) => sum + d.extractedFields.filter((f) => f.confidence >= 0.8).length, 0);
   const lowConfFields = totalFields - highConfFields;
 
   const exportContext = { shipmentId, origin: originCountry, destination: destinationCountry, mode: shipmentMode };
   const detailRows = result ? buildDetailExportRows(documents, result, exportContext) : [];
   const summaryRows = result ? [buildSummaryExportRow(documents, result, exportContext)] : [];
 
+  const filteredSessions = sessions.filter((s) => {
+    if (!historySearch) return true;
+    const q = historySearch.toLowerCase();
+    return (s.shipment_id || "").toLowerCase().includes(q)
+      || (s.origin_country || "").toLowerCase().includes(q)
+      || (s.destination_country || "").toLowerCase().includes(q)
+      || (s.disposition || "").toLowerCase().includes(q);
+  });
+
+  // Template required docs checklist
+  const templateChecklist = selectedTemplate
+    ? selectedTemplate.requiredDocs.map((docType) => ({
+        docType,
+        present: documents.some((d) => (d.detectedType || d.type) === docType && d.status === "extracted"),
+      }))
+    : null;
+
+  const modeIcon = shipmentMode === "air" ? <Plane size={14} /> : shipmentMode === "sea" ? <Ship size={14} /> : <Truck size={14} />;
+
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-xl font-bold font-mono">DOCUMENT PACKET VALIDATOR</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Upload documents → AI extracts fields → Auto-validate → Export
+            Upload → AI Extract → Auto-Validate → Export
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" className="font-mono text-[10px] gap-1.5" onClick={() => setShowTemplates(true)}>
+            <LayoutTemplate size={12} /> Templates
+          </Button>
+          <Button variant="outline" size="sm" className="font-mono text-[10px] gap-1.5" onClick={() => { setShowHistory(true); fetchSessions(); }}>
+            <History size={12} /> History
+          </Button>
+          <Button variant="outline" size="sm" className="font-mono text-[10px] gap-1.5" onClick={handleResetAll}>
+            <RotateCcw size={12} /> Reset
+          </Button>
+          {result && !savedSessionId && (
+            <Button variant="default" size="sm" className="font-mono text-[10px] gap-1.5" onClick={handleSaveSession}>
+              <Save size={12} /> Save Session
+            </Button>
+          )}
+          {savedSessionId && (
+            <Badge variant="outline" className="font-mono text-[10px] border-risk-low/50 text-risk-low">SAVED</Badge>
+          )}
           {result && (
             <>
-              <ExportButton
-                data={detailRows}
-                columns={VALIDATION_DETAIL_COLUMNS}
-                filename={`validation-detail-${shipmentId || "draft"}`}
-                label="Export Details"
-              />
-              <ExportButton
-                data={summaryRows}
-                columns={VALIDATION_SUMMARY_COLUMNS}
-                filename={`validation-summary-${shipmentId || "draft"}`}
-                label="Export Summary"
-              />
+              <ExportButton data={detailRows} columns={VALIDATION_DETAIL_COLUMNS} filename={`validation-detail-${shipmentId || "draft"}`} label="Export Details" />
+              <ExportButton data={summaryRows} columns={VALIDATION_SUMMARY_COLUMNS} filename={`validation-summary-${shipmentId || "draft"}`} label="Export Summary" />
             </>
           )}
         </div>
       </div>
 
+      {/* Disposition Banner */}
+      {result && (
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${
+          disposition === "ready_to_ship" ? "border-risk-low/30 bg-risk-low/10" :
+          disposition === "high_risk" || disposition === "escalate" ? "border-risk-critical/30 bg-risk-critical/10" :
+          disposition === "missing_required_docs" || disposition === "data_mismatch" ? "border-risk-high/30 bg-risk-high/10" :
+          "border-risk-medium/30 bg-risk-medium/10"
+        }`}>
+          {modeIcon}
+          <span className={`font-mono text-sm font-bold ${DISPOSITION_LABELS[disposition]?.color || "text-muted-foreground"}`}>
+            {DISPOSITION_LABELS[disposition]?.label || disposition}
+          </span>
+          {selectedTemplate && (
+            <Badge variant="secondary" className="text-[10px] font-mono ml-auto">{selectedTemplate.name}</Badge>
+          )}
+        </div>
+      )}
+
       {/* Stats Bar */}
       {documents.length > 0 && (
-        <div className="grid grid-cols-4 gap-3">
-          <Card className="border-border bg-card">
-            <CardContent className="py-3 px-4">
-              <p className="text-[10px] font-mono text-muted-foreground">DOCUMENTS</p>
-              <p className="text-2xl font-bold font-mono">{documents.length}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-border bg-card">
-            <CardContent className="py-3 px-4">
-              <p className="text-[10px] font-mono text-muted-foreground">FIELDS EXTRACTED</p>
-              <p className="text-2xl font-bold font-mono">{totalFields}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-border bg-card">
-            <CardContent className="py-3 px-4">
-              <p className="text-[10px] font-mono text-muted-foreground">HIGH CONFIDENCE</p>
-              <p className="text-2xl font-bold font-mono text-risk-low">{highConfFields}</p>
-            </CardContent>
-          </Card>
-          <Card className="border-border bg-card">
-            <CardContent className="py-3 px-4">
-              <p className="text-[10px] font-mono text-muted-foreground">NEEDS REVIEW</p>
-              <p className="text-2xl font-bold font-mono text-risk-medium">{lowConfFields}</p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <Card className="border-border bg-card"><CardContent className="py-3 px-4">
+            <p className="text-[10px] font-mono text-muted-foreground">DOCUMENTS</p>
+            <p className="text-2xl font-bold font-mono">{documents.length}</p>
+          </CardContent></Card>
+          <Card className="border-border bg-card"><CardContent className="py-3 px-4">
+            <p className="text-[10px] font-mono text-muted-foreground">FIELDS EXTRACTED</p>
+            <p className="text-2xl font-bold font-mono">{totalFields}</p>
+          </CardContent></Card>
+          <Card className="border-border bg-card"><CardContent className="py-3 px-4">
+            <p className="text-[10px] font-mono text-muted-foreground">AUTO-APPROVED</p>
+            <p className="text-2xl font-bold font-mono text-risk-low">{highConfFields}</p>
+          </CardContent></Card>
+          <Card className="border-border bg-card"><CardContent className="py-3 px-4">
+            <p className="text-[10px] font-mono text-muted-foreground">NEEDS REVIEW</p>
+            <p className="text-2xl font-bold font-mono text-risk-medium">{lowConfFields}</p>
+          </CardContent></Card>
+          <Card className="border-border bg-card"><CardContent className="py-3 px-4">
+            <p className="text-[10px] font-mono text-muted-foreground">MISMATCHES</p>
+            <p className="text-2xl font-bold font-mono text-risk-high">{crossDocMismatches.length}</p>
+          </CardContent></Card>
         </div>
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="font-mono">
-          <TabsTrigger value="upload" className="text-xs">
-            <Upload size={12} className="mr-1.5" /> UPLOAD & EXTRACT
+          <TabsTrigger value="upload" className="text-xs"><Upload size={12} className="mr-1.5" /> UPLOAD</TabsTrigger>
+          <TabsTrigger value="fields" className="text-xs" disabled={totalFields === 0}><Eye size={12} className="mr-1.5" /> FIELDS ({totalFields})</TabsTrigger>
+          <TabsTrigger value="mismatches" className="text-xs" disabled={crossDocMismatches.length === 0}>
+            <GitCompare size={12} className="mr-1.5" /> MISMATCHES ({crossDocMismatches.length})
           </TabsTrigger>
-          <TabsTrigger value="fields" className="text-xs" disabled={totalFields === 0}>
-            <Eye size={12} className="mr-1.5" /> EXTRACTED FIELDS ({totalFields})
-          </TabsTrigger>
-          <TabsTrigger value="results" className="text-xs" disabled={!result}>
-            <CheckCircle size={12} className="mr-1.5" /> VALIDATION RESULTS
-          </TabsTrigger>
+          <TabsTrigger value="results" className="text-xs" disabled={!result}><CheckCircle size={12} className="mr-1.5" /> RESULTS</TabsTrigger>
         </TabsList>
 
         {/* UPLOAD TAB */}
         <TabsContent value="upload" className="mt-4 space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Upload Zone */}
             <div className="lg:col-span-2 space-y-4">
               {/* Drop zone */}
-              <div
-                onDrop={handleDrop}
-                onDragOver={(e) => e.preventDefault()}
+              <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}
                 className="relative border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 hover:bg-accent/30 transition-colors cursor-pointer"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept="image/*,application/pdf"
-                  className="hidden"
-                  onChange={(e) => handleFiles(e.target.files)}
-                />
+                onClick={() => fileInputRef.current?.click()}>
+                <input ref={fileInputRef} type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={(e) => handleFiles(e.target.files)} />
                 <Upload size={36} className="mx-auto text-muted-foreground/40 mb-3" />
                 <p className="text-sm font-medium">Drop documents here or click to browse</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  PDF, JPG, PNG — invoices, packing lists, BOL, COO, customs declarations
+                  PDF, JPG, PNG — invoices, packing lists, BOL, AWB, COO, labels, product photos
                 </p>
                 <div className="flex items-center justify-center gap-3 mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="font-mono text-[10px]"
-                    onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                  >
+                  <Button variant="outline" size="sm" className="font-mono text-[10px]"
+                    onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>
                     <FileText size={12} className="mr-1.5" /> Browse Files
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="font-mono text-[10px]"
-                    onClick={(e) => { e.stopPropagation(); cameraInputRef.current?.click(); }}
-                  >
-                    <Camera size={12} className="mr-1.5" /> Take Photo
+                  <Button variant="outline" size="sm" className="font-mono text-[10px]"
+                    onClick={(e) => { e.stopPropagation(); cameraInputRef.current?.click(); }}>
+                    <Camera size={12} className="mr-1.5" /> Capture Photo
                   </Button>
-                  <input
-                    ref={cameraInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    onChange={(e) => handleFiles(e.target.files)}
-                  />
+                  <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleFiles(e.target.files)} />
                 </div>
               </div>
+
+              {/* Template required docs checklist */}
+              {templateChecklist && (
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs font-mono text-primary">REQUIRED DOCUMENTS — {selectedTemplate?.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-1">
+                    {templateChecklist.map((item) => (
+                      <div key={item.docType} className="flex items-center gap-2 text-sm">
+                        {item.present
+                          ? <CheckCircle size={14} className="text-risk-low" />
+                          : <XCircle size={14} className="text-risk-high" />}
+                        <span className={`font-mono text-xs ${item.present ? "text-muted-foreground" : ""}`}>
+                          {item.docType.replace(/_/g, " ").toUpperCase()}
+                        </span>
+                        {item.present && <Badge variant="outline" className="text-[10px] border-risk-low/50 text-risk-low">UPLOADED</Badge>}
+                      </div>
+                    ))}
+                    {selectedTemplate?.ruleHints && selectedTemplate.ruleHints.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-border space-y-1">
+                        <p className="text-[10px] font-mono text-muted-foreground">RULE HINTS</p>
+                        {selectedTemplate.ruleHints.map((hint, i) => (
+                          <p key={i} className="text-xs flex items-start gap-1.5">
+                            <Info size={10} className="text-primary shrink-0 mt-0.5" /> {hint}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Uploaded documents list */}
               {documents.length > 0 && (
@@ -410,67 +509,39 @@ export default function DocumentValidator() {
                     <Card key={doc.id} className="border-border bg-card">
                       <CardContent className="py-3 px-4">
                         <div className="flex items-center gap-3">
-                          {doc.status === "extracting" ? (
-                            <Loader2 size={16} className="text-primary animate-spin shrink-0" />
-                          ) : doc.status === "extracted" ? (
-                            <CheckCircle size={16} className="text-risk-low shrink-0" />
-                          ) : doc.status === "error" ? (
-                            <XCircle size={16} className="text-risk-critical shrink-0" />
-                          ) : (
-                            <Upload size={16} className="text-muted-foreground shrink-0" />
-                          )}
+                          {doc.status === "extracting" ? <Loader2 size={16} className="text-primary animate-spin shrink-0" />
+                            : doc.status === "extracted" ? <CheckCircle size={16} className="text-risk-low shrink-0" />
+                            : doc.status === "error" ? <XCircle size={16} className="text-risk-critical shrink-0" />
+                            : <Upload size={16} className="text-muted-foreground shrink-0" />}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-sm font-mono truncate">{doc.file.name}</span>
-                              {doc.detectedType && (
-                                <Badge variant="secondary" className="text-[10px] font-mono shrink-0">
-                                  {doc.detectedType.replace(/_/g, " ").toUpperCase()}
-                                </Badge>
+                              <Select value={doc.type} onValueChange={(val) => setDocuments((prev) => prev.map((d) => d.id === doc.id ? { ...d, type: val } : d))}>
+                                <SelectTrigger className="h-6 w-auto text-[10px] font-mono border-border">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {DOC_TYPES.map((t) => <SelectItem key={t} value={t} className="text-xs">{t.replace(/_/g, " ")}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                              {doc.detectedType && doc.detectedType !== doc.type && (
+                                <Badge variant="secondary" className="text-[10px] font-mono">AI: {doc.detectedType.replace(/_/g, " ")}</Badge>
                               )}
                               {doc.overallQuality && (
-                                <Badge
-                                  variant="outline"
-                                  className={`text-[10px] font-mono shrink-0 ${
-                                    doc.overallQuality === "high"
-                                      ? "border-risk-low/50 text-risk-low"
-                                      : doc.overallQuality === "medium"
-                                      ? "border-risk-medium/50 text-risk-medium"
-                                      : "border-risk-high/50 text-risk-high"
-                                  }`}
-                                >
+                                <Badge variant="outline" className={`text-[10px] font-mono ${doc.overallQuality === "high" ? "border-risk-low/50 text-risk-low" : doc.overallQuality === "medium" ? "border-risk-medium/50 text-risk-medium" : "border-risk-high/50 text-risk-high"}`}>
                                   {doc.overallQuality} quality
                                 </Badge>
                               )}
                             </div>
-                            {doc.status === "extracting" && (
-                              <p className="text-xs text-muted-foreground mt-1">Extracting fields with AI...</p>
-                            )}
-                            {doc.status === "extracted" && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {doc.extractedFields.length} fields extracted
-                              </p>
-                            )}
-                            {doc.status === "error" && (
-                              <p className="text-xs text-risk-critical mt-1">{doc.error}</p>
-                            )}
+                            {doc.status === "extracting" && <p className="text-xs text-muted-foreground mt-1">Extracting fields with AI...</p>}
+                            {doc.status === "extracted" && <p className="text-xs text-muted-foreground mt-1">{doc.extractedFields.length} fields extracted</p>}
+                            {doc.status === "error" && <p className="text-xs text-risk-critical mt-1">{doc.error}</p>}
                           </div>
                           <div className="flex items-center gap-1">
                             {doc.status === "error" && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0"
-                                onClick={() => extractDocument(doc)}
-                              >
-                                <RefreshCw size={12} />
-                              </Button>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => extractDocument(doc)}><RefreshCw size={12} /></Button>
                             )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-7 p-0 text-muted-foreground hover:text-risk-critical"
-                              onClick={() => removeDocument(doc.id)}
-                            >
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-risk-critical" onClick={() => removeDocument(doc.id)}>
                               <XCircle size={12} />
                             </Button>
                           </div>
@@ -478,9 +549,7 @@ export default function DocumentValidator() {
                         {doc.parseWarnings && doc.parseWarnings.length > 0 && (
                           <div className="mt-2 space-y-1">
                             {doc.parseWarnings.map((w, i) => (
-                              <p key={i} className="text-[10px] text-risk-medium flex items-center gap-1">
-                                <AlertTriangle size={10} className="shrink-0" /> {w}
-                              </p>
+                              <p key={i} className="text-[10px] text-risk-medium flex items-center gap-1"><AlertTriangle size={10} className="shrink-0" /> {w}</p>
                             ))}
                           </div>
                         )}
@@ -528,22 +597,13 @@ export default function DocumentValidator() {
                   </div>
                   <div>
                     <label className="text-xs font-mono text-muted-foreground mb-1 block">Shipment ID</label>
-                    <Input value={shipmentId} onChange={(e) => setShipmentId(e.target.value)} placeholder="Optional" />
+                    <Input value={shipmentId} onChange={(e) => setShipmentId(e.target.value)} placeholder="Auto-detected or manual" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Button
-                onClick={handleValidate}
-                disabled={validating || !allExtracted || anyExtracting}
-                className="w-full font-mono"
-                size="lg"
-              >
-                {validating ? (
-                  <Loader2 size={16} className="mr-2 animate-spin" />
-                ) : (
-                  <ShieldAlert size={16} className="mr-2" />
-                )}
+              <Button onClick={handleValidate} disabled={validating || !allExtracted || anyExtracting} className="w-full font-mono" size="lg">
+                {validating ? <Loader2 size={16} className="mr-2 animate-spin" /> : <ShieldAlert size={16} className="mr-2" />}
                 {validating ? "VALIDATING..." : "VALIDATE PACKET"}
               </Button>
             </div>
@@ -572,62 +632,79 @@ export default function DocumentValidator() {
                     <TableHead className="text-[10px] font-mono">VALUE</TableHead>
                     <TableHead className="text-[10px] font-mono">SOURCE</TableHead>
                     <TableHead className="text-[10px] font-mono">LOCATION</TableHead>
+                    <TableHead className="text-[10px] font-mono">STATUS</TableHead>
                     <TableHead className="text-[10px] font-mono w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {documents
-                    .filter((d) => d.status === "extracted")
-                    .flatMap((doc) =>
-                      doc.extractedFields.map((field) => (
-                        <TableRow key={`${doc.id}-${field.fieldName}`}>
-                          <TableCell className="py-2">
-                            <ConfidenceDot confidence={field.confidence} />
-                          </TableCell>
-                          <TableCell className="py-2 text-xs font-mono">
-                            {field.fieldName.replace(/_/g, " ")}
-                          </TableCell>
-                          <TableCell className="py-2 text-xs">
-                            {editingField?.docId === doc.id && editingField?.fieldName === field.fieldName ? (
-                              <div className="flex items-center gap-1">
-                                <Input
-                                  value={editValue}
-                                  onChange={(e) => setEditValue(e.target.value)}
-                                  className="h-6 text-xs w-40"
-                                  autoFocus
-                                  onKeyDown={(e) => e.key === "Enter" && saveEdit()}
-                                />
-                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={saveEdit}>
-                                  <CheckCircle size={10} className="text-risk-low" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <span className={field.confidence < 0.7 ? "text-risk-high" : ""}>
-                                {field.value}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className="py-2 text-[10px] text-muted-foreground truncate max-w-[120px]">
-                            {doc.file.name}
-                          </TableCell>
-                          <TableCell className="py-2 text-[10px] text-muted-foreground">
-                            {field.sourceLocation || "—"}
-                          </TableCell>
-                          <TableCell className="py-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={() => startEdit(doc.id, field.fieldName, field.value)}
-                            >
-                              <Pencil size={10} />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
+                  {documents.filter((d) => d.status === "extracted").flatMap((doc) =>
+                    doc.extractedFields.map((field) => (
+                      <TableRow key={`${doc.id}-${field.fieldName}`}>
+                        <TableCell className="py-2"><ConfidenceDot confidence={field.confidence} /></TableCell>
+                        <TableCell className="py-2 text-xs font-mono">{field.fieldName.replace(/_/g, " ")}</TableCell>
+                        <TableCell className="py-2 text-xs">
+                          {editingField?.docId === doc.id && editingField?.fieldName === field.fieldName ? (
+                            <div className="flex items-center gap-1">
+                              <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-6 text-xs w-40" autoFocus onKeyDown={(e) => e.key === "Enter" && saveEdit()} />
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={saveEdit}><CheckCircle size={10} className="text-risk-low" /></Button>
+                            </div>
+                          ) : (
+                            <span className={field.confidence < 0.7 ? "text-risk-high" : ""}>{field.value}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-2 text-[10px] text-muted-foreground truncate max-w-[120px]">{doc.file.name}</TableCell>
+                        <TableCell className="py-2 text-[10px] text-muted-foreground">{field.sourceLocation || "—"}</TableCell>
+                        <TableCell className="py-2">
+                          <Badge variant="outline" className={`text-[10px] font-mono ${
+                            field.confidence >= 0.8 ? "border-risk-low/50 text-risk-low" :
+                            field.confidence >= 0.6 ? "border-risk-medium/50 text-risk-medium" :
+                            "border-risk-high/50 text-risk-high"
+                          }`}>
+                            {field.confidence >= 0.8 ? "AUTO" : field.confidence >= 0.6 ? "REVIEW" : "FLAG"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => startEdit(doc.id, field.fieldName, field.value)}>
+                            <Pencil size={10} />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* CROSS-DOC MISMATCHES TAB */}
+        <TabsContent value="mismatches" className="mt-4 space-y-3">
+          <Card className="border-risk-high/20 bg-risk-high/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-mono text-risk-high">
+                CROSS-DOCUMENT MISMATCHES — {crossDocMismatches.length} conflicts detected
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {crossDocMismatches.map((mm, i) => (
+                <div key={i} className="p-3 rounded border border-border bg-card">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant={mm.severity === "critical" ? "destructive" : "outline"} className="text-[10px] font-mono uppercase">{mm.severity}</Badge>
+                    <span className="text-sm font-mono">{mm.fieldName.replace(/_/g, " ")}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">{mm.description}</p>
+                  <div className="space-y-1">
+                    {mm.documents.map((d, j) => (
+                      <div key={j} className="flex items-center gap-2 text-xs">
+                        <ConfidenceDot confidence={d.confidence} />
+                        <span className="font-mono text-muted-foreground w-32 truncate">{d.docName}</span>
+                        <Badge variant="secondary" className="text-[10px]">{d.docType.replace(/_/g, " ")}</Badge>
+                        <span className="font-medium">{d.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
         </TabsContent>
@@ -639,7 +716,6 @@ export default function DocumentValidator() {
             const StatusIcon = rc.icon;
             return (
               <>
-                {/* Readiness Banner */}
                 <Card className={`border ${rc.bg}`}>
                   <CardContent className="pt-5 pb-4">
                     <div className="flex items-center gap-3 mb-4">
@@ -670,52 +746,59 @@ export default function DocumentValidator() {
                   </CardContent>
                 </Card>
 
-                {/* Exception Queue - low confidence fields */}
+                {/* Exception Queue */}
                 {lowConfFields > 0 && (
                   <Card className="border-risk-medium/30 bg-risk-medium/5">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-xs font-mono text-risk-medium">
-                        EXCEPTION REVIEW — {lowConfFields} field(s) need attention
-                      </CardTitle>
+                      <CardTitle className="text-xs font-mono text-risk-medium">EXCEPTION REVIEW — {lowConfFields} field(s) need attention</CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
                       <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="text-[10px] font-mono">CONF</TableHead>
-                            <TableHead className="text-[10px] font-mono">FIELD</TableHead>
-                            <TableHead className="text-[10px] font-mono">VALUE</TableHead>
-                            <TableHead className="text-[10px] font-mono">SOURCE</TableHead>
-                            <TableHead className="text-[10px] font-mono w-10"></TableHead>
-                          </TableRow>
-                        </TableHeader>
+                        <TableHeader><TableRow>
+                          <TableHead className="text-[10px] font-mono">CONF</TableHead>
+                          <TableHead className="text-[10px] font-mono">FIELD</TableHead>
+                          <TableHead className="text-[10px] font-mono">VALUE</TableHead>
+                          <TableHead className="text-[10px] font-mono">SOURCE</TableHead>
+                          <TableHead className="text-[10px] font-mono w-10"></TableHead>
+                        </TableRow></TableHeader>
                         <TableBody>
-                          {documents
-                            .filter((d) => d.status === "extracted")
-                            .flatMap((doc) =>
-                              doc.extractedFields
-                                .filter((f) => f.confidence < 0.8)
-                                .map((field) => (
-                                  <TableRow key={`exc-${doc.id}-${field.fieldName}`}>
-                                    <TableCell className="py-2"><ConfidenceDot confidence={field.confidence} /></TableCell>
-                                    <TableCell className="py-2 text-xs font-mono">{field.fieldName.replace(/_/g, " ")}</TableCell>
-                                    <TableCell className="py-2 text-xs text-risk-high">{field.value}</TableCell>
-                                    <TableCell className="py-2 text-[10px] text-muted-foreground">{doc.file.name}</TableCell>
-                                    <TableCell className="py-2">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-6 w-6 p-0"
-                                        onClick={() => { startEdit(doc.id, field.fieldName, field.value); setActiveTab("fields"); }}
-                                      >
-                                        <Pencil size={10} />
-                                      </Button>
-                                    </TableCell>
-                                  </TableRow>
-                                ))
-                            )}
+                          {documents.filter((d) => d.status === "extracted").flatMap((doc) =>
+                            doc.extractedFields.filter((f) => f.confidence < 0.8).map((field) => (
+                              <TableRow key={`exc-${doc.id}-${field.fieldName}`}>
+                                <TableCell className="py-2"><ConfidenceDot confidence={field.confidence} /></TableCell>
+                                <TableCell className="py-2 text-xs font-mono">{field.fieldName.replace(/_/g, " ")}</TableCell>
+                                <TableCell className="py-2 text-xs text-risk-high">{field.value}</TableCell>
+                                <TableCell className="py-2 text-[10px] text-muted-foreground">{doc.file.name}</TableCell>
+                                <TableCell className="py-2">
+                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0"
+                                    onClick={() => { startEdit(doc.id, field.fieldName, field.value); setActiveTab("fields"); }}>
+                                    <Pencil size={10} />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
                         </TableBody>
                       </Table>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Cross-doc mismatches summary in results */}
+                {crossDocMismatches.length > 0 && (
+                  <Card className="border-risk-high/20 bg-risk-high/5">
+                    <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                      <CardTitle className="text-xs font-mono text-risk-high">CROSS-DOCUMENT MISMATCHES ({crossDocMismatches.length})</CardTitle>
+                      <Button variant="ghost" size="sm" className="text-[10px] font-mono" onClick={() => setActiveTab("mismatches")}>View All</Button>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {crossDocMismatches.slice(0, 3).map((mm, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs">
+                          <Badge variant={mm.severity === "critical" ? "destructive" : "outline"} className="text-[10px] font-mono">{mm.severity}</Badge>
+                          <span className="font-mono">{mm.fieldName.replace(/_/g, " ")}</span>
+                          <span className="text-muted-foreground">— {mm.documents.length} conflicting values</span>
+                        </div>
+                      ))}
                     </CardContent>
                   </Card>
                 )}
@@ -723,22 +806,14 @@ export default function DocumentValidator() {
                 {/* Issues */}
                 {result.issues.length > 0 && (
                   <Card className="border-border bg-card">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xs font-mono text-muted-foreground">
-                        ISSUES ({result.issues.length})
-                      </CardTitle>
-                    </CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-muted-foreground">ISSUES ({result.issues.length})</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
                       {result.issues.map((issue, i) => (
                         <div key={i} className="p-3 rounded border border-border bg-secondary/30">
                           <div className="flex items-start gap-2">
-                            {issue.severity === "critical" ? (
-                              <XCircle size={14} className="text-risk-critical shrink-0" />
-                            ) : issue.severity === "high" ? (
-                              <AlertTriangle size={14} className="text-risk-high shrink-0" />
-                            ) : (
-                              <AlertTriangle size={14} className="text-risk-medium shrink-0" />
-                            )}
+                            {issue.severity === "critical" ? <XCircle size={14} className="text-risk-critical shrink-0" />
+                              : issue.severity === "high" ? <AlertTriangle size={14} className="text-risk-high shrink-0" />
+                              : <AlertTriangle size={14} className="text-risk-medium shrink-0" />}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <Badge variant="outline" className="text-[10px] font-mono uppercase">{issue.severity}</Badge>
@@ -757,9 +832,7 @@ export default function DocumentValidator() {
                 {/* Missing Documents */}
                 {result.missingDocuments.length > 0 && (
                   <Card className="border-border bg-card">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xs font-mono text-muted-foreground">MISSING DOCUMENTS</CardTitle>
-                    </CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-muted-foreground">MISSING DOCUMENTS</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
                       {result.missingDocuments.map((doc, i) => (
                         <div key={i} className="flex items-start gap-2 p-2 rounded border border-border">
@@ -767,9 +840,7 @@ export default function DocumentValidator() {
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-mono">{doc.documentType.replace(/_/g, " ").toUpperCase()}</span>
-                              <Badge variant={doc.importance === "required" ? "destructive" : "outline"} className="text-[10px]">
-                                {doc.importance}
-                              </Badge>
+                              <Badge variant={doc.importance === "required" ? "destructive" : "outline"} className="text-[10px]">{doc.importance}</Badge>
                             </div>
                             <p className="text-xs text-muted-foreground mt-0.5">{doc.reason}</p>
                           </div>
@@ -782,15 +853,12 @@ export default function DocumentValidator() {
                 {/* Recommendations */}
                 {result.recommendations.length > 0 && (
                   <Card className="border-primary/20 bg-primary/5">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xs font-mono text-primary">RECOMMENDATIONS</CardTitle>
-                    </CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-primary">RECOMMENDATIONS</CardTitle></CardHeader>
                     <CardContent>
                       <ul className="space-y-2">
                         {result.recommendations.map((rec, i) => (
                           <li key={i} className="text-sm flex items-start gap-2">
-                            <CheckCircle size={14} className="text-primary shrink-0 mt-0.5" />
-                            <span>{rec}</span>
+                            <CheckCircle size={14} className="text-primary shrink-0 mt-0.5" /> <span>{rec}</span>
                           </li>
                         ))}
                       </ul>
@@ -801,16 +869,11 @@ export default function DocumentValidator() {
                 {/* Country Requirements */}
                 {(result.countryRequirements?.length || 0) > 0 && (
                   <Card className="border-border bg-card">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-xs font-mono text-muted-foreground">COUNTRY-SPECIFIC REQUIREMENTS</CardTitle>
-                    </CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-muted-foreground">COUNTRY-SPECIFIC REQUIREMENTS</CardTitle></CardHeader>
                     <CardContent>
                       <ul className="space-y-1">
                         {result.countryRequirements?.map((req, i) => (
-                          <li key={i} className="text-sm flex items-center gap-2">
-                            <Info size={12} className="text-muted-foreground shrink-0" />
-                            {req}
-                          </li>
+                          <li key={i} className="text-sm flex items-center gap-2"><Info size={12} className="text-muted-foreground shrink-0" /> {req}</li>
                         ))}
                       </ul>
                     </CardContent>
@@ -821,6 +884,89 @@ export default function DocumentValidator() {
           })()}
         </TabsContent>
       </Tabs>
+
+      {/* Templates Dialog */}
+      <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-mono">Shipment Templates</DialogTitle>
+            <DialogDescription>Pre-load required documents, rules, and context for common workflows.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+            {SHIPMENT_TEMPLATES.map((t) => (
+              <Card key={t.id} className="border-border bg-card hover:border-primary/50 cursor-pointer transition-colors" onClick={() => handleLoadTemplate(t)}>
+                <CardContent className="py-3 px-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    {t.mode === "air" ? <Plane size={14} className="text-primary" /> : t.mode === "sea" ? <Ship size={14} className="text-primary" /> : <Truck size={14} className="text-primary" />}
+                    <span className="text-sm font-bold font-mono">{t.name}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">{t.description}</p>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <Badge variant="secondary" className="text-[10px]">{t.requiredDocs.length} required</Badge>
+                    <Badge variant="outline" className="text-[10px]">{t.optionalDocs.length} optional</Badge>
+                    {t.origin && <Badge variant="outline" className="text-[10px]">{t.origin}</Badge>}
+                    {t.destination && <Badge variant="outline" className="text-[10px]">{t.destination}</Badge>}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* History Sheet */}
+      <Sheet open={showHistory} onOpenChange={setShowHistory}>
+        <SheetContent className="w-[450px] sm:w-[500px]">
+          <SheetHeader>
+            <SheetTitle className="font-mono">Validation History</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 space-y-3">
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input value={historySearch} onChange={(e) => setHistorySearch(e.target.value)} placeholder="Search by shipment, origin, destination..." className="pl-9 text-xs" />
+            </div>
+            <ScrollArea className="h-[calc(100vh-200px)]">
+              {historyLoading ? (
+                <div className="flex items-center justify-center py-8"><Loader2 size={20} className="animate-spin text-muted-foreground" /></div>
+              ) : filteredSessions.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">No validation sessions found</p>
+              ) : (
+                <div className="space-y-2 pr-2">
+                  {filteredSessions.map((s) => (
+                    <Card key={s.id} className="border-border bg-card hover:border-primary/50 cursor-pointer transition-colors" onClick={() => handleRecallSession(s)}>
+                      <CardContent className="py-3 px-4">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-mono font-bold">{s.shipment_id || "Draft"}</span>
+                          <Badge variant="outline" className={`text-[10px] font-mono ${DISPOSITION_LABELS[s.disposition || "pending"]?.color || ""}`}>
+                            {DISPOSITION_LABELS[s.disposition || "pending"]?.label || s.disposition}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                          {s.origin_country && <span>{s.origin_country}</span>}
+                          {s.origin_country && s.destination_country && <span>→</span>}
+                          {s.destination_country && <span>{s.destination_country}</span>}
+                          <span>·</span>
+                          <span>{s.shipment_mode}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          {s.completeness_score != null && (
+                            <span className="text-[10px] font-mono text-muted-foreground">
+                              Completeness: {Math.round(Number(s.completeness_score))}%
+                            </span>
+                          )}
+                          <span className="text-[10px] text-muted-foreground">
+                            {new Date(s.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

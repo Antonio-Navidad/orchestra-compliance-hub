@@ -2734,6 +2734,86 @@ export type Database = {
         }
         Relationships: []
       }
+      validation_sessions: {
+        Row: {
+          completeness_score: number | null
+          consistency_score: number | null
+          created_at: string
+          cross_doc_mismatches: Json | null
+          declared_value: string | null
+          destination_country: string | null
+          disposition: string | null
+          documents: Json | null
+          hs_code: string | null
+          id: string
+          notes: string | null
+          origin_country: string | null
+          overall_readiness: string | null
+          shipment_id: string | null
+          shipment_mode: string | null
+          status: string
+          template_id: string | null
+          updated_at: string
+          user_id: string | null
+          validation_result: Json | null
+          workspace_id: string | null
+        }
+        Insert: {
+          completeness_score?: number | null
+          consistency_score?: number | null
+          created_at?: string
+          cross_doc_mismatches?: Json | null
+          declared_value?: string | null
+          destination_country?: string | null
+          disposition?: string | null
+          documents?: Json | null
+          hs_code?: string | null
+          id?: string
+          notes?: string | null
+          origin_country?: string | null
+          overall_readiness?: string | null
+          shipment_id?: string | null
+          shipment_mode?: string | null
+          status?: string
+          template_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+          validation_result?: Json | null
+          workspace_id?: string | null
+        }
+        Update: {
+          completeness_score?: number | null
+          consistency_score?: number | null
+          created_at?: string
+          cross_doc_mismatches?: Json | null
+          declared_value?: string | null
+          destination_country?: string | null
+          disposition?: string | null
+          documents?: Json | null
+          hs_code?: string | null
+          id?: string
+          notes?: string | null
+          origin_country?: string | null
+          overall_readiness?: string | null
+          shipment_id?: string | null
+          shipment_mode?: string | null
+          status?: string
+          template_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+          validation_result?: Json | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_sessions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       view_presets: {
         Row: {
           config: Json
