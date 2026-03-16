@@ -1029,26 +1029,56 @@ export default function DocumentValidator() {
                   </Card>
                 )}
 
-                {/* Missing Documents */}
-                {result.missingDocuments.length > 0 && (
-                  <Card className="border-border bg-card">
-                    <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-muted-foreground">MISSING DOCUMENTS</CardTitle></CardHeader>
-                    <CardContent className="space-y-2">
-                      {result.missingDocuments.map((doc, i) => (
-                        <div key={i} className="flex items-start gap-2 p-2 rounded border border-border">
-                          <FileText size={14} className={doc.importance === "required" ? "text-risk-critical" : "text-risk-medium"} />
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-mono">{doc.documentType.replace(/_/g, " ").toUpperCase()}</span>
-                              <Badge variant={doc.importance === "required" ? "destructive" : "outline"} className="text-[10px]">{doc.importance}</Badge>
+                {/* Missing Documents — lifecycle-aware filtering */}
+                {result.missingDocuments.length > 0 && (() => {
+                  // Downstream docs that should only matter at later lifecycle stages
+                  const DOWNSTREAM_DOC_TYPES = new Set([
+                    "arrival notice", "delivery order", "cargo release order",
+                    "customs release", "proof of delivery", "import declaration",
+                  ]);
+                  const preShipmentDocs = result.missingDocuments.filter(
+                    (d) => !DOWNSTREAM_DOC_TYPES.has(d.documentType.toLowerCase())
+                  );
+                  const downstreamDocs = result.missingDocuments.filter(
+                    (d) => DOWNSTREAM_DOC_TYPES.has(d.documentType.toLowerCase())
+                  );
+                  return (
+                    <Card className="border-border bg-card">
+                      <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-muted-foreground">MISSING DOCUMENTS</CardTitle></CardHeader>
+                      <CardContent className="space-y-2">
+                        {preShipmentDocs.map((doc, i) => (
+                          <div key={i} className="flex items-start gap-2 p-2 rounded border border-border">
+                            <FileText size={14} className={doc.importance === "required" ? "text-risk-critical" : "text-risk-medium"} />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-mono">{doc.documentType.replace(/_/g, " ").toUpperCase()}</span>
+                                <Badge variant={doc.importance === "required" ? "destructive" : "outline"} className="text-[10px]">{doc.importance}</Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">{doc.reason}</p>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-0.5">{doc.reason}</p>
                           </div>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                )}
+                        ))}
+                        {downstreamDocs.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-border">
+                            <p className="text-[10px] font-mono text-muted-foreground mb-2">POST-ARRIVAL / DOWNSTREAM (not required at this stage)</p>
+                            {downstreamDocs.map((doc, i) => (
+                              <div key={i} className="flex items-start gap-2 p-2 rounded border border-border/50 opacity-60">
+                                <FileText size={14} className="text-muted-foreground" />
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-mono">{doc.documentType.replace(/_/g, " ").toUpperCase()}</span>
+                                    <Badge variant="outline" className="text-[10px]">later stage</Badge>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-0.5">{doc.reason}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
 
                 {/* Recommendations */}
                 {result.recommendations.length > 0 && (
