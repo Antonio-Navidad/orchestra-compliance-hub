@@ -309,7 +309,7 @@ export default function DocumentValidator() {
   }, [documents]);
 
   const handleValidate = async () => {
-    const extracted = documents.filter((d) => d.status === "extracted");
+    const extracted = documents.filter((d) => d.status === "extracted" && !d.isMultiDocument);
     if (extracted.length === 0) { toast.error("Upload and extract at least one document first"); return; }
     setValidating(true); setResult(null);
     try {
