@@ -21,7 +21,7 @@ import {
 import { toast } from "sonner";
 import { ExportButton } from "@/components/ExportButton";
 import {
-  type UploadedDocument, type ExtractedField,
+  type UploadedDocument, type ExtractedField, type DetectedDocument,
   VALIDATION_DETAIL_COLUMNS, VALIDATION_SUMMARY_COLUMNS,
   buildDetailExportRows, buildSummaryExportRow,
 } from "@/lib/validationExport";
@@ -191,19 +191,88 @@ export default function DocumentValidator() {
         throw new Error(err.error || `HTTP ${res.status}`);
       }
       const data = await res.json();
-      const fields: ExtractedField[] = (data.fields || []).map((f: any) => ({
-        fieldName: f.fieldName, value: f.value, confidence: f.confidence, sourceLocation: f.sourceLocation,
+      const allFields: ExtractedField[] = (data.fields || []).map((f: any) => ({
+        fieldName: f.fieldName, value: f.value, confidence: f.confidence,
+        sourceLocation: f.sourceLocation, sourceDocumentType: f.sourceDocumentType,
       }));
+      const detectedDocs: DetectedDocument[] = (data.detectedDocuments || []).map((d: any) => ({
+        documentType: d.documentType, pageRange: d.pageRange,
+        confidence: d.confidence, detectionMethod: d.detectionMethod || "direct",
+      }));
+      const isMulti = data.isMultiDocument === true && detectedDocs.length > 1;
 
-      setDocuments((prev) =>
-        prev.map((d) =>
-          d.id === doc.id
-            ? { ...d, status: "extracted", extractedFields: fields, detectedType: data.detectedDocumentType, overallQuality: data.overallQuality, parseWarnings: data.parseWarnings, rawTextSummary: data.rawTextSummary, extractionId: data.extractionId }
-            : d
-        )
-      );
-      autoFillContext(fields);
-      toast.success(`Extracted ${fields.length} fields from ${doc.file.name}`);
+      if (isMulti) {
+        // Split into virtual sub-documents per detected document type
+        const subDocs: UploadedDocument[] = detectedDocs.map((dd) => {
+          const subFields = allFields.filter(
+            (f) => f.sourceDocumentType?.toLowerCase() === dd.documentType.toLowerCase()
+          );
+          return {
+            id: crypto.randomUUID(),
+            file: doc.file,
+            type: dd.documentType,
+            name: `${doc.file.name} → ${dd.documentType.replace(/_/g, " ")}`,
+            status: "extracted" as const,
+            extractedFields: subFields,
+            detectedType: dd.documentType,
+            overallQuality: data.overallQuality,
+            parseWarnings: [],
+            rawTextSummary: "",
+            extractionId: data.extractionId,
+            parentUploadId: doc.id,
+            isMultiDocument: false,
+            detectedDocuments: [],
+          };
+        });
+
+        // Also collect any unattributed fields
+        const attributedTypes = new Set(detectedDocs.map((d) => d.documentType.toLowerCase()));
+        const unattributed = allFields.filter(
+          (f) => !f.sourceDocumentType || !attributedTypes.has(f.sourceDocumentType.toLowerCase())
+        );
+
+        // Replace the parent doc with a packet marker + sub-docs
+        setDocuments((prev) => {
+          const withoutParent = prev.filter((d) => d.id !== doc.id);
+          const parentMarker: UploadedDocument = {
+            ...doc,
+            status: "extracted",
+            extractedFields: unattributed,
+            detectedType: "multi_document_packet",
+            overallQuality: data.overallQuality,
+            parseWarnings: data.parseWarnings || [],
+            rawTextSummary: data.rawTextSummary || "",
+            extractionId: data.extractionId,
+            isMultiDocument: true,
+            detectedDocuments: detectedDocs,
+          };
+          return [...withoutParent, parentMarker, ...subDocs];
+        });
+
+        // Auto-fill from all fields
+        autoFillContext(allFields);
+        toast.success(`Detected ${detectedDocs.length} documents in ${doc.file.name}, extracted ${allFields.length} fields`);
+      } else {
+        // Single document handling (existing behavior)
+        setDocuments((prev) =>
+          prev.map((d) =>
+            d.id === doc.id
+              ? {
+                  ...d, status: "extracted", extractedFields: allFields,
+                  detectedType: data.detectedDocumentType,
+                  overallQuality: data.overallQuality,
+                  parseWarnings: data.parseWarnings,
+                  rawTextSummary: data.rawTextSummary,
+                  extractionId: data.extractionId,
+                  isMultiDocument: false,
+                  detectedDocuments: detectedDocs.length > 0 ? detectedDocs : [{ documentType: data.detectedDocumentType || doc.type, confidence: 1, detectionMethod: "direct" as const }],
+                }
+              : d
+          )
+        );
+        autoFillContext(allFields);
+        toast.success(`Extracted ${allFields.length} fields from ${doc.file.name}`);
+      }
     } catch (e: any) {
       setDocuments((prev) =>
         prev.map((d) => (d.id === doc.id ? { ...d, status: "error", error: e.message } : d))
@@ -229,18 +298,18 @@ export default function DocumentValidator() {
 
   const handleDrop = (e: React.DragEvent) => { e.preventDefault(); handleFiles(e.dataTransfer.files); };
 
-  // Run cross-doc matching whenever documents change
+  // Run cross-doc matching whenever documents change (exclude packet parents)
   useEffect(() => {
-    const extracted = documents.filter((d) => d.status === "extracted");
+    const extracted = documents.filter((d) => d.status === "extracted" && !d.isMultiDocument);
     if (extracted.length >= 2) {
-      setCrossDocMismatches(detectCrossDocMismatches(documents));
+      setCrossDocMismatches(detectCrossDocMismatches(extracted));
     } else {
       setCrossDocMismatches([]);
     }
   }, [documents]);
 
   const handleValidate = async () => {
-    const extracted = documents.filter((d) => d.status === "extracted");
+    const extracted = documents.filter((d) => d.status === "extracted" && !d.isMultiDocument);
     if (extracted.length === 0) { toast.error("Upload and extract at least one document first"); return; }
     setValidating(true); setResult(null);
     try {
@@ -323,10 +392,11 @@ export default function DocumentValidator() {
   };
   const removeDocument = (id: string) => setDocuments((prev) => prev.filter((d) => d.id !== id));
 
-  const allExtracted = documents.length > 0 && documents.every((d) => d.status === "extracted");
+  const allExtracted = documents.length > 0 && documents.filter(d => !d.isMultiDocument).length > 0 && documents.filter(d => !d.isMultiDocument).every((d) => d.status === "extracted");
   const anyExtracting = documents.some((d) => d.status === "extracting");
-  const totalFields = documents.reduce((sum, d) => sum + d.extractedFields.length, 0);
-  const highConfFields = documents.reduce((sum, d) => sum + d.extractedFields.filter((f) => f.confidence >= 0.8).length, 0);
+  const nonPacketDocs = documents.filter(d => !d.isMultiDocument);
+  const totalFields = nonPacketDocs.reduce((sum, d) => sum + d.extractedFields.length, 0);
+  const highConfFields = nonPacketDocs.reduce((sum, d) => sum + d.extractedFields.filter((f) => f.confidence >= 0.8).length, 0);
   const lowConfFields = totalFields - highConfFields;
 
   const exportContext = { shipmentId, origin: originCountry, destination: destinationCountry, mode: shipmentMode };
@@ -342,15 +412,32 @@ export default function DocumentValidator() {
       || (s.disposition || "").toLowerCase().includes(q);
   });
 
-  // Template required docs checklist
+  // Compute all detected document types across all uploads (including sub-docs from packets)
+  const allDetectedDocTypes = new Set<string>();
+  for (const doc of documents) {
+    if (doc.status === "extracted" && !doc.isMultiDocument) {
+      allDetectedDocTypes.add((doc.detectedType || doc.type).toLowerCase());
+    }
+    if (doc.detectedDocuments) {
+      for (const dd of doc.detectedDocuments) {
+        allDetectedDocTypes.add(dd.documentType.toLowerCase());
+      }
+    }
+  }
+
+  // Template required docs checklist — uses allDetectedDocTypes for accurate matching
   const templateChecklist = selectedTemplate
     ? selectedTemplate.requiredDocs.map((docType) => ({
         docType,
-        present: documents.some((d) => (d.detectedType || d.type) === docType && d.status === "extracted"),
+        present: allDetectedDocTypes.has(docType.toLowerCase()),
       }))
     : null;
 
   const modeIcon = shipmentMode === "air" ? <Plane size={14} /> : shipmentMode === "sea" ? <Ship size={14} /> : <Truck size={14} />;
+
+  // Visible documents (exclude packet parents from count, show sub-docs instead)
+  const visibleDocs = documents.filter((d) => !d.isMultiDocument);
+  const packetParents = documents.filter((d) => d.isMultiDocument);
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl space-y-6">
@@ -412,7 +499,7 @@ export default function DocumentValidator() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Card className="border-border bg-card"><CardContent className="py-3 px-4">
             <p className="text-[10px] font-mono text-muted-foreground">DOCUMENTS</p>
-            <p className="text-2xl font-bold font-mono">{documents.length}</p>
+            <p className="text-2xl font-bold font-mono">{visibleDocs.length}</p>
           </CardContent></Card>
           <Card className="border-border bg-card"><CardContent className="py-3 px-4">
             <p className="text-[10px] font-mono text-muted-foreground">FIELDS EXTRACTED</p>
@@ -502,11 +589,45 @@ export default function DocumentValidator() {
                 </Card>
               )}
 
+              {/* Detected Documents Panel — shows for multi-doc packets */}
+              {packetParents.length > 0 && (
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs font-mono text-primary">
+                      DETECTED DOCUMENTS — {allDetectedDocTypes.size} types identified
+                    </CardTitle>
+                    <p className="text-[10px] text-muted-foreground">
+                      Combined packet segmented into logical documents
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-1.5">
+                    {packetParents.flatMap((p) => p.detectedDocuments || []).map((dd, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm">
+                        <CheckCircle size={14} className={
+                          dd.detectionMethod === "direct" ? "text-risk-low" :
+                          dd.detectionMethod === "inferred" ? "text-risk-medium" : "text-risk-high"
+                        } />
+                        <span className="font-mono text-xs">{dd.documentType.replace(/_/g, " ").toUpperCase()}</span>
+                        <Badge variant="outline" className={`text-[10px] font-mono ${
+                          dd.detectionMethod === "direct" ? "border-risk-low/50 text-risk-low" :
+                          dd.detectionMethod === "inferred" ? "border-risk-medium/50 text-risk-medium" :
+                          "border-risk-high/50 text-risk-high"
+                        }`}>
+                          {dd.detectionMethod}
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground">{Math.round(dd.confidence * 100)}%</span>
+                        {dd.pageRange && <span className="text-[10px] text-muted-foreground">({dd.pageRange})</span>}
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Uploaded documents list */}
               {documents.length > 0 && (
                 <div className="space-y-2">
                   {documents.map((doc) => (
-                    <Card key={doc.id} className="border-border bg-card">
+                    <Card key={doc.id} className={`border-border bg-card ${doc.isMultiDocument ? "border-primary/20" : doc.parentUploadId ? "ml-4 border-l-2 border-l-primary/30" : ""}`}>
                       <CardContent className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           {doc.status === "extracting" ? <Loader2 size={16} className="text-primary animate-spin shrink-0" />
@@ -515,35 +636,49 @@ export default function DocumentValidator() {
                             : <Upload size={16} className="text-muted-foreground shrink-0" />}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-mono truncate">{doc.file.name}</span>
-                              <Select value={doc.type} onValueChange={(val) => setDocuments((prev) => prev.map((d) => d.id === doc.id ? { ...d, type: val } : d))}>
-                                <SelectTrigger className="h-6 w-auto text-[10px] font-mono border-border">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {DOC_TYPES.map((t) => <SelectItem key={t} value={t} className="text-xs">{t.replace(/_/g, " ")}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
-                              {doc.detectedType && doc.detectedType !== doc.type && (
+                              <span className="text-sm font-mono truncate">{doc.isMultiDocument ? `📦 ${doc.file.name}` : doc.parentUploadId ? `↳ ${doc.name}` : doc.file.name}</span>
+                              {doc.isMultiDocument ? (
+                                <Badge variant="secondary" className="text-[10px] font-mono">COMBINED PACKET</Badge>
+                              ) : (
+                                <Select value={doc.type} onValueChange={(val) => setDocuments((prev) => prev.map((d) => d.id === doc.id ? { ...d, type: val } : d))}>
+                                  <SelectTrigger className="h-6 w-auto text-[10px] font-mono border-border">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {DOC_TYPES.map((t) => <SelectItem key={t} value={t} className="text-xs">{t.replace(/_/g, " ")}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                              {!doc.isMultiDocument && doc.detectedType && doc.detectedType !== doc.type && (
                                 <Badge variant="secondary" className="text-[10px] font-mono">AI: {doc.detectedType.replace(/_/g, " ")}</Badge>
                               )}
-                              {doc.overallQuality && (
+                              {doc.overallQuality && !doc.parentUploadId && (
                                 <Badge variant="outline" className={`text-[10px] font-mono ${doc.overallQuality === "high" ? "border-risk-low/50 text-risk-low" : doc.overallQuality === "medium" ? "border-risk-medium/50 text-risk-medium" : "border-risk-high/50 text-risk-high"}`}>
                                   {doc.overallQuality} quality
                                 </Badge>
                               )}
                             </div>
                             {doc.status === "extracting" && <p className="text-xs text-muted-foreground mt-1">Extracting fields with AI...</p>}
-                            {doc.status === "extracted" && <p className="text-xs text-muted-foreground mt-1">{doc.extractedFields.length} fields extracted</p>}
+                            {doc.isMultiDocument && doc.detectedDocuments && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {doc.detectedDocuments.length} documents detected · {doc.extractedFields.length} unattributed fields
+                              </p>
+                            )}
+                            {doc.status === "extracted" && !doc.isMultiDocument && <p className="text-xs text-muted-foreground mt-1">{doc.extractedFields.length} fields extracted</p>}
                             {doc.status === "error" && <p className="text-xs text-risk-critical mt-1">{doc.error}</p>}
                           </div>
                           <div className="flex items-center gap-1">
                             {doc.status === "error" && (
                               <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => extractDocument(doc)}><RefreshCw size={12} /></Button>
                             )}
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-risk-critical" onClick={() => removeDocument(doc.id)}>
-                              <XCircle size={12} />
-                            </Button>
+                            {!doc.parentUploadId && (
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-risk-critical" onClick={() => {
+                                // Remove parent and all its children
+                                setDocuments((prev) => prev.filter((d) => d.id !== doc.id && d.parentUploadId !== doc.id));
+                              }}>
+                                <XCircle size={12} />
+                              </Button>
+                            )}
                           </div>
                         </div>
                         {doc.parseWarnings && doc.parseWarnings.length > 0 && (
@@ -615,7 +750,7 @@ export default function DocumentValidator() {
           <Card className="border-border bg-card">
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="text-xs font-mono text-muted-foreground">
-                ALL EXTRACTED FIELDS — {totalFields} fields from {documents.filter(d => d.status === "extracted").length} documents
+                ALL EXTRACTED FIELDS — {totalFields} fields from {visibleDocs.filter(d => d.status === "extracted").length} documents
               </CardTitle>
               <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-risk-low inline-block" /> ≥90%</span>
@@ -630,14 +765,14 @@ export default function DocumentValidator() {
                     <TableHead className="text-[10px] font-mono">CONF</TableHead>
                     <TableHead className="text-[10px] font-mono">FIELD</TableHead>
                     <TableHead className="text-[10px] font-mono">VALUE</TableHead>
+                    <TableHead className="text-[10px] font-mono">DOC TYPE</TableHead>
                     <TableHead className="text-[10px] font-mono">SOURCE</TableHead>
-                    <TableHead className="text-[10px] font-mono">LOCATION</TableHead>
                     <TableHead className="text-[10px] font-mono">STATUS</TableHead>
                     <TableHead className="text-[10px] font-mono w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {documents.filter((d) => d.status === "extracted").flatMap((doc) =>
+                  {documents.filter((d) => d.status === "extracted" && !d.isMultiDocument).flatMap((doc) =>
                     doc.extractedFields.map((field) => (
                       <TableRow key={`${doc.id}-${field.fieldName}`}>
                         <TableCell className="py-2"><ConfidenceDot confidence={field.confidence} /></TableCell>
@@ -652,8 +787,12 @@ export default function DocumentValidator() {
                             <span className={field.confidence < 0.7 ? "text-risk-high" : ""}>{field.value}</span>
                           )}
                         </TableCell>
-                        <TableCell className="py-2 text-[10px] text-muted-foreground truncate max-w-[120px]">{doc.file.name}</TableCell>
-                        <TableCell className="py-2 text-[10px] text-muted-foreground">{field.sourceLocation || "—"}</TableCell>
+                        <TableCell className="py-2">
+                          <Badge variant="secondary" className="text-[10px] font-mono">
+                            {(field.sourceDocumentType || doc.detectedType || doc.type).replace(/_/g, " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-2 text-[10px] text-muted-foreground truncate max-w-[100px]">{doc.parentUploadId ? doc.name.split("→")[0]?.trim() : doc.file.name}</TableCell>
                         <TableCell className="py-2">
                           <Badge variant="outline" className={`text-[10px] font-mono ${
                             field.confidence >= 0.8 ? "border-risk-low/50 text-risk-low" :

@@ -41,6 +41,14 @@ export interface ExtractedField {
   value: string;
   confidence: number;
   sourceLocation?: string;
+  sourceDocumentType?: string;
+}
+
+export interface DetectedDocument {
+  documentType: string;
+  pageRange?: string;
+  confidence: number;
+  detectionMethod: "direct" | "inferred" | "partial";
 }
 
 export interface UploadedDocument {
@@ -56,6 +64,10 @@ export interface UploadedDocument {
   rawTextSummary?: string;
   extractionId?: string;
   error?: string;
+  isMultiDocument?: boolean;
+  detectedDocuments?: DetectedDocument[];
+  /** For virtual sub-documents split from a combined packet */
+  parentUploadId?: string;
 }
 
 export function buildDetailExportRows(
