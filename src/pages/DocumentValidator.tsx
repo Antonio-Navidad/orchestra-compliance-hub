@@ -16,7 +16,8 @@ import {
   FileText, Upload, Loader2, CheckCircle, AlertTriangle, XCircle,
   ShieldAlert, Info, Camera, Download, Eye, Pencil, RefreshCw,
   Save, History, LayoutTemplate, GitCompare, RotateCcw, Copy,
-  Package, Truck, Plane, Ship, Search, Hash, Clock, Shield
+  Package, Truck, Plane, Ship, Search, Hash, Clock, Shield,
+  Plus, MapPin
 } from "lucide-react";
 import { toast } from "sonner";
 import { ExportButton } from "@/components/ExportButton";
@@ -30,7 +31,9 @@ import { detectCrossDocMismatches, type CrossDocMismatch } from "@/lib/crossDocM
 import { useValidationHistory, type ValidationSession } from "@/hooks/useValidationHistory";
 import { useFindingReviews, type ReviewAction, type FindingReview } from "@/hooks/useFindingReviews";
 import { useLaneUsage, deriveLaneStatus, type LaneUsageRecord, type LaneStatus } from "@/hooks/useLaneUsage";
+import { useLanes, type Lane, type CreateLaneParams } from "@/hooks/useLanes";
 import { FindingReviewActions } from "@/components/FindingReviewActions";
+import { Label } from "@/components/ui/label";
 import {
   evaluateRules, computePacketHash,
   RULES_VERSION, RULES_ENGINE_ID,
@@ -146,6 +149,13 @@ export default function DocumentValidator() {
   const { reviews, fetchReviews, submitReview, getStatus, getReviewsForRule } = useFindingReviews(savedSessionId);
   const { lanes: laneUsageData, loading: lanesLoading, fetchLaneUsage } = useLaneUsage();
   const [laneFilter, setLaneFilter] = useState<"all" | "templates" | "production" | "validated">("all");
+  const { lanes: savedLanes, loading: savedLanesLoading, fetchLanes, createLane } = useLanes();
+  const [showNewLane, setShowNewLane] = useState(false);
+  const [newLaneName, setNewLaneName] = useState("");
+  const [newLaneOrigin, setNewLaneOrigin] = useState("");
+  const [newLaneDestination, setNewLaneDestination] = useState("");
+  const [newLaneMode, setNewLaneMode] = useState("sea");
+  const [newLaneStage, setNewLaneStage] = useState("pre_shipment");
 
   // Auto-fill shipment context from extracted fields
   const autoFillContext = useCallback((fields: ExtractedField[]) => {
@@ -407,6 +417,47 @@ export default function DocumentValidator() {
     if (id) setSavedSessionId(id);
   };
 
+  const handleSaveAsLane = async () => {
+    if (!originCountry || !destinationCountry) {
+      toast.error("Origin and destination are required to save a lane");
+      return;
+    }
+    const laneName = `${originCountry} → ${destinationCountry} (${shipmentMode})`;
+    const id = await createLane({
+      name: laneName,
+      origin: originCountry,
+      destination: destinationCountry,
+      mode: shipmentMode,
+      workflow_stage: workflowStage,
+      rules_version: auditMeta?.rulesVersion,
+      source_type: "saved_from_validation",
+      status: "validated",
+    });
+    if (id) fetchLanes();
+  };
+
+  const handleCreateNewLane = async () => {
+    if (!newLaneName.trim() || !newLaneOrigin.trim() || !newLaneDestination.trim()) {
+      toast.error("Name, origin, and destination are required");
+      return;
+    }
+    const id = await createLane({
+      name: newLaneName,
+      origin: newLaneOrigin,
+      destination: newLaneDestination,
+      mode: newLaneMode,
+      workflow_stage: newLaneStage,
+      source_type: "manual",
+      status: "template_only",
+    });
+    if (id) {
+      setShowNewLane(false);
+      setNewLaneName(""); setNewLaneOrigin(""); setNewLaneDestination("");
+      setNewLaneMode("sea"); setNewLaneStage("pre_shipment");
+      fetchLanes();
+    }
+  };
+
   const handleLoadTemplate = (t: ShipmentTemplate) => {
     setSelectedTemplate(t);
     setShipmentMode(t.mode);
@@ -556,6 +607,11 @@ export default function DocumentValidator() {
           )}
           {savedSessionId && (
             <Badge variant="outline" className="font-mono text-[10px] border-risk-low/50 text-risk-low">SAVED</Badge>
+          )}
+          {ruleResult && originCountry && destinationCountry && (
+            <Button variant="outline" size="sm" className="font-mono text-[10px] gap-1.5" onClick={handleSaveAsLane}>
+              <MapPin size={12} /> Save as Lane
+            </Button>
           )}
           {ruleResult && (
             <>
@@ -1330,11 +1386,11 @@ export default function DocumentValidator() {
       </Tabs>
 
       {/* Templates & Lanes Dialog */}
-      <Dialog open={showTemplates} onOpenChange={(open) => { setShowTemplates(open); if (open) fetchLaneUsage(); }}>
+      <Dialog open={showTemplates} onOpenChange={(open) => { setShowTemplates(open); if (open) { fetchLaneUsage(); fetchLanes(); } }}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="font-mono">Templates &amp; Lane Registry</DialogTitle>
-            <DialogDescription>Pre-load workflows or select validated production lanes. Lanes are derived from validation history.</DialogDescription>
+            <DialogDescription>Pre-load workflows or select validated production lanes.</DialogDescription>
           </DialogHeader>
 
           {/* Filter Tabs */}
@@ -1349,8 +1405,58 @@ export default function DocumentValidator() {
                 {f === "all" ? "All" : f === "templates" ? "Templates Only" : f === "validated" ? "Validated Lanes" : "Production Lanes"}
               </Badge>
             ))}
-            {lanesLoading && <Loader2 size={14} className="animate-spin text-muted-foreground" />}
+            {(lanesLoading || savedLanesLoading) && <Loader2 size={14} className="animate-spin text-muted-foreground" />}
+            <Button variant="outline" size="sm" className="ml-auto font-mono text-[10px] gap-1.5" onClick={() => setShowNewLane(!showNewLane)}>
+              <Plus size={12} /> New Lane
+            </Button>
           </div>
+
+          {showNewLane && (
+            <div className="border border-border rounded-md p-3 space-y-3 bg-muted/30">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <Label className="text-[10px] font-mono">Lane Name</Label>
+                  <Input value={newLaneName} onChange={(e) => setNewLaneName(e.target.value)} placeholder="e.g. Colombia → US East Coast" className="text-xs mt-1" />
+                </div>
+                <div>
+                  <Label className="text-[10px] font-mono">Origin</Label>
+                  <Input value={newLaneOrigin} onChange={(e) => setNewLaneOrigin(e.target.value)} placeholder="e.g. Colombia" className="text-xs mt-1" />
+                </div>
+                <div>
+                  <Label className="text-[10px] font-mono">Destination</Label>
+                  <Input value={newLaneDestination} onChange={(e) => setNewLaneDestination(e.target.value)} placeholder="e.g. United States" className="text-xs mt-1" />
+                </div>
+                <div>
+                  <Label className="text-[10px] font-mono">Mode</Label>
+                  <Select value={newLaneMode} onValueChange={setNewLaneMode}>
+                    <SelectTrigger className="text-xs mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sea">Sea</SelectItem>
+                      <SelectItem value="air">Air</SelectItem>
+                      <SelectItem value="land">Land</SelectItem>
+                      <SelectItem value="multimodal">Multimodal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-[10px] font-mono">Workflow Stage</Label>
+                  <Select value={newLaneStage} onValueChange={setNewLaneStage}>
+                    <SelectTrigger className="text-xs mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pre_shipment">Pre-Shipment</SelectItem>
+                      <SelectItem value="in_transit">In Transit</SelectItem>
+                      <SelectItem value="at_customs">At Customs</SelectItem>
+                      <SelectItem value="post_clearance">Post Clearance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" size="sm" className="text-xs" onClick={() => setShowNewLane(false)}>Cancel</Button>
+                <Button size="sm" className="text-xs font-mono" onClick={handleCreateNewLane}>Create Lane</Button>
+              </div>
+            </div>
+          )}
 
           <ScrollArea className="flex-1 mt-3 pr-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1422,6 +1528,38 @@ export default function DocumentValidator() {
                       lastUsed: l.lastUsed,
                       rulesVersion: l.rulesVersion,
                       workflowStage: l.workflowStage,
+                      template: null,
+                      requiredDocs: 0,
+                      optionalDocs: 0,
+                    });
+                  }
+                }
+
+                // Add saved lanes from the lanes table
+                for (const sl of savedLanes) {
+                  const key = `${sl.origin.toLowerCase()}|${sl.destination.toLowerCase()}|${sl.mode}`;
+                  if (!usedKeys.has(key)) {
+                    usedKeys.add(key);
+                    const matchingUsage = laneUsageData.find(
+                      (l) => l.origin.toLowerCase() === sl.origin.toLowerCase() &&
+                             l.destination.toLowerCase() === sl.destination.toLowerCase() &&
+                             l.mode === sl.mode
+                    );
+                    const usageCount = matchingUsage?.usageCount || sl.usage_count;
+                    const lastUsed = matchingUsage?.lastUsed || sl.last_used;
+                    const status = deriveLaneStatus(usageCount, lastUsed);
+                    merged.push({
+                      id: sl.id,
+                      name: sl.name,
+                      description: `${sl.source_type === "manual" ? "Manually created" : "Saved from validation"} lane`,
+                      mode: sl.mode,
+                      origin: sl.origin,
+                      destination: sl.destination,
+                      status: status === "template_only" ? (sl.status as LaneStatus) : status,
+                      usageCount,
+                      lastUsed,
+                      rulesVersion: sl.rules_version || matchingUsage?.rulesVersion || null,
+                      workflowStage: sl.workflow_stage || matchingUsage?.workflowStage || null,
                       template: null,
                       requiredDocs: 0,
                       optionalDocs: 0,

@@ -1417,6 +1417,60 @@ export type Database = {
           },
         ]
       }
+      lanes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          destination: string
+          id: string
+          last_used: string | null
+          mode: string
+          name: string
+          notes: string | null
+          origin: string
+          rules_version: string | null
+          source_type: string
+          status: string
+          updated_at: string
+          usage_count: number
+          workflow_stage: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          destination?: string
+          id?: string
+          last_used?: string | null
+          mode?: string
+          name: string
+          notes?: string | null
+          origin?: string
+          rules_version?: string | null
+          source_type?: string
+          status?: string
+          updated_at?: string
+          usage_count?: number
+          workflow_stage?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          destination?: string
+          id?: string
+          last_used?: string | null
+          mode?: string
+          name?: string
+          notes?: string | null
+          origin?: string
+          rules_version?: string | null
+          source_type?: string
+          status?: string
+          updated_at?: string
+          usage_count?: number
+          workflow_stage?: string | null
+        }
+        Relationships: []
+      }
       legal_knowledge: {
         Row: {
           created_at: string
