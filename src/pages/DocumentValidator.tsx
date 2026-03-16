@@ -608,6 +608,11 @@ export default function DocumentValidator() {
           {savedSessionId && (
             <Badge variant="outline" className="font-mono text-[10px] border-risk-low/50 text-risk-low">SAVED</Badge>
           )}
+          {ruleResult && originCountry && destinationCountry && (
+            <Button variant="outline" size="sm" className="font-mono text-[10px] gap-1.5" onClick={handleSaveAsLane}>
+              <MapPin size={12} /> Save as Lane
+            </Button>
+          )}
           {ruleResult && (
             <>
               <ExportButton data={detailRows} columns={VALIDATION_DETAIL_COLUMNS} filename={`validation-detail-${shipmentId || "draft"}`} label="Export Details" />
