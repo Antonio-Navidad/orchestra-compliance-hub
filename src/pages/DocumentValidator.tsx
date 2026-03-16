@@ -30,7 +30,10 @@ import { detectCrossDocMismatches, type CrossDocMismatch } from "@/lib/crossDocM
 import { useValidationHistory, type ValidationSession } from "@/hooks/useValidationHistory";
 import { useFindingReviews, type ReviewAction, type FindingReview } from "@/hooks/useFindingReviews";
 import { useLaneUsage, deriveLaneStatus, type LaneUsageRecord, type LaneStatus } from "@/hooks/useLaneUsage";
+import { useLanes, type Lane, type CreateLaneParams } from "@/hooks/useLanes";
 import { FindingReviewActions } from "@/components/FindingReviewActions";
+import { Label } from "@/components/ui/label";
+import { Plus, MapPin } from "lucide-react";
 import {
   evaluateRules, computePacketHash,
   RULES_VERSION, RULES_ENGINE_ID,
