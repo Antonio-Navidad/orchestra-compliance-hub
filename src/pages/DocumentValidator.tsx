@@ -588,11 +588,45 @@ export default function DocumentValidator() {
                 </Card>
               )}
 
+              {/* Detected Documents Panel — shows for multi-doc packets */}
+              {packetParents.length > 0 && (
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs font-mono text-primary">
+                      DETECTED DOCUMENTS — {allDetectedDocTypes.size} types identified
+                    </CardTitle>
+                    <p className="text-[10px] text-muted-foreground">
+                      Combined packet segmented into logical documents
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-1.5">
+                    {packetParents.flatMap((p) => p.detectedDocuments || []).map((dd, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm">
+                        <CheckCircle size={14} className={
+                          dd.detectionMethod === "direct" ? "text-risk-low" :
+                          dd.detectionMethod === "inferred" ? "text-risk-medium" : "text-risk-high"
+                        } />
+                        <span className="font-mono text-xs">{dd.documentType.replace(/_/g, " ").toUpperCase()}</span>
+                        <Badge variant="outline" className={`text-[10px] font-mono ${
+                          dd.detectionMethod === "direct" ? "border-risk-low/50 text-risk-low" :
+                          dd.detectionMethod === "inferred" ? "border-risk-medium/50 text-risk-medium" :
+                          "border-risk-high/50 text-risk-high"
+                        }`}>
+                          {dd.detectionMethod}
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground">{Math.round(dd.confidence * 100)}%</span>
+                        {dd.pageRange && <span className="text-[10px] text-muted-foreground">({dd.pageRange})</span>}
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Uploaded documents list */}
               {documents.length > 0 && (
                 <div className="space-y-2">
                   {documents.map((doc) => (
-                    <Card key={doc.id} className="border-border bg-card">
+                    <Card key={doc.id} className={`border-border bg-card ${doc.isMultiDocument ? "border-primary/20" : doc.parentUploadId ? "ml-4 border-l-2 border-l-primary/30" : ""}`}>
                       <CardContent className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           {doc.status === "extracting" ? <Loader2 size={16} className="text-primary animate-spin shrink-0" />
@@ -601,35 +635,49 @@ export default function DocumentValidator() {
                             : <Upload size={16} className="text-muted-foreground shrink-0" />}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-mono truncate">{doc.file.name}</span>
-                              <Select value={doc.type} onValueChange={(val) => setDocuments((prev) => prev.map((d) => d.id === doc.id ? { ...d, type: val } : d))}>
-                                <SelectTrigger className="h-6 w-auto text-[10px] font-mono border-border">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {DOC_TYPES.map((t) => <SelectItem key={t} value={t} className="text-xs">{t.replace(/_/g, " ")}</SelectItem>)}
-                                </SelectContent>
-                              </Select>
-                              {doc.detectedType && doc.detectedType !== doc.type && (
+                              <span className="text-sm font-mono truncate">{doc.isMultiDocument ? `📦 ${doc.file.name}` : doc.parentUploadId ? `↳ ${doc.name}` : doc.file.name}</span>
+                              {doc.isMultiDocument ? (
+                                <Badge variant="secondary" className="text-[10px] font-mono">COMBINED PACKET</Badge>
+                              ) : (
+                                <Select value={doc.type} onValueChange={(val) => setDocuments((prev) => prev.map((d) => d.id === doc.id ? { ...d, type: val } : d))}>
+                                  <SelectTrigger className="h-6 w-auto text-[10px] font-mono border-border">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {DOC_TYPES.map((t) => <SelectItem key={t} value={t} className="text-xs">{t.replace(/_/g, " ")}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                              {!doc.isMultiDocument && doc.detectedType && doc.detectedType !== doc.type && (
                                 <Badge variant="secondary" className="text-[10px] font-mono">AI: {doc.detectedType.replace(/_/g, " ")}</Badge>
                               )}
-                              {doc.overallQuality && (
+                              {doc.overallQuality && !doc.parentUploadId && (
                                 <Badge variant="outline" className={`text-[10px] font-mono ${doc.overallQuality === "high" ? "border-risk-low/50 text-risk-low" : doc.overallQuality === "medium" ? "border-risk-medium/50 text-risk-medium" : "border-risk-high/50 text-risk-high"}`}>
                                   {doc.overallQuality} quality
                                 </Badge>
                               )}
                             </div>
                             {doc.status === "extracting" && <p className="text-xs text-muted-foreground mt-1">Extracting fields with AI...</p>}
-                            {doc.status === "extracted" && <p className="text-xs text-muted-foreground mt-1">{doc.extractedFields.length} fields extracted</p>}
+                            {doc.isMultiDocument && doc.detectedDocuments && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {doc.detectedDocuments.length} documents detected · {doc.extractedFields.length} unattributed fields
+                              </p>
+                            )}
+                            {doc.status === "extracted" && !doc.isMultiDocument && <p className="text-xs text-muted-foreground mt-1">{doc.extractedFields.length} fields extracted</p>}
                             {doc.status === "error" && <p className="text-xs text-risk-critical mt-1">{doc.error}</p>}
                           </div>
                           <div className="flex items-center gap-1">
                             {doc.status === "error" && (
                               <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => extractDocument(doc)}><RefreshCw size={12} /></Button>
                             )}
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-risk-critical" onClick={() => removeDocument(doc.id)}>
-                              <XCircle size={12} />
-                            </Button>
+                            {!doc.parentUploadId && (
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground hover:text-risk-critical" onClick={() => {
+                                // Remove parent and all its children
+                                setDocuments((prev) => prev.filter((d) => d.id !== doc.id && d.parentUploadId !== doc.id));
+                              }}>
+                                <XCircle size={12} />
+                              </Button>
+                            )}
                           </div>
                         </div>
                         {doc.parseWarnings && doc.parseWarnings.length > 0 && (
