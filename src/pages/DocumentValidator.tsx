@@ -109,14 +109,21 @@ function computeDisposition(result: ValidationResult, mismatches: CrossDocMismat
   const trueConflicts = mismatches.filter((m) => m.mismatchType === "true_conflict");
   const critMismatches = trueConflicts.filter((m) => m.severity === "critical").length;
   const highMismatches = trueConflicts.filter((m) => m.severity === "high").length;
-  const requiredMissing = result.missingDocuments.filter((d) => d.importance === "required").length;
+  // Downstream docs shouldn't block pre-shipment readiness
+  const DOWNSTREAM_DOC_TYPES = new Set([
+    "arrival notice", "delivery order", "cargo release order",
+    "customs release", "proof of delivery", "import declaration",
+  ]);
+  const requiredMissing = result.missingDocuments.filter(
+    (d) => d.importance === "required" && !DOWNSTREAM_DOC_TYPES.has(d.documentType.toLowerCase())
+  ).length;
 
   if (critIssues > 0 || critMismatches > 0) return "high_risk";
   if (requiredMissing > 0) return "missing_required_docs";
   if (highMismatches > 0) return "data_mismatch";
   if (lowConfFields > 3) return "low_confidence";
   if (highIssues > 0) return "needs_review";
-  if (result.issues.length > 0 || lowConfFields > 0 || mismatches.length > 0) return "cleared_warnings";
+  if (result.issues.length > 0 || lowConfFields > 0 || trueConflicts.length > 0) return "cleared_warnings";
   return "ready_to_ship";
 }
 
