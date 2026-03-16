@@ -411,15 +411,32 @@ export default function DocumentValidator() {
       || (s.disposition || "").toLowerCase().includes(q);
   });
 
-  // Template required docs checklist
+  // Compute all detected document types across all uploads (including sub-docs from packets)
+  const allDetectedDocTypes = new Set<string>();
+  for (const doc of documents) {
+    if (doc.status === "extracted" && !doc.isMultiDocument) {
+      allDetectedDocTypes.add((doc.detectedType || doc.type).toLowerCase());
+    }
+    if (doc.detectedDocuments) {
+      for (const dd of doc.detectedDocuments) {
+        allDetectedDocTypes.add(dd.documentType.toLowerCase());
+      }
+    }
+  }
+
+  // Template required docs checklist — uses allDetectedDocTypes for accurate matching
   const templateChecklist = selectedTemplate
     ? selectedTemplate.requiredDocs.map((docType) => ({
         docType,
-        present: documents.some((d) => (d.detectedType || d.type) === docType && d.status === "extracted"),
+        present: allDetectedDocTypes.has(docType.toLowerCase()),
       }))
     : null;
 
   const modeIcon = shipmentMode === "air" ? <Plane size={14} /> : shipmentMode === "sea" ? <Ship size={14} /> : <Truck size={14} />;
+
+  // Visible documents (exclude packet parents from count, show sub-docs instead)
+  const visibleDocs = documents.filter((d) => !d.isMultiDocument);
+  const packetParents = documents.filter((d) => d.isMultiDocument);
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl space-y-6">
