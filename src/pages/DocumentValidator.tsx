@@ -21,7 +21,7 @@ import {
 import { toast } from "sonner";
 import { ExportButton } from "@/components/ExportButton";
 import {
-  type UploadedDocument, type ExtractedField,
+  type UploadedDocument, type ExtractedField, type DetectedDocument,
   VALIDATION_DETAIL_COLUMNS, VALIDATION_SUMMARY_COLUMNS,
   buildDetailExportRows, buildSummaryExportRow,
 } from "@/lib/validationExport";
