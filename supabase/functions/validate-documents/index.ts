@@ -42,7 +42,8 @@ Analyze completeness and consistency.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
+        temperature: 0,
         messages: [
           {
             role: "system",
