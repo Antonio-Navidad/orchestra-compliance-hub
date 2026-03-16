@@ -383,6 +383,7 @@ export default function DocumentValidator() {
 
   const handleSaveSession = async () => {
     if (!ruleResult) return;
+    if (!auditMeta) return;
     const legacyDisposition = ruleResult.packetIntegrity === "conflicts" ? "data_mismatch"
       : ruleResult.packetIntegrity === "incomplete" ? "missing_required_docs"
       : ruleResult.complianceReadiness === "not_ready" ? "high_risk"
@@ -393,15 +394,9 @@ export default function DocumentValidator() {
     const id = await saveSession({
       shipmentId, templateId: selectedTemplate?.id, shipmentMode, originCountry, destinationCountry,
       hsCode, declaredValue, documents,
-      validationResult: {
-        completenessScore: ruleResult.completenessScore,
-        consistencyScore: ruleResult.consistencyScore,
-        overallReadiness: ruleResult.packetIntegrity === "clean" ? "ready" : "needs_attention",
-        missingDocuments: [],
-        issues: ruleResult.issues.map((i) => ({ severity: i.severity, field: i.documentType, description: i.description, suggestion: i.suggestion })),
-        recommendations: aiNarrative?.recommendations || [],
-      },
+      ruleEngineResult: ruleResult,
       crossDocMismatches, disposition: legacyDisposition,
+      auditMeta,
     });
     if (id) setSavedSessionId(id);
   };
@@ -434,9 +429,26 @@ export default function DocumentValidator() {
     setDeclaredValue(session.declared_value || "");
     setCrossDocMismatches(session.cross_doc_mismatches || []);
     setSavedSessionId(session.id);
+
+    // Restore deterministic rule result from saved session
+    const savedResult = session.validation_result as RuleEngineResult | null;
+    if (savedResult && savedResult.rulesVersion) {
+      setRuleResult(savedResult);
+    }
+
+    // Restore audit meta from notes field
+    try {
+      const meta = session.notes ? JSON.parse(session.notes) : null;
+      if (meta && meta.packetHash) {
+        setAuditMeta(meta);
+      }
+    } catch {
+      // notes is not JSON audit meta, ignore
+    }
+
     setShowHistory(false);
     setActiveTab("results");
-    toast.success("Session recalled");
+    toast.success("Session recalled — showing saved deterministic result");
   };
 
   const startEdit = (docId: string, fieldName: string, currentValue: string) => {
@@ -462,16 +474,13 @@ export default function DocumentValidator() {
   const highConfFields = nonPacketDocs.reduce((sum, d) => sum + d.extractedFields.filter((f) => f.confidence >= 0.8).length, 0);
   const lowConfFields = totalFields - highConfFields;
 
-  const exportContext = { shipmentId, origin: originCountry, destination: destinationCountry, mode: shipmentMode };
-  const detailRows = ruleResult ? buildDetailExportRows(documents, { issues: ruleResult.issues.map((i) => ({ severity: i.severity, field: i.documentType, description: i.description, suggestion: i.suggestion })) }, exportContext) : [];
-  const summaryRows = ruleResult ? [buildSummaryExportRow(documents, {
-    completenessScore: ruleResult.completenessScore,
-    consistencyScore: ruleResult.consistencyScore,
-    overallReadiness: ruleResult.packetIntegrity,
-    missingDocuments: [],
-    issues: ruleResult.issues.map((i) => ({ severity: i.severity, field: i.documentType, description: i.description, suggestion: i.suggestion })),
-    recommendations: [],
-  }, exportContext)] : [];
+  const exportContext: import("@/lib/validationExport").ExportAuditContext = {
+    shipmentId, origin: originCountry, destination: destinationCountry, mode: shipmentMode,
+    packetHash: auditMeta?.packetHash, rulesVersion: auditMeta?.rulesVersion,
+    modelVersion: auditMeta?.modelVersion, workflowStage: auditMeta?.workflowStage,
+  };
+  const detailRows = ruleResult ? buildDetailExportRows(documents, ruleResult, exportContext) : [];
+  const summaryRows = ruleResult ? [buildSummaryExportRow(documents, ruleResult, exportContext)] : [];
 
   const filteredSessions = sessions.filter((s) => {
     if (!historySearch) return true;
@@ -578,13 +587,59 @@ export default function DocumentValidator() {
 
           {/* Audit metadata strip */}
           {auditMeta && (
-            <div className="flex items-center gap-3 flex-wrap text-[10px] font-mono text-muted-foreground px-1">
-              <span className="flex items-center gap-1"><Hash size={10} /> {auditMeta.packetHash}</span>
-              <span className="flex items-center gap-1"><Shield size={10} /> rules v{auditMeta.rulesVersion}</span>
-              <span className="flex items-center gap-1"><Clock size={10} /> {new Date(auditMeta.validationTimestamp).toLocaleString()}</span>
-              <span>model: {auditMeta.modelVersion}</span>
-              <span>stage: {auditMeta.workflowStage}</span>
-              <span>{auditMeta.fieldCount} fields · {auditMeta.docCount} docs</span>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 flex-wrap text-[10px] font-mono text-muted-foreground px-1">
+                <span className="flex items-center gap-1"><Hash size={10} /> {auditMeta.packetHash}</span>
+                <span className="flex items-center gap-1"><Shield size={10} /> rules v{auditMeta.rulesVersion}</span>
+                <span className="flex items-center gap-1"><Clock size={10} /> {new Date(auditMeta.validationTimestamp).toLocaleString()}</span>
+                <span>model: {auditMeta.modelVersion}</span>
+                <span>stage: {auditMeta.workflowStage}</span>
+                <span>{auditMeta.fieldCount} fields · {auditMeta.docCount} docs</span>
+              </div>
+
+              {/* ═══ BENCHMARK DEBUG BLOCK ═══ */}
+              <details className="group">
+                <summary className="text-[10px] font-mono text-muted-foreground cursor-pointer hover:text-foreground px-1 select-none">
+                  ▸ BENCHMARK FINGERPRINT (click to expand)
+                </summary>
+                <div className="mt-2 p-3 rounded border border-dashed border-border bg-muted/30 font-mono text-[10px] space-y-1">
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                    <span className="text-muted-foreground">Packet Hash</span>
+                    <span className="font-bold">{auditMeta.packetHash}</span>
+                    <span className="text-muted-foreground">Rules Version</span>
+                    <span className="font-bold">{auditMeta.rulesVersion}</span>
+                    <span className="text-muted-foreground">Engine ID</span>
+                    <span className="font-bold">{auditMeta.engineId}</span>
+                    <span className="text-muted-foreground">Model Version</span>
+                    <span className="font-bold">{auditMeta.modelVersion}</span>
+                    <span className="text-muted-foreground">Workflow Stage</span>
+                    <span className="font-bold">{auditMeta.workflowStage}</span>
+                    <span className="text-muted-foreground">Field Count</span>
+                    <span className="font-bold">{auditMeta.fieldCount}</span>
+                    <span className="text-muted-foreground">Document Count</span>
+                    <span className="font-bold">{auditMeta.docCount}</span>
+                    <span className="text-muted-foreground">Completeness Score</span>
+                    <span className="font-bold">{ruleResult?.completenessScore ?? "—"}%</span>
+                    <span className="text-muted-foreground">Consistency Score</span>
+                    <span className="font-bold">{ruleResult?.consistencyScore ?? "—"}%</span>
+                    <span className="text-muted-foreground">Total Issues</span>
+                    <span className="font-bold">{ruleResult?.issues.length ?? 0}</span>
+                    <span className="text-muted-foreground">Packet Integrity</span>
+                    <span className="font-bold">{ruleResult?.packetIntegrity ?? "—"}</span>
+                    <span className="text-muted-foreground">Compliance Readiness</span>
+                    <span className="font-bold">{ruleResult?.complianceReadiness ?? "—"}</span>
+                    <span className="text-muted-foreground">True Conflicts</span>
+                    <span className="font-bold">{crossDocMismatches.filter(m => m.mismatchType === "true_conflict").length}</span>
+                    <span className="text-muted-foreground">Info Differences</span>
+                    <span className="font-bold">{crossDocMismatches.filter(m => m.mismatchType !== "true_conflict").length}</span>
+                    <span className="text-muted-foreground">Timestamp</span>
+                    <span className="font-bold">{auditMeta.validationTimestamp}</span>
+                  </div>
+                  <p className="text-muted-foreground/70 pt-2 border-t border-border/50 mt-2">
+                    Same packet hash + rules version + stage → same scores, issues, and disposition. Compare this block across runs.
+                  </p>
+                </div>
+              </details>
             </div>
           )}
 
