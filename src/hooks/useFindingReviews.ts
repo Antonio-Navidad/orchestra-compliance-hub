@@ -54,7 +54,7 @@ export function useFindingReviews(sessionId: string | null) {
     if (error) {
       console.error("Failed to fetch finding reviews:", error);
     } else {
-      setReviews((data || []) as FindingReview[]);
+      setReviews((data || []) as unknown as FindingReview[]);
     }
     setLoading(false);
   }, [sessionId]);
