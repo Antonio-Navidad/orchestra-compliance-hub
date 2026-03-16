@@ -68,16 +68,39 @@ interface ValidationResult {
   recommendations: string[];
 }
 
-const DISPOSITION_LABELS: Record<string, { label: string; color: string }> = {
-  ready_to_ship: { label: "READY TO SHIP", color: "text-risk-low" },
-  missing_required_docs: { label: "MISSING REQUIRED DOCS", color: "text-risk-high" },
-  needs_review: { label: "NEEDS REVIEW", color: "text-risk-medium" },
-  data_mismatch: { label: "DATA MISMATCH DETECTED", color: "text-risk-high" },
-  low_confidence: { label: "LOW CONFIDENCE EXTRACTION", color: "text-risk-medium" },
-  high_risk: { label: "HIGH-RISK COMPLIANCE ISSUE", color: "text-risk-critical" },
-  cleared_warnings: { label: "CLEARED WITH WARNINGS", color: "text-risk-low" },
-  escalate: { label: "ESCALATE TO BROKER / CUSTOMS", color: "text-risk-critical" },
-  pending: { label: "PENDING VALIDATION", color: "text-muted-foreground" },
+// External filing requirement types — not part of packet integrity
+const EXTERNAL_FILING_TYPES = new Set([
+  "isf filing", "isf filing confirmation", "importer security filing",
+  "ams filing", "aci filing", "ens filing", "customs bond",
+  "entry summary", "prior notice", "fda prior notice",
+  "lacey act declaration", "tsca certification",
+]);
+
+const DOWNSTREAM_DOC_TYPES = new Set([
+  "arrival notice", "delivery order", "cargo release order",
+  "customs release", "proof of delivery", "import declaration",
+]);
+
+interface DualDisposition {
+  packetIntegrity: 'clean' | 'warnings' | 'conflicts' | 'incomplete';
+  complianceReadiness: 'ready' | 'action_required' | 'not_ready' | 'pending';
+  packetLabel: string;
+  complianceLabel: string;
+  complianceDetail?: string;
+}
+
+const PACKET_CONFIG: Record<string, { label: string; color: string; bg: string; icon: typeof CheckCircle }> = {
+  clean: { label: "PACKET CLEAN", color: "text-risk-low", bg: "border-risk-low/30 bg-risk-low/10", icon: CheckCircle },
+  warnings: { label: "PACKET OK — MINOR NOTES", color: "text-risk-medium", bg: "border-risk-medium/30 bg-risk-medium/10", icon: AlertTriangle },
+  conflicts: { label: "DOCUMENT CONFLICTS", color: "text-risk-high", bg: "border-risk-high/30 bg-risk-high/10", icon: XCircle },
+  incomplete: { label: "INCOMPLETE PACKET", color: "text-risk-critical", bg: "border-risk-critical/30 bg-risk-critical/10", icon: ShieldAlert },
+};
+
+const COMPLIANCE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  ready: { label: "FILING READY", color: "text-risk-low", bg: "border-risk-low/30 bg-risk-low/10" },
+  action_required: { label: "ACTION REQUIRED", color: "text-risk-medium", bg: "border-risk-medium/30 bg-risk-medium/10" },
+  not_ready: { label: "NOT FILING READY", color: "text-risk-high", bg: "border-risk-high/30 bg-risk-high/10" },
+  pending: { label: "PENDING", color: "text-muted-foreground", bg: "border-border bg-card" },
 };
 
 const readinessConfig = {
@@ -102,29 +125,73 @@ function ConfidenceDot({ confidence }: { confidence: number }) {
   );
 }
 
-function computeDisposition(result: ValidationResult, mismatches: CrossDocMismatch[], lowConfFields: number): string {
+function computeDualDisposition(result: ValidationResult, mismatches: CrossDocMismatch[], lowConfFields: number): DualDisposition {
+  const trueConflicts = mismatches.filter((m) => m.mismatchType === "true_conflict");
+  const critConflicts = trueConflicts.filter((m) => m.severity === "critical").length;
+  const highConflicts = trueConflicts.filter((m) => m.severity === "high").length;
+
+  // Classify missing docs
+  const missingUploaded = result.missingDocuments.filter(
+    (d) => d.importance === "required"
+      && !DOWNSTREAM_DOC_TYPES.has(d.documentType.toLowerCase())
+      && !EXTERNAL_FILING_TYPES.has(d.documentType.toLowerCase())
+  );
+  const missingExternal = result.missingDocuments.filter(
+    (d) => EXTERNAL_FILING_TYPES.has(d.documentType.toLowerCase())
+  );
+
+  // --- Packet Integrity (internal consistency of uploaded docs) ---
+  let packetIntegrity: DualDisposition['packetIntegrity'] = 'clean';
+  let packetLabel = 'Documentation Internally Consistent';
+
+  if (critConflicts > 0 || highConflicts > 0) {
+    packetIntegrity = 'conflicts';
+    packetLabel = `${critConflicts + highConflicts} Material Conflict${critConflicts + highConflicts > 1 ? 's' : ''} Detected`;
+  } else if (missingUploaded.length > 0) {
+    packetIntegrity = 'incomplete';
+    packetLabel = `${missingUploaded.length} Required Document${missingUploaded.length > 1 ? 's' : ''} Missing`;
+  } else if (lowConfFields > 3) {
+    packetIntegrity = 'warnings';
+    packetLabel = 'Low-Confidence Extractions Present';
+  } else if (trueConflicts.length > 0) {
+    packetIntegrity = 'warnings';
+    packetLabel = 'Minor Discrepancies Noted';
+  }
+
+  // --- Compliance Readiness (external filings + regulatory) ---
+  let complianceReadiness: DualDisposition['complianceReadiness'] = 'ready';
+  let complianceLabel = 'All Filing Requirements Met';
+  let complianceDetail: string | undefined;
+
   const critIssues = result.issues.filter((i) => i.severity === "critical").length;
   const highIssues = result.issues.filter((i) => i.severity === "high").length;
-  // Only true conflicts count toward disposition escalation
-  const trueConflicts = mismatches.filter((m) => m.mismatchType === "true_conflict");
-  const critMismatches = trueConflicts.filter((m) => m.severity === "critical").length;
-  const highMismatches = trueConflicts.filter((m) => m.severity === "high").length;
-  // Downstream docs shouldn't block pre-shipment readiness
-  const DOWNSTREAM_DOC_TYPES = new Set([
-    "arrival notice", "delivery order", "cargo release order",
-    "customs release", "proof of delivery", "import declaration",
-  ]);
-  const requiredMissing = result.missingDocuments.filter(
-    (d) => d.importance === "required" && !DOWNSTREAM_DOC_TYPES.has(d.documentType.toLowerCase())
-  ).length;
 
-  if (critIssues > 0 || critMismatches > 0) return "high_risk";
-  if (requiredMissing > 0) return "missing_required_docs";
-  if (highMismatches > 0) return "data_mismatch";
-  if (lowConfFields > 3) return "low_confidence";
-  if (highIssues > 0) return "needs_review";
-  if (result.issues.length > 0 || lowConfFields > 0 || trueConflicts.length > 0) return "cleared_warnings";
-  return "ready_to_ship";
+  if (critIssues > 0) {
+    complianceReadiness = 'not_ready';
+    complianceLabel = 'Critical Compliance Issue';
+  } else if (missingExternal.length > 0 || highIssues > 0) {
+    complianceReadiness = 'action_required';
+    const parts: string[] = [];
+    if (missingExternal.length > 0) parts.push(missingExternal.map(d => d.documentType.replace(/_/g, ' ')).join(', '));
+    if (highIssues > 0) parts.push(`${highIssues} issue${highIssues > 1 ? 's' : ''}`);
+    complianceLabel = 'Filing Action Required';
+    complianceDetail = parts.join(' · ');
+  } else if (result.issues.length > 0 || result.countryRequirements?.length) {
+    complianceReadiness = 'action_required';
+    complianceLabel = 'Advisory Items Present';
+  }
+
+  return { packetIntegrity, complianceReadiness, packetLabel, complianceLabel, complianceDetail };
+}
+
+// Legacy compat for saved sessions
+function dispositionFromDual(d: DualDisposition): string {
+  if (d.packetIntegrity === 'conflicts') return 'data_mismatch';
+  if (d.packetIntegrity === 'incomplete') return 'missing_required_docs';
+  if (d.complianceReadiness === 'not_ready') return 'high_risk';
+  if (d.complianceReadiness === 'action_required') return 'cleared_warnings';
+  if (d.packetIntegrity === 'warnings') return 'cleared_warnings';
+  return 'ready_to_ship';
 }
 
 export default function DocumentValidator() {
@@ -142,6 +209,7 @@ export default function DocumentValidator() {
   const [editValue, setEditValue] = useState("");
   const [crossDocMismatches, setCrossDocMismatches] = useState<CrossDocMismatch[]>([]);
   const [disposition, setDisposition] = useState("pending");
+  const [dualDisp, setDualDisp] = useState<DualDisposition | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ShipmentTemplate | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -333,8 +401,9 @@ export default function DocumentValidator() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setResult(data);
-      const disp = computeDisposition(data, crossDocMismatches, lowConfFields);
-      setDisposition(disp);
+      const dual = computeDualDisposition(data, crossDocMismatches, lowConfFields);
+      setDualDisp(dual);
+      setDisposition(dispositionFromDual(dual));
       setActiveTab("results");
       toast.success("Validation complete");
     } catch (e: any) {
@@ -486,20 +555,40 @@ export default function DocumentValidator() {
         </div>
       </div>
 
-      {/* Disposition Banner */}
-      {result && (
-        <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${
-          disposition === "ready_to_ship" ? "border-risk-low/30 bg-risk-low/10" :
-          disposition === "high_risk" || disposition === "escalate" ? "border-risk-critical/30 bg-risk-critical/10" :
-          disposition === "missing_required_docs" || disposition === "data_mismatch" ? "border-risk-high/30 bg-risk-high/10" :
-          "border-risk-medium/30 bg-risk-medium/10"
-        }`}>
-          {modeIcon}
-          <span className={`font-mono text-sm font-bold ${DISPOSITION_LABELS[disposition]?.color || "text-muted-foreground"}`}>
-            {DISPOSITION_LABELS[disposition]?.label || disposition}
-          </span>
+      {/* Dual Disposition Banner */}
+      {result && dualDisp && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Packet Integrity */}
+          {(() => {
+            const pc = PACKET_CONFIG[dualDisp.packetIntegrity];
+            const PIcon = pc.icon;
+            return (
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${pc.bg}`}>
+                <PIcon size={18} className={pc.color} />
+                <div className="flex-1 min-w-0">
+                  <p className={`font-mono text-xs font-bold ${pc.color}`}>{pc.label}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{dualDisp.packetLabel}</p>
+                </div>
+                <Badge variant="outline" className="text-[9px] font-mono shrink-0">PACKET</Badge>
+              </div>
+            );
+          })()}
+          {/* Compliance Readiness */}
+          {(() => {
+            const cc = COMPLIANCE_CONFIG[dualDisp.complianceReadiness];
+            return (
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${cc.bg}`}>
+                <ShieldAlert size={18} className={cc.color} />
+                <div className="flex-1 min-w-0">
+                  <p className={`font-mono text-xs font-bold ${cc.color}`}>{cc.label}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{dualDisp.complianceDetail || dualDisp.complianceLabel}</p>
+                </div>
+                <Badge variant="outline" className="text-[9px] font-mono shrink-0">FILING</Badge>
+              </div>
+            );
+          })()}
           {selectedTemplate && (
-            <Badge variant="secondary" className="text-[10px] font-mono ml-auto">{selectedTemplate.name}</Badge>
+            <Badge variant="secondary" className="text-[10px] font-mono md:col-span-2 w-fit">{selectedTemplate.name}</Badge>
           )}
         </div>
       )}
@@ -910,8 +999,28 @@ export default function DocumentValidator() {
           {result && (() => {
             const rc = readinessConfig[result.overallReadiness];
             const StatusIcon = rc.icon;
+
+            // Categorize missing docs
+            const missingUploaded = result.missingDocuments.filter(
+              (d) => !DOWNSTREAM_DOC_TYPES.has(d.documentType.toLowerCase()) && !EXTERNAL_FILING_TYPES.has(d.documentType.toLowerCase())
+            );
+            const externalFilings = result.missingDocuments.filter(
+              (d) => EXTERNAL_FILING_TYPES.has(d.documentType.toLowerCase())
+            );
+            const downstreamDocs = result.missingDocuments.filter(
+              (d) => DOWNSTREAM_DOC_TYPES.has(d.documentType.toLowerCase())
+            );
+
+            // Categorize issues
+            const regulatoryIssues = result.issues.filter(i => i.severity === "critical" || i.severity === "high");
+            const advisoryIssues = result.issues.filter(i => i.severity !== "critical" && i.severity !== "high");
+
+            const trueConflicts = crossDocMismatches.filter(m => m.mismatchType === "true_conflict");
+            const infoCount = crossDocMismatches.length - trueConflicts.length;
+
             return (
               <>
+                {/* Scores Card */}
                 <Card className={`border ${rc.bg}`}>
                   <CardContent className="pt-5 pb-4">
                     <div className="flex items-center gap-3 mb-4">
@@ -941,6 +1050,138 @@ export default function DocumentValidator() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* ═══ SECTION 1: DOCUMENT MISMATCHES ═══ */}
+                {crossDocMismatches.length > 0 && (() => {
+                  const borderColor = trueConflicts.length > 0 ? "border-risk-high/20 bg-risk-high/5" : "border-risk-low/20 bg-risk-low/5";
+                  const titleColor = trueConflicts.length > 0 ? "text-risk-high" : "text-risk-low";
+                  const titleText = trueConflicts.length > 0
+                    ? `DOCUMENT MISMATCHES — ${trueConflicts.length} conflict${trueConflicts.length !== 1 ? 's' : ''}`
+                    : `DOCUMENT CONSISTENCY — No conflicts`;
+                  return (
+                    <Card className={borderColor}>
+                      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                        <CardTitle className={`text-xs font-mono ${titleColor}`}>{titleText}</CardTitle>
+                        <Button variant="ghost" size="sm" className="text-[10px] font-mono" onClick={() => setActiveTab("mismatches")}>View All</Button>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {trueConflicts.length > 0 ? trueConflicts.slice(0, 3).map((mm, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs">
+                            <Badge variant={mm.severity === "critical" ? "destructive" : "outline"} className="text-[10px] font-mono">{mm.severity}</Badge>
+                            <span className="font-mono">{mm.fieldName.replace(/_/g, " ")}</span>
+                            <span className="text-muted-foreground">— {mm.reason.slice(0, 60)}</span>
+                          </div>
+                        )) : (
+                          <p className="text-xs text-risk-low flex items-center gap-1.5">
+                            <CheckCircle size={12} /> All documents internally consistent.
+                            {infoCount > 0 && <span className="text-muted-foreground ml-1">({infoCount} normalized difference{infoCount !== 1 ? 's' : ''})</span>}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
+
+                {/* Clean packet confirmation when no conflicts */}
+                {crossDocMismatches.length === 0 && (
+                  <Card className="border-risk-low/20 bg-risk-low/5">
+                    <CardContent className="py-4">
+                      <p className="text-xs text-risk-low flex items-center gap-1.5 font-mono">
+                        <CheckCircle size={14} /> DOCUMENT CONSISTENCY — No cross-document mismatches detected
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* ═══ SECTION 2: MISSING UPLOADED DOCUMENTS ═══ */}
+                {missingUploaded.length > 0 && (
+                  <Card className="border-risk-high/20 bg-risk-high/5">
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-risk-high">MISSING UPLOADED DOCUMENTS — {missingUploaded.length}</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                      {missingUploaded.map((doc, i) => (
+                        <div key={i} className="flex items-start gap-2 p-2 rounded border border-risk-high/20">
+                          <FileText size={14} className={doc.importance === "required" ? "text-risk-critical" : "text-risk-medium"} />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-mono">{doc.documentType.replace(/_/g, " ").toUpperCase()}</span>
+                              <Badge variant={doc.importance === "required" ? "destructive" : "outline"} className="text-[10px]">{doc.importance}</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">{doc.reason}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* ═══ SECTION 3: EXTERNAL FILING REQUIREMENTS ═══ */}
+                {externalFilings.length > 0 && (
+                  <Card className="border-risk-medium/20 bg-risk-medium/5">
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-risk-medium">EXTERNAL FILING REQUIREMENTS — {externalFilings.length}</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                      {externalFilings.map((doc, i) => (
+                        <div key={i} className="flex items-start gap-2 p-2 rounded border border-risk-medium/20">
+                          <ShieldAlert size={14} className="text-risk-medium shrink-0" />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-mono">{doc.documentType.replace(/_/g, " ").toUpperCase()}</span>
+                              <Badge variant="outline" className="text-[10px] border-risk-medium/50 text-risk-medium">external filing</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">{doc.reason}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* ═══ SECTION 4: REGULATORY ADVISORIES / ISSUES ═══ */}
+                {regulatoryIssues.length > 0 && (
+                  <Card className="border-risk-high/20 bg-risk-high/5">
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-risk-high">REGULATORY ISSUES — {regulatoryIssues.length}</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                      {regulatoryIssues.map((issue, i) => (
+                        <div key={i} className="p-3 rounded border border-risk-high/20">
+                          <div className="flex items-start gap-2">
+                            {issue.severity === "critical" ? <XCircle size={14} className="text-risk-critical shrink-0" />
+                              : <AlertTriangle size={14} className="text-risk-high shrink-0" />}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-[10px] font-mono uppercase">{issue.severity}</Badge>
+                                <span className="text-xs font-mono text-muted-foreground">{issue.field}</span>
+                              </div>
+                              <p className="text-sm mt-1">{issue.description}</p>
+                              <p className="text-xs text-primary mt-1">💡 {issue.suggestion}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {advisoryIssues.length > 0 && (
+                  <Card className="border-border bg-card">
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-muted-foreground">ADVISORIES — {advisoryIssues.length}</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                      {advisoryIssues.map((issue, i) => (
+                        <div key={i} className="p-3 rounded border border-border bg-secondary/30">
+                          <div className="flex items-start gap-2">
+                            <Info size={14} className="text-muted-foreground shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-[10px] font-mono">{issue.severity}</Badge>
+                                <span className="text-xs font-mono text-muted-foreground">{issue.field}</span>
+                              </div>
+                              <p className="text-sm mt-1">{issue.description}</p>
+                              <p className="text-xs text-primary mt-1">💡 {issue.suggestion}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Exception Queue */}
                 {lowConfFields > 0 && (
@@ -980,112 +1221,26 @@ export default function DocumentValidator() {
                   </Card>
                 )}
 
-                {/* Cross-doc mismatches summary in results */}
-                {crossDocMismatches.length > 0 && (() => {
-                  const trueConflicts = crossDocMismatches.filter(m => m.mismatchType === "true_conflict");
-                  const infoCount = crossDocMismatches.length - trueConflicts.length;
-                  const borderColor = trueConflicts.length > 0 ? "border-risk-high/20 bg-risk-high/5" : "border-border bg-card";
-                  const titleColor = trueConflicts.length > 0 ? "text-risk-high" : "text-muted-foreground";
-                  return (
-                    <Card className={borderColor}>
-                      <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                        <CardTitle className={`text-xs font-mono ${titleColor}`}>
-                          CROSS-DOCUMENT COMPARISON ({trueConflicts.length} conflict{trueConflicts.length !== 1 ? 's' : ''}{infoCount > 0 ? `, ${infoCount} info` : ''})
-                        </CardTitle>
-                        <Button variant="ghost" size="sm" className="text-[10px] font-mono" onClick={() => setActiveTab("mismatches")}>View All</Button>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        {trueConflicts.slice(0, 3).map((mm, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs">
-                            <Badge variant={mm.severity === "critical" ? "destructive" : "outline"} className="text-[10px] font-mono">{mm.severity}</Badge>
-                            <span className="font-mono">{mm.fieldName.replace(/_/g, " ")}</span>
-                            <span className="text-muted-foreground">— {mm.reason.slice(0, 60)}</span>
-                          </div>
-                        ))}
-                        {trueConflicts.length === 0 && (
-                          <p className="text-xs text-muted-foreground">No material conflicts. {infoCount} normalized difference{infoCount !== 1 ? 's' : ''} detected.</p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })()}
-
-                {/* Issues */}
-                {result.issues.length > 0 && (
+                {/* ═══ SECTION 5: RECOMMENDED OPTIONAL DOCUMENTS ═══ */}
+                {downstreamDocs.length > 0 && (
                   <Card className="border-border bg-card">
-                    <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-muted-foreground">ISSUES ({result.issues.length})</CardTitle></CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-muted-foreground">RECOMMENDED / LATER-STAGE DOCUMENTS</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
-                      {result.issues.map((issue, i) => (
-                        <div key={i} className="p-3 rounded border border-border bg-secondary/30">
-                          <div className="flex items-start gap-2">
-                            {issue.severity === "critical" ? <XCircle size={14} className="text-risk-critical shrink-0" />
-                              : issue.severity === "high" ? <AlertTriangle size={14} className="text-risk-high shrink-0" />
-                              : <AlertTriangle size={14} className="text-risk-medium shrink-0" />}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-[10px] font-mono uppercase">{issue.severity}</Badge>
-                                <span className="text-xs font-mono text-muted-foreground">{issue.field}</span>
-                              </div>
-                              <p className="text-sm mt-1">{issue.description}</p>
-                              <p className="text-xs text-primary mt-1">💡 {issue.suggestion}</p>
+                      {downstreamDocs.map((doc, i) => (
+                        <div key={i} className="flex items-start gap-2 p-2 rounded border border-border/50 opacity-60">
+                          <FileText size={14} className="text-muted-foreground" />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-mono">{doc.documentType.replace(/_/g, " ").toUpperCase()}</span>
+                              <Badge variant="outline" className="text-[10px]">later stage</Badge>
                             </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">{doc.reason}</p>
                           </div>
                         </div>
                       ))}
                     </CardContent>
                   </Card>
                 )}
-
-                {/* Missing Documents — lifecycle-aware filtering */}
-                {result.missingDocuments.length > 0 && (() => {
-                  // Downstream docs that should only matter at later lifecycle stages
-                  const DOWNSTREAM_DOC_TYPES = new Set([
-                    "arrival notice", "delivery order", "cargo release order",
-                    "customs release", "proof of delivery", "import declaration",
-                  ]);
-                  const preShipmentDocs = result.missingDocuments.filter(
-                    (d) => !DOWNSTREAM_DOC_TYPES.has(d.documentType.toLowerCase())
-                  );
-                  const downstreamDocs = result.missingDocuments.filter(
-                    (d) => DOWNSTREAM_DOC_TYPES.has(d.documentType.toLowerCase())
-                  );
-                  return (
-                    <Card className="border-border bg-card">
-                      <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-muted-foreground">MISSING DOCUMENTS</CardTitle></CardHeader>
-                      <CardContent className="space-y-2">
-                        {preShipmentDocs.map((doc, i) => (
-                          <div key={i} className="flex items-start gap-2 p-2 rounded border border-border">
-                            <FileText size={14} className={doc.importance === "required" ? "text-risk-critical" : "text-risk-medium"} />
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-mono">{doc.documentType.replace(/_/g, " ").toUpperCase()}</span>
-                                <Badge variant={doc.importance === "required" ? "destructive" : "outline"} className="text-[10px]">{doc.importance}</Badge>
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-0.5">{doc.reason}</p>
-                            </div>
-                          </div>
-                        ))}
-                        {downstreamDocs.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-border">
-                            <p className="text-[10px] font-mono text-muted-foreground mb-2">POST-ARRIVAL / DOWNSTREAM (not required at this stage)</p>
-                            {downstreamDocs.map((doc, i) => (
-                              <div key={i} className="flex items-start gap-2 p-2 rounded border border-border/50 opacity-60">
-                                <FileText size={14} className="text-muted-foreground" />
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-mono">{doc.documentType.replace(/_/g, " ").toUpperCase()}</span>
-                                    <Badge variant="outline" className="text-[10px]">later stage</Badge>
-                                  </div>
-                                  <p className="text-xs text-muted-foreground mt-0.5">{doc.reason}</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })()}
 
                 {/* Recommendations */}
                 {result.recommendations.length > 0 && (
@@ -1174,8 +1329,12 @@ export default function DocumentValidator() {
                       <CardContent className="py-3 px-4">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-xs font-mono font-bold">{s.shipment_id || "Draft"}</span>
-                          <Badge variant="outline" className={`text-[10px] font-mono ${DISPOSITION_LABELS[s.disposition || "pending"]?.color || ""}`}>
-                            {DISPOSITION_LABELS[s.disposition || "pending"]?.label || s.disposition}
+                          <Badge variant="outline" className={`text-[10px] font-mono ${
+                            s.disposition === "ready_to_ship" ? "text-risk-low" :
+                            s.disposition === "high_risk" || s.disposition === "data_mismatch" ? "text-risk-high" :
+                            "text-risk-medium"
+                          }`}>
+                            {(s.disposition || "pending").replace(/_/g, " ").toUpperCase()}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
