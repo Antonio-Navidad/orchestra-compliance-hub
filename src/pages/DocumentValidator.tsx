@@ -29,6 +29,7 @@ import { SHIPMENT_TEMPLATES, type ShipmentTemplate } from "@/lib/shipmentTemplat
 import { detectCrossDocMismatches, type CrossDocMismatch } from "@/lib/crossDocMatching";
 import { useValidationHistory, type ValidationSession } from "@/hooks/useValidationHistory";
 import { useFindingReviews, type ReviewAction, type FindingReview } from "@/hooks/useFindingReviews";
+import { useLaneUsage, deriveLaneStatus, type LaneUsageRecord, type LaneStatus } from "@/hooks/useLaneUsage";
 import { FindingReviewActions } from "@/components/FindingReviewActions";
 import {
   evaluateRules, computePacketHash,
@@ -143,6 +144,8 @@ export default function DocumentValidator() {
 
   const { sessions, loading: historyLoading, fetchSessions, saveSession } = useValidationHistory();
   const { reviews, fetchReviews, submitReview, getStatus, getReviewsForRule } = useFindingReviews(savedSessionId);
+  const { lanes: laneUsageData, loading: lanesLoading, fetchLaneUsage } = useLaneUsage();
+  const [laneFilter, setLaneFilter] = useState<"all" | "templates" | "production" | "validated">("all");
 
   // Auto-fill shipment context from extracted fields
   const autoFillContext = useCallback((fields: ExtractedField[]) => {
@@ -1326,32 +1329,195 @@ export default function DocumentValidator() {
         </TabsContent>
       </Tabs>
 
-      {/* Templates Dialog */}
-      <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
-        <DialogContent className="max-w-2xl">
+      {/* Templates & Lanes Dialog */}
+      <Dialog open={showTemplates} onOpenChange={(open) => { setShowTemplates(open); if (open) fetchLaneUsage(); }}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle className="font-mono">Shipment Templates</DialogTitle>
-            <DialogDescription>Pre-load required documents, rules, and context for common workflows.</DialogDescription>
+            <DialogTitle className="font-mono">Templates &amp; Lane Registry</DialogTitle>
+            <DialogDescription>Pre-load workflows or select validated production lanes. Lanes are derived from validation history.</DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-            {SHIPMENT_TEMPLATES.map((t) => (
-              <Card key={t.id} className="border-border bg-card hover:border-primary/50 cursor-pointer transition-colors" onClick={() => handleLoadTemplate(t)}>
-                <CardContent className="py-3 px-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    {t.mode === "air" ? <Plane size={14} className="text-primary" /> : t.mode === "sea" ? <Ship size={14} className="text-primary" /> : <Truck size={14} className="text-primary" />}
-                    <span className="text-sm font-bold font-mono">{t.name}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-2">{t.description}</p>
-                  <div className="flex items-center gap-1 flex-wrap">
-                    <Badge variant="secondary" className="text-[10px]">{t.requiredDocs.length} required</Badge>
-                    <Badge variant="outline" className="text-[10px]">{t.optionalDocs.length} optional</Badge>
-                    {t.origin && <Badge variant="outline" className="text-[10px]">{t.origin}</Badge>}
-                    {t.destination && <Badge variant="outline" className="text-[10px]">{t.destination}</Badge>}
-                  </div>
-                </CardContent>
-              </Card>
+
+          {/* Filter Tabs */}
+          <div className="flex items-center gap-2 flex-wrap mt-1">
+            {(["all", "templates", "validated", "production"] as const).map((f) => (
+              <Badge
+                key={f}
+                variant={laneFilter === f ? "default" : "outline"}
+                className="cursor-pointer text-[10px] font-mono uppercase"
+                onClick={() => setLaneFilter(f)}
+              >
+                {f === "all" ? "All" : f === "templates" ? "Templates Only" : f === "validated" ? "Validated Lanes" : "Production Lanes"}
+              </Badge>
             ))}
+            {lanesLoading && <Loader2 size={14} className="animate-spin text-muted-foreground" />}
           </div>
+
+          <ScrollArea className="flex-1 mt-3 pr-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(() => {
+                // Build merged list: templates + discovered lanes
+                type MergedLane = {
+                  id: string;
+                  name: string;
+                  description: string;
+                  mode: string;
+                  origin: string;
+                  destination: string;
+                  status: LaneStatus;
+                  usageCount: number;
+                  lastUsed: string | null;
+                  rulesVersion: string | null;
+                  workflowStage: string | null;
+                  template: ShipmentTemplate | null;
+                  requiredDocs: number;
+                  optionalDocs: number;
+                };
+
+                const merged: MergedLane[] = [];
+                const usedKeys = new Set<string>();
+
+                // Start with templates, enrich with lane data
+                for (const t of SHIPMENT_TEMPLATES) {
+                  const matchingLane = laneUsageData.find(
+                    (l) => l.origin.toLowerCase() === (t.origin || "").toLowerCase() &&
+                           l.destination.toLowerCase() === (t.destination || "").toLowerCase() &&
+                           l.mode === t.mode
+                  );
+                  const usageCount = matchingLane?.usageCount || 0;
+                  const lastUsed = matchingLane?.lastUsed || null;
+                  const status = deriveLaneStatus(usageCount, lastUsed);
+                  usedKeys.add(`${(t.origin || "").toLowerCase()}|${(t.destination || "").toLowerCase()}|${t.mode}`);
+                  merged.push({
+                    id: t.id,
+                    name: t.name,
+                    description: t.description,
+                    mode: t.mode,
+                    origin: t.origin || "",
+                    destination: t.destination || "",
+                    status,
+                    usageCount,
+                    lastUsed,
+                    rulesVersion: matchingLane?.rulesVersion || null,
+                    workflowStage: matchingLane?.workflowStage || null,
+                    template: t,
+                    requiredDocs: t.requiredDocs.length,
+                    optionalDocs: t.optionalDocs.length,
+                  });
+                }
+
+                // Add discovered lanes that don't match a template
+                for (const l of laneUsageData) {
+                  const key = `${l.origin.toLowerCase()}|${l.destination.toLowerCase()}|${l.mode}`;
+                  if (!usedKeys.has(key)) {
+                    const status = deriveLaneStatus(l.usageCount, l.lastUsed);
+                    merged.push({
+                      id: `lane-${key}`,
+                      name: `${l.origin} → ${l.destination}`,
+                      description: `Discovered lane from ${l.usageCount} validation session(s)`,
+                      mode: l.mode,
+                      origin: l.origin,
+                      destination: l.destination,
+                      status,
+                      usageCount: l.usageCount,
+                      lastUsed: l.lastUsed,
+                      rulesVersion: l.rulesVersion,
+                      workflowStage: l.workflowStage,
+                      template: null,
+                      requiredDocs: 0,
+                      optionalDocs: 0,
+                    });
+                  }
+                }
+
+                // Apply filter
+                const filtered = merged.filter((m) => {
+                  if (laneFilter === "templates") return m.template !== null && m.status === "template_only";
+                  if (laneFilter === "validated") return m.status === "validated" || m.status === "active_production";
+                  if (laneFilter === "production") return m.status === "active_production";
+                  return true;
+                });
+
+                // Sort: active production first, then by usage
+                filtered.sort((a, b) => {
+                  const order: Record<LaneStatus, number> = { active_production: 0, validated: 1, template_only: 2, archived: 3 };
+                  const diff = order[a.status] - order[b.status];
+                  return diff !== 0 ? diff : b.usageCount - a.usageCount;
+                });
+
+                if (filtered.length === 0) {
+                  return <p className="text-sm text-muted-foreground text-center col-span-2 py-8">No lanes match this filter.</p>;
+                }
+
+                const STATUS_STYLES: Record<LaneStatus, { label: string; cls: string }> = {
+                  template_only: { label: "TEMPLATE", cls: "bg-muted text-muted-foreground" },
+                  validated: { label: "VALIDATED", cls: "bg-primary/15 text-primary" },
+                  active_production: { label: "PRODUCTION", cls: "bg-risk-low/20 text-risk-low" },
+                  archived: { label: "ARCHIVED", cls: "bg-muted text-muted-foreground/60" },
+                };
+
+                return filtered.map((m) => {
+                  const st = STATUS_STYLES[m.status];
+                  return (
+                    <Card
+                      key={m.id}
+                      className={`border-border bg-card hover:border-primary/50 cursor-pointer transition-colors ${m.status === "archived" ? "opacity-60" : ""}`}
+                      onClick={() => {
+                        if (m.template) {
+                          handleLoadTemplate(m.template);
+                        } else {
+                          // Load discovered lane context
+                          setShipmentMode(m.mode);
+                          if (m.origin) setOriginCountry(m.origin);
+                          if (m.destination) setDestinationCountry(m.destination);
+                          setShowTemplates(false);
+                          toast.success(`Lane loaded: ${m.name}`);
+                        }
+                      }}
+                    >
+                      <CardContent className="py-3 px-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          {m.mode === "air" ? <Plane size={14} className="text-primary" /> : m.mode === "sea" ? <Ship size={14} className="text-primary" /> : <Truck size={14} className="text-primary" />}
+                          <span className="text-sm font-bold font-mono truncate">{m.name}</span>
+                          <Badge className={`text-[9px] font-mono ml-auto shrink-0 border-0 ${st.cls}`}>{st.label}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-2 line-clamp-1">{m.description}</p>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {m.template && <Badge variant="secondary" className="text-[10px]">{m.requiredDocs} req</Badge>}
+                          {m.template && <Badge variant="outline" className="text-[10px]">{m.optionalDocs} opt</Badge>}
+                          {m.origin && <Badge variant="outline" className="text-[10px]">{m.origin}</Badge>}
+                          {m.destination && <Badge variant="outline" className="text-[10px]">{m.destination}</Badge>}
+                          <Badge variant="outline" className="text-[10px] font-mono uppercase">{m.mode}</Badge>
+                        </div>
+                        {/* Usage metadata row */}
+                        {(m.usageCount > 0 || m.rulesVersion) && (
+                          <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground font-mono">
+                            {m.usageCount > 0 && (
+                              <span className="flex items-center gap-1">
+                                <Hash size={10} /> {m.usageCount} run{m.usageCount !== 1 ? "s" : ""}
+                              </span>
+                            )}
+                            {m.lastUsed && (
+                              <span className="flex items-center gap-1">
+                                <Clock size={10} /> {new Date(m.lastUsed).toLocaleDateString()}
+                              </span>
+                            )}
+                            {m.rulesVersion && (
+                              <span className="flex items-center gap-1">
+                                <Shield size={10} /> v{m.rulesVersion}
+                              </span>
+                            )}
+                            {m.workflowStage && (
+                              <span>{m.workflowStage.replace(/_/g, " ")}</span>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                });
+              })()}
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
