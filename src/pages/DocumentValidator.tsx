@@ -749,7 +749,7 @@ export default function DocumentValidator() {
           <Card className="border-border bg-card">
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="text-xs font-mono text-muted-foreground">
-                ALL EXTRACTED FIELDS — {totalFields} fields from {documents.filter(d => d.status === "extracted").length} documents
+                ALL EXTRACTED FIELDS — {totalFields} fields from {visibleDocs.filter(d => d.status === "extracted").length} documents
               </CardTitle>
               <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-risk-low inline-block" /> ≥90%</span>
