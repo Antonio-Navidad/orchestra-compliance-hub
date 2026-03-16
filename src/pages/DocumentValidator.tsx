@@ -1082,6 +1082,12 @@ export default function DocumentValidator() {
 
             return (
               <>
+                {!savedSessionId && (
+                  <div className="flex items-center gap-2 p-3 rounded border border-border bg-muted/30 text-xs font-mono text-muted-foreground">
+                    <Info size={14} className="shrink-0" />
+                    Save the session to enable review actions on findings.
+                  </div>
+                )}
                 {/* Deterministic Scores */}
                 <Card className="border-border bg-card">
                   <CardContent className="pt-5 pb-4">
