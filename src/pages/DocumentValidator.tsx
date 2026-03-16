@@ -144,6 +144,8 @@ export default function DocumentValidator() {
 
   const { sessions, loading: historyLoading, fetchSessions, saveSession } = useValidationHistory();
   const { reviews, fetchReviews, submitReview, getStatus, getReviewsForRule } = useFindingReviews(savedSessionId);
+  const { lanes: laneUsageData, loading: lanesLoading, fetchLaneUsage } = useLaneUsage();
+  const [laneFilter, setLaneFilter] = useState<"all" | "templates" | "production" | "validated">("all");
 
   // Auto-fill shipment context from extracted fields
   const autoFillContext = useCallback((fields: ExtractedField[]) => {
