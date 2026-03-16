@@ -105,15 +105,18 @@ function ConfidenceDot({ confidence }: { confidence: number }) {
 function computeDisposition(result: ValidationResult, mismatches: CrossDocMismatch[], lowConfFields: number): string {
   const critIssues = result.issues.filter((i) => i.severity === "critical").length;
   const highIssues = result.issues.filter((i) => i.severity === "high").length;
-  const critMismatches = mismatches.filter((m) => m.severity === "critical").length;
+  // Only true conflicts count toward disposition escalation
+  const trueConflicts = mismatches.filter((m) => m.mismatchType === "true_conflict");
+  const critMismatches = trueConflicts.filter((m) => m.severity === "critical").length;
+  const highMismatches = trueConflicts.filter((m) => m.severity === "high").length;
   const requiredMissing = result.missingDocuments.filter((d) => d.importance === "required").length;
 
   if (critIssues > 0 || critMismatches > 0) return "high_risk";
   if (requiredMissing > 0) return "missing_required_docs";
-  if (critMismatches > 0 || mismatches.filter((m) => m.severity === "high").length > 0) return "data_mismatch";
+  if (highMismatches > 0) return "data_mismatch";
   if (lowConfFields > 3) return "low_confidence";
   if (highIssues > 0) return "needs_review";
-  if (result.issues.length > 0 || lowConfFields > 0) return "cleared_warnings";
+  if (result.issues.length > 0 || lowConfFields > 0 || mismatches.length > 0) return "cleared_warnings";
   return "ready_to_ship";
 }
 
