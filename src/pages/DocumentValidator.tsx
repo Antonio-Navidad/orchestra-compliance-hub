@@ -209,6 +209,7 @@ export default function DocumentValidator() {
   const [editValue, setEditValue] = useState("");
   const [crossDocMismatches, setCrossDocMismatches] = useState<CrossDocMismatch[]>([]);
   const [disposition, setDisposition] = useState("pending");
+  const [dualDisp, setDualDisp] = useState<DualDisposition | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ShipmentTemplate | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
