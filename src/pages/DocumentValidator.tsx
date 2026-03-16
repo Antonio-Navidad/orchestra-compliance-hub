@@ -1535,6 +1535,38 @@ export default function DocumentValidator() {
                   }
                 }
 
+                // Add saved lanes from the lanes table
+                for (const sl of savedLanes) {
+                  const key = `${sl.origin.toLowerCase()}|${sl.destination.toLowerCase()}|${sl.mode}`;
+                  if (!usedKeys.has(key)) {
+                    usedKeys.add(key);
+                    const matchingUsage = laneUsageData.find(
+                      (l) => l.origin.toLowerCase() === sl.origin.toLowerCase() &&
+                             l.destination.toLowerCase() === sl.destination.toLowerCase() &&
+                             l.mode === sl.mode
+                    );
+                    const usageCount = matchingUsage?.usageCount || sl.usage_count;
+                    const lastUsed = matchingUsage?.lastUsed || sl.last_used;
+                    const status = deriveLaneStatus(usageCount, lastUsed);
+                    merged.push({
+                      id: sl.id,
+                      name: sl.name,
+                      description: `${sl.source_type === "manual" ? "Manually created" : "Saved from validation"} lane`,
+                      mode: sl.mode,
+                      origin: sl.origin,
+                      destination: sl.destination,
+                      status: status === "template_only" ? (sl.status as LaneStatus) : status,
+                      usageCount,
+                      lastUsed,
+                      rulesVersion: sl.rules_version || matchingUsage?.rulesVersion || null,
+                      workflowStage: sl.workflow_stage || matchingUsage?.workflowStage || null,
+                      template: null,
+                      requiredDocs: 0,
+                      optionalDocs: 0,
+                    });
+                  }
+                }
+
                 // Apply filter
                 const filtered = merged.filter((m) => {
                   if (laneFilter === "templates") return m.template !== null && m.status === "template_only";
