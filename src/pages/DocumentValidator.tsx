@@ -491,7 +491,8 @@ export default function DocumentValidator() {
     packetHash: auditMeta?.packetHash, rulesVersion: auditMeta?.rulesVersion,
     modelVersion: auditMeta?.modelVersion, workflowStage: auditMeta?.workflowStage,
   };
-  const detailRows = ruleResult ? buildDetailExportRows(documents, ruleResult, exportContext) : [];
+  const reviewExports = reviews.map((r) => ({ rule_id: r.rule_id, status: r.status, action: r.action, note: r.note, user_email: r.user_email, created_at: r.created_at }));
+  const detailRows = ruleResult ? buildDetailExportRows(documents, ruleResult, exportContext, reviewExports) : [];
   const summaryRows = ruleResult ? [buildSummaryExportRow(documents, ruleResult, exportContext)] : [];
 
   const filteredSessions = sessions.filter((s) => {
