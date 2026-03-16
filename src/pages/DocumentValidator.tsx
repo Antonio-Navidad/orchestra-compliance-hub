@@ -29,6 +29,7 @@ import { SHIPMENT_TEMPLATES, type ShipmentTemplate } from "@/lib/shipmentTemplat
 import { detectCrossDocMismatches, type CrossDocMismatch } from "@/lib/crossDocMatching";
 import { useValidationHistory, type ValidationSession } from "@/hooks/useValidationHistory";
 import { useFindingReviews, type ReviewAction, type FindingReview } from "@/hooks/useFindingReviews";
+import { useLaneUsage, deriveLaneStatus, type LaneUsageRecord, type LaneStatus } from "@/hooks/useLaneUsage";
 import { FindingReviewActions } from "@/components/FindingReviewActions";
 import {
   evaluateRules, computePacketHash,
