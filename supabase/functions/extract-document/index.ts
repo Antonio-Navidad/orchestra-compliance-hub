@@ -1,0 +1,175 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const formData = await req.formData();
+    const file = formData.get("file") as File | null;
+    const documentType = formData.get("documentType") as string || "unknown";
+    const shipmentContext = formData.get("shipmentContext") as string || "{}";
+
+    if (!file) throw new Error("No file provided");
+
+    // Read file as base64 for vision model
+    const arrayBuffer = await file.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const mimeType = file.type || "application/octet-stream";
+
+    // Determine if it's an image or PDF
+    const isImage = mimeType.startsWith("image/");
+    const isPdf = mimeType === "application/pdf";
+
+    if (!isImage && !isPdf) {
+      throw new Error("Unsupported file type. Please upload an image (JPG, PNG) or PDF.");
+    }
+
+    let context: Record<string, string> = {};
+    try { context = JSON.parse(shipmentContext); } catch {}
+
+    const systemPrompt = `You are an expert customs and logistics document data extractor. Extract all structured fields from the uploaded document image/scan. Be thorough and precise. For each field, also assess your confidence (0.0-1.0) in the extraction accuracy.
+
+Document type hint: ${documentType}
+${context.shipmentMode ? `Transport mode: ${context.shipmentMode}` : ""}
+${context.originCountry ? `Origin: ${context.originCountry}` : ""}
+${context.destinationCountry ? `Destination: ${context.destinationCountry}` : ""}`;
+
+    const userContent: any[] = [
+      {
+        type: "image_url",
+        image_url: { url: `data:${mimeType};base64,${base64}` },
+      },
+      {
+        type: "text",
+        text: `Extract all structured data from this ${documentType.replace(/_/g, " ")} document. Include every field you can identify.`,
+      },
+    ];
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "extract_document_fields",
+              description: "Return all extracted fields from the document with confidence scores.",
+              parameters: {
+                type: "object",
+                properties: {
+                  detectedDocumentType: {
+                    type: "string",
+                    description: "The actual document type detected (e.g. commercial_invoice, packing_list, bill_of_lading, air_waybill, certificate_of_origin, customs_declaration, etc.)",
+                  },
+                  fields: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        fieldName: { type: "string", description: "Normalized field name (e.g. product_name, hs_code, declared_value, shipper_name, consignee_name, origin_country, destination_country, invoice_number, weight_kg, package_count, transport_mode, bill_of_lading_number, currency, incoterms, etc.)" },
+                        value: { type: "string", description: "Extracted value" },
+                        confidence: { type: "number", description: "0.0-1.0 confidence in extraction accuracy" },
+                        sourceLocation: { type: "string", description: "Where on the document this was found (e.g. 'header', 'table row 3', 'footer')" },
+                      },
+                      required: ["fieldName", "value", "confidence"],
+                    },
+                  },
+                  rawTextSummary: { type: "string", description: "Brief plain-text summary of the document content" },
+                  parseWarnings: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "Any warnings about readability, missing sections, or low-quality areas",
+                  },
+                  overallQuality: {
+                    type: "string",
+                    enum: ["high", "medium", "low"],
+                    description: "Overall document quality/readability assessment",
+                  },
+                },
+                required: ["detectedDocumentType", "fields", "rawTextSummary", "overallQuality"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "extract_document_fields" } },
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "AI usage credits exhausted." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const t = await response.text();
+      console.error("AI gateway error:", response.status, t);
+      throw new Error(`AI gateway error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall) throw new Error("AI did not return extraction results");
+
+    const result = JSON.parse(toolCall.function.arguments);
+
+    // Optionally persist to document_extractions
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const extractedFieldsMap: Record<string, string> = {};
+    const fieldConfidenceMap: Record<string, number> = {};
+    for (const f of result.fields || []) {
+      extractedFieldsMap[f.fieldName] = f.value;
+      fieldConfidenceMap[f.fieldName] = f.confidence;
+    }
+
+    const { data: extraction, error: extErr } = await adminClient
+      .from("document_extractions")
+      .insert({
+        extracted_fields: extractedFieldsMap,
+        field_confidence: fieldConfidenceMap,
+        extraction_model: "google/gemini-2.5-flash",
+        raw_text: result.rawTextSummary || null,
+        parse_warnings: result.parseWarnings || [],
+      })
+      .select("id")
+      .single();
+
+    if (extErr) console.error("Failed to persist extraction:", extErr);
+    else result.extractionId = extraction?.id;
+
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    console.error("extract-document error:", e);
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
