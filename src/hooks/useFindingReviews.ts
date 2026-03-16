@@ -89,7 +89,7 @@ export function useFindingReviews(sessionId: string | null) {
       return null;
     }
 
-    setReviews((prev) => [...prev, data as FindingReview]);
+    setReviews((prev) => [...prev, data as unknown as FindingReview]);
     toast.success(`Finding ${ACTION_LABELS[action].toLowerCase()}`);
     return data;
   }, [sessionId, user]);
