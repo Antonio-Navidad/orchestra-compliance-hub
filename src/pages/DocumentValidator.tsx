@@ -125,29 +125,73 @@ function ConfidenceDot({ confidence }: { confidence: number }) {
   );
 }
 
-function computeDisposition(result: ValidationResult, mismatches: CrossDocMismatch[], lowConfFields: number): string {
+function computeDualDisposition(result: ValidationResult, mismatches: CrossDocMismatch[], lowConfFields: number): DualDisposition {
+  const trueConflicts = mismatches.filter((m) => m.mismatchType === "true_conflict");
+  const critConflicts = trueConflicts.filter((m) => m.severity === "critical").length;
+  const highConflicts = trueConflicts.filter((m) => m.severity === "high").length;
+
+  // Classify missing docs
+  const missingUploaded = result.missingDocuments.filter(
+    (d) => d.importance === "required"
+      && !DOWNSTREAM_DOC_TYPES.has(d.documentType.toLowerCase())
+      && !EXTERNAL_FILING_TYPES.has(d.documentType.toLowerCase())
+  );
+  const missingExternal = result.missingDocuments.filter(
+    (d) => EXTERNAL_FILING_TYPES.has(d.documentType.toLowerCase())
+  );
+
+  // --- Packet Integrity (internal consistency of uploaded docs) ---
+  let packetIntegrity: DualDisposition['packetIntegrity'] = 'clean';
+  let packetLabel = 'Documentation Internally Consistent';
+
+  if (critConflicts > 0 || highConflicts > 0) {
+    packetIntegrity = 'conflicts';
+    packetLabel = `${critConflicts + highConflicts} Material Conflict${critConflicts + highConflicts > 1 ? 's' : ''} Detected`;
+  } else if (missingUploaded.length > 0) {
+    packetIntegrity = 'incomplete';
+    packetLabel = `${missingUploaded.length} Required Document${missingUploaded.length > 1 ? 's' : ''} Missing`;
+  } else if (lowConfFields > 3) {
+    packetIntegrity = 'warnings';
+    packetLabel = 'Low-Confidence Extractions Present';
+  } else if (trueConflicts.length > 0) {
+    packetIntegrity = 'warnings';
+    packetLabel = 'Minor Discrepancies Noted';
+  }
+
+  // --- Compliance Readiness (external filings + regulatory) ---
+  let complianceReadiness: DualDisposition['complianceReadiness'] = 'ready';
+  let complianceLabel = 'All Filing Requirements Met';
+  let complianceDetail: string | undefined;
+
   const critIssues = result.issues.filter((i) => i.severity === "critical").length;
   const highIssues = result.issues.filter((i) => i.severity === "high").length;
-  // Only true conflicts count toward disposition escalation
-  const trueConflicts = mismatches.filter((m) => m.mismatchType === "true_conflict");
-  const critMismatches = trueConflicts.filter((m) => m.severity === "critical").length;
-  const highMismatches = trueConflicts.filter((m) => m.severity === "high").length;
-  // Downstream docs shouldn't block pre-shipment readiness
-  const DOWNSTREAM_DOC_TYPES = new Set([
-    "arrival notice", "delivery order", "cargo release order",
-    "customs release", "proof of delivery", "import declaration",
-  ]);
-  const requiredMissing = result.missingDocuments.filter(
-    (d) => d.importance === "required" && !DOWNSTREAM_DOC_TYPES.has(d.documentType.toLowerCase())
-  ).length;
 
-  if (critIssues > 0 || critMismatches > 0) return "high_risk";
-  if (requiredMissing > 0) return "missing_required_docs";
-  if (highMismatches > 0) return "data_mismatch";
-  if (lowConfFields > 3) return "low_confidence";
-  if (highIssues > 0) return "needs_review";
-  if (result.issues.length > 0 || lowConfFields > 0 || trueConflicts.length > 0) return "cleared_warnings";
-  return "ready_to_ship";
+  if (critIssues > 0) {
+    complianceReadiness = 'not_ready';
+    complianceLabel = 'Critical Compliance Issue';
+  } else if (missingExternal.length > 0 || highIssues > 0) {
+    complianceReadiness = 'action_required';
+    const parts: string[] = [];
+    if (missingExternal.length > 0) parts.push(missingExternal.map(d => d.documentType.replace(/_/g, ' ')).join(', '));
+    if (highIssues > 0) parts.push(`${highIssues} issue${highIssues > 1 ? 's' : ''}`);
+    complianceLabel = 'Filing Action Required';
+    complianceDetail = parts.join(' · ');
+  } else if (result.issues.length > 0 || result.countryRequirements?.length) {
+    complianceReadiness = 'action_required';
+    complianceLabel = 'Advisory Items Present';
+  }
+
+  return { packetIntegrity, complianceReadiness, packetLabel, complianceLabel, complianceDetail };
+}
+
+// Legacy compat for saved sessions
+function dispositionFromDual(d: DualDisposition): string {
+  if (d.packetIntegrity === 'conflicts') return 'data_mismatch';
+  if (d.packetIntegrity === 'incomplete') return 'missing_required_docs';
+  if (d.complianceReadiness === 'not_ready') return 'high_risk';
+  if (d.complianceReadiness === 'action_required') return 'cleared_warnings';
+  if (d.packetIntegrity === 'warnings') return 'cleared_warnings';
+  return 'ready_to_ship';
 }
 
 export default function DocumentValidator() {
