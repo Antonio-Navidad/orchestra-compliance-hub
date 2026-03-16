@@ -16,7 +16,8 @@ import {
   FileText, Upload, Loader2, CheckCircle, AlertTriangle, XCircle,
   ShieldAlert, Info, Camera, Download, Eye, Pencil, RefreshCw,
   Save, History, LayoutTemplate, GitCompare, RotateCcw, Copy,
-  Package, Truck, Plane, Ship, Search, Hash, Clock, Shield
+  Package, Truck, Plane, Ship, Search, Hash, Clock, Shield,
+  Plus, MapPin
 } from "lucide-react";
 import { toast } from "sonner";
 import { ExportButton } from "@/components/ExportButton";
@@ -33,7 +34,6 @@ import { useLaneUsage, deriveLaneStatus, type LaneUsageRecord, type LaneStatus }
 import { useLanes, type Lane, type CreateLaneParams } from "@/hooks/useLanes";
 import { FindingReviewActions } from "@/components/FindingReviewActions";
 import { Label } from "@/components/ui/label";
-import { Plus, MapPin } from "lucide-react";
 import {
   evaluateRules, computePacketHash,
   RULES_VERSION, RULES_ENGINE_ID,
