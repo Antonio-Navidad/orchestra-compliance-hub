@@ -499,7 +499,7 @@ export default function DocumentValidator() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Card className="border-border bg-card"><CardContent className="py-3 px-4">
             <p className="text-[10px] font-mono text-muted-foreground">DOCUMENTS</p>
-            <p className="text-2xl font-bold font-mono">{documents.length}</p>
+            <p className="text-2xl font-bold font-mono">{visibleDocs.length}</p>
           </CardContent></Card>
           <Card className="border-border bg-card"><CardContent className="py-3 px-4">
             <p className="text-[10px] font-mono text-muted-foreground">FIELDS EXTRACTED</p>
