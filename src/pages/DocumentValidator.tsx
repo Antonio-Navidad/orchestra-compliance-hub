@@ -833,6 +833,7 @@ export default function DocumentValidator() {
               true_conflict: { label: "TRUE CONFLICT", color: "text-risk-high" },
               semantic_variant: { label: "SEMANTIC VARIANT", color: "text-muted-foreground" },
               unit_conversion: { label: "UNIT CONVERSION", color: "text-muted-foreground" },
+              port_gateway: { label: "SAME GATEWAY", color: "text-muted-foreground" },
               expected_difference: { label: "EXPECTED DIFFERENCE", color: "text-muted-foreground" },
             };
             const renderMismatchCard = (mm: CrossDocMismatch, i: number) => {
