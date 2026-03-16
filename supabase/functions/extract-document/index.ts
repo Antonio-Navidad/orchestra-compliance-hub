@@ -20,12 +20,10 @@ serve(async (req) => {
 
     if (!file) throw new Error("No file provided");
 
-    // Read file as base64 for vision model
     const arrayBuffer = await file.arrayBuffer();
     const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
     const mimeType = file.type || "application/octet-stream";
 
-    // Determine if it's an image or PDF
     const isImage = mimeType.startsWith("image/");
     const isPdf = mimeType === "application/pdf";
 
@@ -36,7 +34,15 @@ serve(async (req) => {
     let context: Record<string, string> = {};
     try { context = JSON.parse(shipmentContext); } catch {}
 
-    const systemPrompt = `You are an expert customs and logistics document data extractor. Extract all structured fields from the uploaded document image/scan. Be thorough and precise. For each field, also assess your confidence (0.0-1.0) in the extraction accuracy.
+    const systemPrompt = `You are an expert customs and logistics document data extractor.
+
+CRITICAL INSTRUCTION: The uploaded file may contain MULTIPLE logical documents combined into a single PDF packet. For example, a single PDF may contain a Commercial Invoice on pages 1-2, a Packing List on page 3, a Bill of Lading on pages 4-5, and a Certificate of Origin on page 6.
+
+You MUST:
+1. Identify ALL distinct logical documents present in the file
+2. For each logical document, extract its fields separately
+3. Tag every extracted field with which logical document it belongs to
+4. Report all detected document types
 
 Document type hint: ${documentType}
 ${context.shipmentMode ? `Transport mode: ${context.shipmentMode}` : ""}
@@ -50,7 +56,7 @@ ${context.destinationCountry ? `Destination: ${context.destinationCountry}` : ""
       },
       {
         type: "text",
-        text: `Extract all structured data from this ${documentType.replace(/_/g, " ")} document. Include every field you can identify.`,
+        text: `Analyze this file carefully. It may contain MULTIPLE logistics/customs documents combined into one file. Identify each distinct document section (e.g. Commercial Invoice, Packing List, Bill of Lading, Certificate of Origin, Air Waybill, etc.) and extract structured fields from EACH one separately. Tag every field with its source document type.`,
       },
     ];
 
@@ -71,13 +77,44 @@ ${context.destinationCountry ? `Destination: ${context.destinationCountry}` : ""
             type: "function",
             function: {
               name: "extract_document_fields",
-              description: "Return all extracted fields from the document with confidence scores.",
+              description: "Return all extracted fields from the document(s) with confidence scores. If the file contains multiple logical documents, list each one in the detectedDocuments array.",
               parameters: {
                 type: "object",
                 properties: {
+                  isMultiDocument: {
+                    type: "boolean",
+                    description: "True if the file contains multiple distinct logical documents (e.g. invoice + packing list + BL combined into one PDF)",
+                  },
+                  detectedDocuments: {
+                    type: "array",
+                    description: "List of all logical document types detected in this file. Each entry represents a distinct document section found.",
+                    items: {
+                      type: "object",
+                      properties: {
+                        documentType: {
+                          type: "string",
+                          description: "Document type: commercial_invoice, packing_list, bill_of_lading, air_waybill, certificate_of_origin, customs_declaration, export_license, import_permit, insurance_certificate, inspection_certificate, phytosanitary_certificate, fumigation_certificate, dangerous_goods_declaration, other",
+                        },
+                        pageRange: {
+                          type: "string",
+                          description: "Approximate page range or location in the file (e.g. 'pages 1-2', 'page 3', 'top half of page 1')",
+                        },
+                        confidence: {
+                          type: "number",
+                          description: "0.0-1.0 confidence that this document type was correctly identified",
+                        },
+                        detectionMethod: {
+                          type: "string",
+                          enum: ["direct", "inferred", "partial"],
+                          description: "direct = clearly present with header/title; inferred = identified from content/references; partial = some indicators but incomplete",
+                        },
+                      },
+                      required: ["documentType", "confidence", "detectionMethod"],
+                    },
+                  },
                   detectedDocumentType: {
                     type: "string",
-                    description: "The actual document type detected (e.g. commercial_invoice, packing_list, bill_of_lading, air_waybill, certificate_of_origin, customs_declaration, etc.)",
+                    description: "The primary document type if single document, or 'multi_document_packet' if multiple documents detected",
                   },
                   fields: {
                     type: "array",
@@ -88,6 +125,7 @@ ${context.destinationCountry ? `Destination: ${context.destinationCountry}` : ""
                         value: { type: "string", description: "Extracted value" },
                         confidence: { type: "number", description: "0.0-1.0 confidence in extraction accuracy" },
                         sourceLocation: { type: "string", description: "Where on the document this was found (e.g. 'header', 'table row 3', 'footer')" },
+                        sourceDocumentType: { type: "string", description: "Which logical document this field was extracted from (e.g. 'commercial_invoice', 'packing_list', 'bill_of_lading'). REQUIRED for multi-document packets." },
                       },
                       required: ["fieldName", "value", "confidence"],
                     },
@@ -104,7 +142,7 @@ ${context.destinationCountry ? `Destination: ${context.destinationCountry}` : ""
                     description: "Overall document quality/readability assessment",
                   },
                 },
-                required: ["detectedDocumentType", "fields", "rawTextSummary", "overallQuality"],
+                required: ["isMultiDocument", "detectedDocuments", "detectedDocumentType", "fields", "rawTextSummary", "overallQuality"],
                 additionalProperties: false,
               },
             },
@@ -136,7 +174,7 @@ ${context.destinationCountry ? `Destination: ${context.destinationCountry}` : ""
 
     const result = JSON.parse(toolCall.function.arguments);
 
-    // Optionally persist to document_extractions
+    // Persist to document_extractions
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
