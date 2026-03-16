@@ -933,6 +933,45 @@ export type Database = {
           },
         ]
       }
+      finding_reviews: {
+        Row: {
+          action: string
+          created_at: string
+          finding_key: string
+          id: string
+          note: string | null
+          rule_id: string
+          session_id: string
+          status: string
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          finding_key: string
+          id?: string
+          note?: string | null
+          rule_id: string
+          session_id: string
+          status?: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          finding_key?: string
+          id?: string
+          note?: string | null
+          rule_id?: string
+          session_id?: string
+          status?: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       handoff_checkpoints: {
         Row: {
           actual_arrival: string | null

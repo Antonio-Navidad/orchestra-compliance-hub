@@ -28,6 +28,8 @@ import {
 import { SHIPMENT_TEMPLATES, type ShipmentTemplate } from "@/lib/shipmentTemplates";
 import { detectCrossDocMismatches, type CrossDocMismatch } from "@/lib/crossDocMatching";
 import { useValidationHistory, type ValidationSession } from "@/hooks/useValidationHistory";
+import { useFindingReviews, type ReviewAction, type FindingReview } from "@/hooks/useFindingReviews";
+import { FindingReviewActions } from "@/components/FindingReviewActions";
 import {
   evaluateRules, computePacketHash,
   RULES_VERSION, RULES_ENGINE_ID,
@@ -140,6 +142,7 @@ export default function DocumentValidator() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const { sessions, loading: historyLoading, fetchSessions, saveSession } = useValidationHistory();
+  const { reviews, fetchReviews, submitReview, getStatus, getReviewsForRule } = useFindingReviews(savedSessionId);
 
   // Auto-fill shipment context from extracted fields
   const autoFillContext = useCallback((fields: ExtractedField[]) => {
@@ -420,6 +423,15 @@ export default function DocumentValidator() {
     toast("Workspace reset");
   };
 
+  // Load reviews when a saved session is set
+  const prevSessionRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (savedSessionId && savedSessionId !== prevSessionRef.current) {
+      prevSessionRef.current = savedSessionId;
+      fetchReviews();
+    }
+  }, [savedSessionId, fetchReviews]);
+
   const handleRecallSession = (session: ValidationSession) => {
     setShipmentId(session.shipment_id || "");
     setShipmentMode(session.shipment_mode || "sea");
@@ -479,7 +491,8 @@ export default function DocumentValidator() {
     packetHash: auditMeta?.packetHash, rulesVersion: auditMeta?.rulesVersion,
     modelVersion: auditMeta?.modelVersion, workflowStage: auditMeta?.workflowStage,
   };
-  const detailRows = ruleResult ? buildDetailExportRows(documents, ruleResult, exportContext) : [];
+  const reviewExports = reviews.map((r) => ({ rule_id: r.rule_id, status: r.status, action: r.action, note: r.note, user_email: r.user_email, created_at: r.created_at }));
+  const detailRows = ruleResult ? buildDetailExportRows(documents, ruleResult, exportContext, reviewExports) : [];
   const summaryRows = ruleResult ? [buildSummaryExportRow(documents, ruleResult, exportContext)] : [];
 
   const filteredSessions = sessions.filter((s) => {
@@ -1069,6 +1082,12 @@ export default function DocumentValidator() {
 
             return (
               <>
+                {!savedSessionId && (
+                  <div className="flex items-center gap-2 p-3 rounded border border-border bg-muted/30 text-xs font-mono text-muted-foreground">
+                    <Info size={14} className="shrink-0" />
+                    Save the session to enable review actions on findings.
+                  </div>
+                )}
                 {/* Deterministic Scores */}
                 <Card className="border-border bg-card">
                   <CardContent className="pt-5 pb-4">
@@ -1146,7 +1165,7 @@ export default function DocumentValidator() {
                     <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-risk-high">2. MISSING PACKET DOCUMENTS — {ruleResult.packetRequirements.length}</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
                       {ruleResult.packetRequirements.map((issue, i) => (
-                        <RuleIssueRow key={i} issue={issue} />
+                        <RuleIssueRow key={i} issue={issue} reviewProps={savedSessionId ? { status: getStatus(issue.ruleId), history: getReviewsForRule(issue.ruleId), onSubmit: submitReview } : undefined} />
                       ))}
                     </CardContent>
                   </Card>
@@ -1167,7 +1186,7 @@ export default function DocumentValidator() {
                     <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-risk-medium">3. EXTERNAL FILING REQUIREMENTS — {ruleResult.externalFilings.length}</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
                       {ruleResult.externalFilings.map((issue, i) => (
-                        <RuleIssueRow key={i} issue={issue} />
+                        <RuleIssueRow key={i} issue={issue} reviewProps={savedSessionId ? { status: getStatus(issue.ruleId), history: getReviewsForRule(issue.ruleId), onSubmit: submitReview } : undefined} />
                       ))}
                     </CardContent>
                   </Card>
@@ -1188,7 +1207,7 @@ export default function DocumentValidator() {
                     <CardHeader className="pb-2"><CardTitle className="text-xs font-mono text-muted-foreground">4. REGULATORY ADVISORIES — {ruleResult.regulatoryAdvisories.length}</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
                       {ruleResult.regulatoryAdvisories.map((issue, i) => (
-                        <RuleIssueRow key={i} issue={issue} />
+                        <RuleIssueRow key={i} issue={issue} reviewProps={savedSessionId ? { status: getStatus(issue.ruleId), history: getReviewsForRule(issue.ruleId), onSubmit: submitReview } : undefined} />
                       ))}
                     </CardContent>
                   </Card>
@@ -1380,7 +1399,15 @@ export default function DocumentValidator() {
 
 // ── Reusable rule issue row component ─────────────────────────────────
 
-function RuleIssueRow({ issue }: { issue: RuleIssue }) {
+function RuleIssueRow({ issue, reviewProps }: {
+  issue: RuleIssue;
+  reviewProps?: {
+    status: import("@/hooks/useFindingReviews").ReviewStatus;
+    history: FindingReview[];
+    disabled?: boolean;
+    onSubmit: (ruleId: string, findingKey: string, action: ReviewAction, note: string) => Promise<any>;
+  };
+}) {
   const severityIcon = issue.severity === "critical" ? <XCircle size={14} className="text-risk-critical shrink-0" />
     : issue.severity === "high" ? <AlertTriangle size={14} className="text-risk-high shrink-0" />
     : <Info size={14} className="text-muted-foreground shrink-0" />;
@@ -1399,6 +1426,16 @@ function RuleIssueRow({ issue }: { issue: RuleIssue }) {
           <p className="text-sm mt-1">{issue.description}</p>
           <p className="text-xs text-primary mt-1">💡 {issue.suggestion}</p>
           <p className="text-[10px] text-muted-foreground mt-1 italic">Triggered: {issue.triggeredBecause}</p>
+          {reviewProps && (
+            <FindingReviewActions
+              ruleId={issue.ruleId}
+              findingKey={issue.ruleId}
+              status={reviewProps.status}
+              history={reviewProps.history}
+              disabled={reviewProps.disabled}
+              onSubmit={reviewProps.onSubmit}
+            />
+          )}
         </div>
       </div>
     </div>
