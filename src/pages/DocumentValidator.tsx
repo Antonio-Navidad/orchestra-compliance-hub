@@ -149,6 +149,13 @@ export default function DocumentValidator() {
   const { reviews, fetchReviews, submitReview, getStatus, getReviewsForRule } = useFindingReviews(savedSessionId);
   const { lanes: laneUsageData, loading: lanesLoading, fetchLaneUsage } = useLaneUsage();
   const [laneFilter, setLaneFilter] = useState<"all" | "templates" | "production" | "validated">("all");
+  const { lanes: savedLanes, loading: savedLanesLoading, fetchLanes, createLane } = useLanes();
+  const [showNewLane, setShowNewLane] = useState(false);
+  const [newLaneName, setNewLaneName] = useState("");
+  const [newLaneOrigin, setNewLaneOrigin] = useState("");
+  const [newLaneDestination, setNewLaneDestination] = useState("");
+  const [newLaneMode, setNewLaneMode] = useState("sea");
+  const [newLaneStage, setNewLaneStage] = useState("pre_shipment");
 
   // Auto-fill shipment context from extracted fields
   const autoFillContext = useCallback((fields: ExtractedField[]) => {
