@@ -71,9 +71,9 @@ function guessDocType(filename: string): string {
 // ── Packet / Compliance status configs ────────────────────────────────
 
 const PACKET_CONFIG: Record<string, { label: string; color: string; bg: string; icon: typeof CheckCircle }> = {
-  clean: { label: "PACKET CLEAN", color: "text-risk-low", bg: "border-risk-low/30 bg-risk-low/10", icon: CheckCircle },
+  clean: { label: "PACKET COMPLETE", color: "text-risk-low", bg: "border-risk-low/30 bg-risk-low/10", icon: CheckCircle },
   warnings: { label: "PACKET OK — MINOR NOTES", color: "text-risk-medium", bg: "border-risk-medium/30 bg-risk-medium/10", icon: AlertTriangle },
-  conflicts: { label: "DOCUMENT CONFLICTS", color: "text-risk-high", bg: "border-risk-high/30 bg-risk-high/10", icon: XCircle },
+  conflicts: { label: "PACKET CONFLICTS", color: "text-risk-high", bg: "border-risk-high/30 bg-risk-high/10", icon: XCircle },
   incomplete: { label: "INCOMPLETE PACKET", color: "text-risk-critical", bg: "border-risk-critical/30 bg-risk-critical/10", icon: ShieldAlert },
 };
 
