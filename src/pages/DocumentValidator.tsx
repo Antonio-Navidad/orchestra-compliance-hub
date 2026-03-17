@@ -1674,8 +1674,9 @@ export default function DocumentValidator() {
                   );
                 });
               })()}
-            </div>
-          </ScrollArea>
+              </div>
+            </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
 
