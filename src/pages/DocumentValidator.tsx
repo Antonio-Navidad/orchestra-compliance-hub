@@ -156,6 +156,8 @@ export default function DocumentValidator() {
   const [newLaneDestination, setNewLaneDestination] = useState("");
   const [newLaneMode, setNewLaneMode] = useState("sea");
   const [newLaneStage, setNewLaneStage] = useState("pre_shipment");
+  const [recentLaneId, setRecentLaneId] = useState<string | null>(null);
+  const laneCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Auto-fill shipment context from extracted fields
   const autoFillContext = useCallback((fields: ExtractedField[]) => {
