@@ -1595,8 +1595,11 @@ export default function DocumentValidator() {
                   return true;
                 });
 
-                // Sort: active production first, then by usage
+                // Sort: keep newly created lane visible, then active production, then usage
                 filtered.sort((a, b) => {
+                  if (recentLaneId && a.id === recentLaneId) return -1;
+                  if (recentLaneId && b.id === recentLaneId) return 1;
+
                   const order: Record<LaneStatus, number> = { active_production: 0, validated: 1, template_only: 2, archived: 3 };
                   const diff = order[a.status] - order[b.status];
                   return diff !== 0 ? diff : b.usageCount - a.usageCount;
