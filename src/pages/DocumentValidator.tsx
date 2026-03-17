@@ -156,6 +156,8 @@ export default function DocumentValidator() {
   const [newLaneDestination, setNewLaneDestination] = useState("");
   const [newLaneMode, setNewLaneMode] = useState("sea");
   const [newLaneStage, setNewLaneStage] = useState("pre_shipment");
+  const [recentLaneId, setRecentLaneId] = useState<string | null>(null);
+  const laneCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Auto-fill shipment context from extracted fields
   const autoFillContext = useCallback((fields: ExtractedField[]) => {
@@ -452,6 +454,8 @@ export default function DocumentValidator() {
     });
     if (id) {
       setShowNewLane(false);
+      setLaneFilter("all");
+      setRecentLaneId(id);
       setNewLaneName(""); setNewLaneOrigin(""); setNewLaneDestination("");
       setNewLaneMode("sea"); setNewLaneStage("pre_shipment");
       fetchLanes();
@@ -485,6 +489,18 @@ export default function DocumentValidator() {
       fetchReviews();
     }
   }, [savedSessionId, fetchReviews]);
+
+  useEffect(() => {
+    if (!showTemplates || !recentLaneId) return;
+    const target = laneCardRefs.current[recentLaneId];
+    if (!target) return;
+
+    const raf = requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+
+    return () => cancelAnimationFrame(raf);
+  }, [showTemplates, recentLaneId, savedLanes, laneFilter]);
 
   const handleRecallSession = (session: ValidationSession) => {
     setShipmentId(session.shipment_id || "");
@@ -1387,79 +1403,83 @@ export default function DocumentValidator() {
 
       {/* Templates & Lanes Dialog */}
       <Dialog open={showTemplates} onOpenChange={(open) => { setShowTemplates(open); if (open) { fetchLaneUsage(); fetchLanes(); } }}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader className="shrink-0">
+        <DialogContent className="max-w-4xl w-[min(96vw,56rem)] h-[min(88vh,44rem)] overflow-hidden p-0 gap-0 flex flex-col">
+          <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
             <DialogTitle className="font-mono">Templates &amp; Lane Registry</DialogTitle>
             <DialogDescription>Pre-load workflows or select validated production lanes.</DialogDescription>
           </DialogHeader>
 
-          {/* Filter Tabs */}
-          <div className="flex items-center gap-2 flex-wrap shrink-0">
-            {(["all", "templates", "validated", "production"] as const).map((f) => (
-              <Badge
-                key={f}
-                variant={laneFilter === f ? "default" : "outline"}
-                className="cursor-pointer text-[10px] font-mono uppercase"
-                onClick={() => setLaneFilter(f)}
-              >
-                {f === "all" ? "All" : f === "templates" ? "Templates Only" : f === "validated" ? "Validated Lanes" : "Production Lanes"}
-              </Badge>
-            ))}
-            {(lanesLoading || savedLanesLoading) && <Loader2 size={14} className="animate-spin text-muted-foreground" />}
-            <Button variant="outline" size="sm" className="ml-auto font-mono text-[10px] gap-1.5" onClick={() => setShowNewLane(!showNewLane)}>
-              <Plus size={12} /> New Lane
-            </Button>
+          <div className="shrink-0 border-b border-border px-6 py-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              {(["all", "templates", "validated", "production"] as const).map((f) => (
+                <Badge
+                  key={f}
+                  variant={laneFilter === f ? "default" : "outline"}
+                  className="cursor-pointer text-[10px] font-mono uppercase"
+                  onClick={() => setLaneFilter(f)}
+                >
+                  {f === "all" ? "All" : f === "templates" ? "Templates Only" : f === "validated" ? "Validated Lanes" : "Production Lanes"}
+                </Badge>
+              ))}
+              {(lanesLoading || savedLanesLoading) && <Loader2 size={14} className="animate-spin text-muted-foreground" />}
+              <Button variant="outline" size="sm" className="ml-auto font-mono text-[10px] gap-1.5" onClick={() => setShowNewLane(!showNewLane)}>
+                <Plus size={12} /> {showNewLane ? "Close" : "New Lane"}
+              </Button>
+            </div>
           </div>
 
           {showNewLane && (
-            <div className="border border-border rounded-md p-3 space-y-3 bg-muted/30 shrink-0">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
-                  <Label className="text-[10px] font-mono">Lane Name</Label>
-                  <Input value={newLaneName} onChange={(e) => setNewLaneName(e.target.value)} placeholder="e.g. Colombia → US East Coast" className="text-xs mt-1" />
-                </div>
-                <div>
-                  <Label className="text-[10px] font-mono">Origin</Label>
-                  <Input value={newLaneOrigin} onChange={(e) => setNewLaneOrigin(e.target.value)} placeholder="e.g. Colombia" className="text-xs mt-1" />
-                </div>
-                <div>
-                  <Label className="text-[10px] font-mono">Destination</Label>
-                  <Input value={newLaneDestination} onChange={(e) => setNewLaneDestination(e.target.value)} placeholder="e.g. United States" className="text-xs mt-1" />
-                </div>
-                <div>
-                  <Label className="text-[10px] font-mono">Mode</Label>
-                  <Select value={newLaneMode} onValueChange={setNewLaneMode}>
-                    <SelectTrigger className="text-xs mt-1"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sea">Sea</SelectItem>
-                      <SelectItem value="air">Air</SelectItem>
-                      <SelectItem value="land">Land</SelectItem>
-                      <SelectItem value="multimodal">Multimodal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-[10px] font-mono">Workflow Stage</Label>
-                  <Select value={newLaneStage} onValueChange={setNewLaneStage}>
-                    <SelectTrigger className="text-xs mt-1"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pre_shipment">Pre-Shipment</SelectItem>
-                      <SelectItem value="in_transit">In Transit</SelectItem>
-                      <SelectItem value="at_customs">At Customs</SelectItem>
-                      <SelectItem value="post_clearance">Post Clearance</SelectItem>
-                    </SelectContent>
-                  </Select>
+            <div className="shrink-0 border-b border-border bg-muted/20 px-6 py-3">
+              <div className="max-h-[32vh] overflow-y-auto pr-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="sm:col-span-2">
+                    <Label className="text-[10px] font-mono">Lane Name</Label>
+                    <Input value={newLaneName} onChange={(e) => setNewLaneName(e.target.value)} placeholder="e.g. Colombia → US East Coast" className="text-xs mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] font-mono">Origin</Label>
+                    <Input value={newLaneOrigin} onChange={(e) => setNewLaneOrigin(e.target.value)} placeholder="e.g. Colombia" className="text-xs mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] font-mono">Destination</Label>
+                    <Input value={newLaneDestination} onChange={(e) => setNewLaneDestination(e.target.value)} placeholder="e.g. United States" className="text-xs mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] font-mono">Mode</Label>
+                    <Select value={newLaneMode} onValueChange={setNewLaneMode}>
+                      <SelectTrigger className="text-xs mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sea">Sea</SelectItem>
+                        <SelectItem value="air">Air</SelectItem>
+                        <SelectItem value="land">Land</SelectItem>
+                        <SelectItem value="multimodal">Multimodal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] font-mono">Workflow Stage</Label>
+                    <Select value={newLaneStage} onValueChange={setNewLaneStage}>
+                      <SelectTrigger className="text-xs mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pre_shipment">Pre-Shipment</SelectItem>
+                        <SelectItem value="in_transit">In Transit</SelectItem>
+                        <SelectItem value="at_customs">At Customs</SelectItem>
+                        <SelectItem value="post_clearance">Post Clearance</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
-              <div className="flex justify-end gap-2">
+              <div className="mt-3 flex justify-end gap-2">
                 <Button variant="ghost" size="sm" className="text-xs" onClick={() => setShowNewLane(false)}>Cancel</Button>
                 <Button size="sm" className="text-xs font-mono" onClick={handleCreateNewLane}>Create Lane</Button>
               </div>
             </div>
           )}
 
-          <ScrollArea className="min-h-0 flex-1 pr-1">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="min-h-0 flex-1 overflow-hidden px-6 py-3">
+            <ScrollArea className="h-full w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pr-2 pb-6">
               {(() => {
                 // Build merged list: templates + discovered lanes
                 type MergedLane = {
@@ -1575,8 +1595,11 @@ export default function DocumentValidator() {
                   return true;
                 });
 
-                // Sort: active production first, then by usage
+                // Sort: keep newly created lane visible, then active production, then usage
                 filtered.sort((a, b) => {
+                  if (recentLaneId && a.id === recentLaneId) return -1;
+                  if (recentLaneId && b.id === recentLaneId) return 1;
+
                   const order: Record<LaneStatus, number> = { active_production: 0, validated: 1, template_only: 2, archived: 3 };
                   const diff = order[a.status] - order[b.status];
                   return diff !== 0 ? diff : b.usageCount - a.usageCount;
@@ -1596,23 +1619,27 @@ export default function DocumentValidator() {
                 return filtered.map((m) => {
                   const st = STATUS_STYLES[m.status];
                   return (
-                    <Card
+                    <div
                       key={m.id}
-                      className={`border-border bg-card hover:border-primary/50 cursor-pointer transition-colors ${m.status === "archived" ? "opacity-60" : ""}`}
-                      onClick={() => {
-                        if (m.template) {
-                          handleLoadTemplate(m.template);
-                        } else {
-                          // Load discovered lane context
-                          setShipmentMode(m.mode);
-                          if (m.origin) setOriginCountry(m.origin);
-                          if (m.destination) setDestinationCountry(m.destination);
-                          setShowTemplates(false);
-                          toast.success(`Lane loaded: ${m.name}`);
-                        }
-                      }}
+                      ref={(node) => { laneCardRefs.current[m.id] = node; }}
+                      className={recentLaneId === m.id ? "rounded-lg ring-1 ring-primary/40" : undefined}
                     >
-                      <CardContent className="py-3 px-4">
+                      <Card
+                        className={`border-border bg-card hover:border-primary/50 cursor-pointer transition-colors ${m.status === "archived" ? "opacity-60" : ""}`}
+                        onClick={() => {
+                          if (m.template) {
+                            handleLoadTemplate(m.template);
+                          } else {
+                            // Load discovered lane context
+                            setShipmentMode(m.mode);
+                            if (m.origin) setOriginCountry(m.origin);
+                            if (m.destination) setDestinationCountry(m.destination);
+                            setShowTemplates(false);
+                            toast.success(`Lane loaded: ${m.name}`);
+                          }
+                        }}
+                      >
+                        <CardContent className="py-3 px-4">
                         <div className="flex items-center gap-2 mb-1">
                           {m.mode === "air" ? <Plane size={14} className="text-primary" /> : m.mode === "sea" ? <Ship size={14} className="text-primary" /> : <Truck size={14} className="text-primary" />}
                           <span className="text-sm font-bold font-mono truncate">{m.name}</span>
@@ -1649,13 +1676,15 @@ export default function DocumentValidator() {
                             )}
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+                    </div>
                   );
                 });
               })()}
-            </div>
-          </ScrollArea>
+              </div>
+            </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
 
