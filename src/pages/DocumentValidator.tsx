@@ -1412,7 +1412,7 @@ export default function DocumentValidator() {
           </div>
 
           {showNewLane && (
-            <div className="border border-border rounded-md p-3 space-y-3 bg-muted/30">
+            <div className="border border-border rounded-md p-3 space-y-3 bg-muted/30 shrink-0">
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
                   <Label className="text-[10px] font-mono">Lane Name</Label>
