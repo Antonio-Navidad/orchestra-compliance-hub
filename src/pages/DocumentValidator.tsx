@@ -1475,7 +1475,7 @@ export default function DocumentValidator() {
                 <Button size="sm" className="text-xs font-mono" onClick={handleCreateNewLane}>Create Lane</Button>
               </div>
             </div>
-          )
+          )}
 
           <ScrollArea className="min-h-0 flex-1 pr-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
