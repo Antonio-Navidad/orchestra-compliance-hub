@@ -488,6 +488,18 @@ export default function DocumentValidator() {
     }
   }, [savedSessionId, fetchReviews]);
 
+  useEffect(() => {
+    if (!showTemplates || !recentLaneId) return;
+    const target = laneCardRefs.current[recentLaneId];
+    if (!target) return;
+
+    const raf = requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+
+    return () => cancelAnimationFrame(raf);
+  }, [showTemplates, recentLaneId, savedLanes, laneFilter]);
+
   const handleRecallSession = (session: ValidationSession) => {
     setShipmentId(session.shipment_id || "");
     setShipmentMode(session.shipment_mode || "sea");
