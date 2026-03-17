@@ -1676,8 +1676,9 @@ export default function DocumentValidator() {
                             )}
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+                    </div>
                   );
                 });
               })()}
