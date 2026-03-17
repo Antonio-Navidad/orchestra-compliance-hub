@@ -438,6 +438,27 @@ export default function DocumentValidator() {
     if (id) fetchLanes();
   };
 
+  // ── Fully rebind validator context from a lane ──────────────────────
+  const handleLoadLane = useCallback((lane: { name: string; origin: string; destination: string; mode: string; workflowStage?: string; rulesVersion?: string }) => {
+    // 1. Clear all stale template/rule state
+    setSelectedTemplate(null);
+    setRuleResult(null);
+    setAiNarrative(null);
+    setAuditMeta(null);
+    setCrossDocMismatches([]);
+    setSavedSessionId(null);
+
+    // 2. Rebind context from the lane
+    setOriginCountry(lane.origin || "");
+    setDestinationCountry(lane.destination || "");
+    setShipmentMode(lane.mode || "sea");
+    setWorkflowStage(lane.workflowStage || "pre_shipment");
+
+    // 3. Close modal
+    setShowTemplates(false);
+    toast.success(`Lane loaded: ${lane.name}`);
+  }, []);
+
   const handleCreateNewLane = async () => {
     if (!newLaneName.trim() || !newLaneOrigin.trim() || !newLaneDestination.trim()) {
       toast.error("Name, origin, and destination are required");
@@ -456,6 +477,14 @@ export default function DocumentValidator() {
       setShowNewLane(false);
       setLaneFilter("all");
       setRecentLaneId(id);
+      // Rebind validator context to the newly created lane
+      handleLoadLane({
+        name: newLaneName,
+        origin: newLaneOrigin,
+        destination: newLaneDestination,
+        mode: newLaneMode,
+        workflowStage: newLaneStage,
+      });
       setNewLaneName(""); setNewLaneOrigin(""); setNewLaneDestination("");
       setNewLaneMode("sea"); setNewLaneStage("pre_shipment");
       fetchLanes();
@@ -463,6 +492,12 @@ export default function DocumentValidator() {
   };
 
   const handleLoadTemplate = (t: ShipmentTemplate) => {
+    // Clear stale lane/rule state before loading template
+    setRuleResult(null);
+    setAiNarrative(null);
+    setAuditMeta(null);
+    setSavedSessionId(null);
+
     setSelectedTemplate(t);
     setShipmentMode(t.mode);
     if (t.origin) setOriginCountry(t.origin);
@@ -598,6 +633,18 @@ export default function DocumentValidator() {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl space-y-6">
+      {/* Debug: Active Lane Context */}
+      {(originCountry || destinationCountry) && (
+        <div className="rounded border border-dashed border-muted-foreground/30 bg-muted/30 px-3 py-1.5 font-mono text-[10px] text-muted-foreground flex items-center gap-4 flex-wrap">
+          <span className="font-bold text-foreground/70">ACTIVE CONTEXT</span>
+          <span>Origin: <strong className="text-foreground">{originCountry || "—"}</strong></span>
+          <span>Dest: <strong className="text-foreground">{destinationCountry || "—"}</strong></span>
+          <span>Mode: <strong className="text-foreground">{shipmentMode}</strong></span>
+          <span>Stage: <strong className="text-foreground">{workflowStage}</strong></span>
+          {selectedTemplate && <span>Template: <strong className="text-foreground">{selectedTemplate.name}</strong></span>}
+          {!selectedTemplate && <span className="text-muted-foreground/50">No template</span>}
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -1630,12 +1677,15 @@ export default function DocumentValidator() {
                           if (m.template) {
                             handleLoadTemplate(m.template);
                           } else {
-                            // Load discovered lane context
-                            setShipmentMode(m.mode);
-                            if (m.origin) setOriginCountry(m.origin);
-                            if (m.destination) setDestinationCountry(m.destination);
-                            setShowTemplates(false);
-                            toast.success(`Lane loaded: ${m.name}`);
+                            // Load lane context — fully rebind validator
+                            handleLoadLane({
+                              name: m.name,
+                              origin: m.origin || "",
+                              destination: m.destination || "",
+                              mode: m.mode,
+                              workflowStage: m.workflowStage,
+                              rulesVersion: m.rulesVersion,
+                            });
                           }
                         }}
                       >
