@@ -454,6 +454,8 @@ export default function DocumentValidator() {
     });
     if (id) {
       setShowNewLane(false);
+      setLaneFilter("all");
+      setRecentLaneId(id);
       setNewLaneName(""); setNewLaneOrigin(""); setNewLaneDestination("");
       setNewLaneMode("sea"); setNewLaneStage("pre_shipment");
       fetchLanes();
