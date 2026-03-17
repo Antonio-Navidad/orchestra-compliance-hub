@@ -1458,7 +1458,7 @@ export default function DocumentValidator() {
             </div>
           )}
 
-          <ScrollArea className="flex-1 mt-3 pr-1">
+          <ScrollArea className="min-h-0 flex-1 pr-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {(() => {
                 // Build merged list: templates + discovered lanes
