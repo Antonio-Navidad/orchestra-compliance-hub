@@ -1388,7 +1388,7 @@ export default function DocumentValidator() {
       {/* Templates & Lanes Dialog */}
       <Dialog open={showTemplates} onOpenChange={(open) => { setShowTemplates(open); if (open) { fetchLaneUsage(); fetchLanes(); } }}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader>
+          <DialogHeader className="shrink-0">
             <DialogTitle className="font-mono">Templates &amp; Lane Registry</DialogTitle>
             <DialogDescription>Pre-load workflows or select validated production lanes.</DialogDescription>
           </DialogHeader>
