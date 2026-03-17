@@ -438,6 +438,27 @@ export default function DocumentValidator() {
     if (id) fetchLanes();
   };
 
+  // ── Fully rebind validator context from a lane ──────────────────────
+  const handleLoadLane = useCallback((lane: { name: string; origin: string; destination: string; mode: string; workflowStage?: string; rulesVersion?: string }) => {
+    // 1. Clear all stale template/rule state
+    setSelectedTemplate(null);
+    setRuleResult(null);
+    setAiNarrative(null);
+    setAuditMeta(null);
+    setCrossDocMismatches([]);
+    setSavedSessionId(null);
+
+    // 2. Rebind context from the lane
+    setOriginCountry(lane.origin || "");
+    setDestinationCountry(lane.destination || "");
+    setShipmentMode(lane.mode || "sea");
+    setWorkflowStage(lane.workflowStage || "pre_shipment");
+
+    // 3. Close modal
+    setShowTemplates(false);
+    toast.success(`Lane loaded: ${lane.name}`);
+  }, []);
+
   const handleCreateNewLane = async () => {
     if (!newLaneName.trim() || !newLaneOrigin.trim() || !newLaneDestination.trim()) {
       toast.error("Name, origin, and destination are required");
@@ -456,6 +477,14 @@ export default function DocumentValidator() {
       setShowNewLane(false);
       setLaneFilter("all");
       setRecentLaneId(id);
+      // Rebind validator context to the newly created lane
+      handleLoadLane({
+        name: newLaneName,
+        origin: newLaneOrigin,
+        destination: newLaneDestination,
+        mode: newLaneMode,
+        workflowStage: newLaneStage,
+      });
       setNewLaneName(""); setNewLaneOrigin(""); setNewLaneDestination("");
       setNewLaneMode("sea"); setNewLaneStage("pre_shipment");
       fetchLanes();
@@ -463,6 +492,12 @@ export default function DocumentValidator() {
   };
 
   const handleLoadTemplate = (t: ShipmentTemplate) => {
+    // Clear stale lane/rule state before loading template
+    setRuleResult(null);
+    setAiNarrative(null);
+    setAuditMeta(null);
+    setSavedSessionId(null);
+
     setSelectedTemplate(t);
     setShipmentMode(t.mode);
     if (t.origin) setOriginCountry(t.origin);
