@@ -1665,12 +1665,15 @@ export default function DocumentValidator() {
                           if (m.template) {
                             handleLoadTemplate(m.template);
                           } else {
-                            // Load discovered lane context
-                            setShipmentMode(m.mode);
-                            if (m.origin) setOriginCountry(m.origin);
-                            if (m.destination) setDestinationCountry(m.destination);
-                            setShowTemplates(false);
-                            toast.success(`Lane loaded: ${m.name}`);
+                            // Load lane context — fully rebind validator
+                            handleLoadLane({
+                              name: m.name,
+                              origin: m.origin || "",
+                              destination: m.destination || "",
+                              mode: m.mode,
+                              workflowStage: m.workflowStage,
+                              rulesVersion: m.rulesVersion,
+                            });
                           }
                         }}
                       >
