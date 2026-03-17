@@ -1388,13 +1388,13 @@ export default function DocumentValidator() {
       {/* Templates & Lanes Dialog */}
       <Dialog open={showTemplates} onOpenChange={(open) => { setShowTemplates(open); if (open) { fetchLaneUsage(); fetchLanes(); } }}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader>
+          <DialogHeader className="shrink-0">
             <DialogTitle className="font-mono">Templates &amp; Lane Registry</DialogTitle>
             <DialogDescription>Pre-load workflows or select validated production lanes.</DialogDescription>
           </DialogHeader>
 
           {/* Filter Tabs */}
-          <div className="flex items-center gap-2 flex-wrap mt-1">
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
             {(["all", "templates", "validated", "production"] as const).map((f) => (
               <Badge
                 key={f}
@@ -1412,7 +1412,7 @@ export default function DocumentValidator() {
           </div>
 
           {showNewLane && (
-            <div className="border border-border rounded-md p-3 space-y-3 bg-muted/30">
+            <div className="border border-border rounded-md p-3 space-y-3 bg-muted/30 shrink-0">
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
                   <Label className="text-[10px] font-mono">Lane Name</Label>
@@ -1458,7 +1458,7 @@ export default function DocumentValidator() {
             </div>
           )}
 
-          <ScrollArea className="flex-1 mt-3 pr-1">
+          <ScrollArea className="min-h-0 flex-1 pr-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {(() => {
                 // Build merged list: templates + discovered lanes
