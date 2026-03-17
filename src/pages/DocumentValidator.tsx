@@ -633,6 +633,18 @@ export default function DocumentValidator() {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl space-y-6">
+      {/* Debug: Active Lane Context */}
+      {(originCountry || destinationCountry) && (
+        <div className="rounded border border-dashed border-muted-foreground/30 bg-muted/30 px-3 py-1.5 font-mono text-[10px] text-muted-foreground flex items-center gap-4 flex-wrap">
+          <span className="font-bold text-foreground/70">ACTIVE CONTEXT</span>
+          <span>Origin: <strong className="text-foreground">{originCountry || "—"}</strong></span>
+          <span>Dest: <strong className="text-foreground">{destinationCountry || "—"}</strong></span>
+          <span>Mode: <strong className="text-foreground">{shipmentMode}</strong></span>
+          <span>Stage: <strong className="text-foreground">{workflowStage}</strong></span>
+          {selectedTemplate && <span>Template: <strong className="text-foreground">{selectedTemplate.name}</strong></span>}
+          {!selectedTemplate && <span className="text-muted-foreground/50">No template</span>}
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
