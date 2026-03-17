@@ -1394,7 +1394,7 @@ export default function DocumentValidator() {
           </DialogHeader>
 
           {/* Filter Tabs */}
-          <div className="flex items-center gap-2 flex-wrap mt-1">
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
             {(["all", "templates", "validated", "production"] as const).map((f) => (
               <Badge
                 key={f}
