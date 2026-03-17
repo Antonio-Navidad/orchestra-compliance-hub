@@ -1619,23 +1619,27 @@ export default function DocumentValidator() {
                 return filtered.map((m) => {
                   const st = STATUS_STYLES[m.status];
                   return (
-                    <Card
+                    <div
                       key={m.id}
-                      className={`border-border bg-card hover:border-primary/50 cursor-pointer transition-colors ${m.status === "archived" ? "opacity-60" : ""}`}
-                      onClick={() => {
-                        if (m.template) {
-                          handleLoadTemplate(m.template);
-                        } else {
-                          // Load discovered lane context
-                          setShipmentMode(m.mode);
-                          if (m.origin) setOriginCountry(m.origin);
-                          if (m.destination) setDestinationCountry(m.destination);
-                          setShowTemplates(false);
-                          toast.success(`Lane loaded: ${m.name}`);
-                        }
-                      }}
+                      ref={(node) => { laneCardRefs.current[m.id] = node; }}
+                      className={recentLaneId === m.id ? "rounded-lg ring-1 ring-primary/40" : undefined}
                     >
-                      <CardContent className="py-3 px-4">
+                      <Card
+                        className={`border-border bg-card hover:border-primary/50 cursor-pointer transition-colors ${m.status === "archived" ? "opacity-60" : ""}`}
+                        onClick={() => {
+                          if (m.template) {
+                            handleLoadTemplate(m.template);
+                          } else {
+                            // Load discovered lane context
+                            setShipmentMode(m.mode);
+                            if (m.origin) setOriginCountry(m.origin);
+                            if (m.destination) setDestinationCountry(m.destination);
+                            setShowTemplates(false);
+                            toast.success(`Lane loaded: ${m.name}`);
+                          }
+                        }}
+                      >
+                        <CardContent className="py-3 px-4">
                         <div className="flex items-center gap-2 mb-1">
                           {m.mode === "air" ? <Plane size={14} className="text-primary" /> : m.mode === "sea" ? <Ship size={14} className="text-primary" /> : <Truck size={14} className="text-primary" />}
                           <span className="text-sm font-bold font-mono truncate">{m.name}</span>
