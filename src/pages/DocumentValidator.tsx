@@ -1403,28 +1403,29 @@ export default function DocumentValidator() {
 
       {/* Templates & Lanes Dialog */}
       <Dialog open={showTemplates} onOpenChange={(open) => { setShowTemplates(open); if (open) { fetchLaneUsage(); fetchLanes(); } }}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader className="shrink-0">
+        <DialogContent className="max-w-4xl w-[min(96vw,56rem)] h-[min(88vh,44rem)] overflow-hidden p-0 gap-0 flex flex-col">
+          <DialogHeader className="shrink-0 border-b border-border px-6 py-4">
             <DialogTitle className="font-mono">Templates &amp; Lane Registry</DialogTitle>
             <DialogDescription>Pre-load workflows or select validated production lanes.</DialogDescription>
           </DialogHeader>
 
-          {/* Filter Tabs */}
-          <div className="flex items-center gap-2 flex-wrap shrink-0">
-            {(["all", "templates", "validated", "production"] as const).map((f) => (
-              <Badge
-                key={f}
-                variant={laneFilter === f ? "default" : "outline"}
-                className="cursor-pointer text-[10px] font-mono uppercase"
-                onClick={() => setLaneFilter(f)}
-              >
-                {f === "all" ? "All" : f === "templates" ? "Templates Only" : f === "validated" ? "Validated Lanes" : "Production Lanes"}
-              </Badge>
-            ))}
-            {(lanesLoading || savedLanesLoading) && <Loader2 size={14} className="animate-spin text-muted-foreground" />}
-            <Button variant="outline" size="sm" className="ml-auto font-mono text-[10px] gap-1.5" onClick={() => setShowNewLane(!showNewLane)}>
-              <Plus size={12} /> New Lane
-            </Button>
+          <div className="shrink-0 border-b border-border px-6 py-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              {(["all", "templates", "validated", "production"] as const).map((f) => (
+                <Badge
+                  key={f}
+                  variant={laneFilter === f ? "default" : "outline"}
+                  className="cursor-pointer text-[10px] font-mono uppercase"
+                  onClick={() => setLaneFilter(f)}
+                >
+                  {f === "all" ? "All" : f === "templates" ? "Templates Only" : f === "validated" ? "Validated Lanes" : "Production Lanes"}
+                </Badge>
+              ))}
+              {(lanesLoading || savedLanesLoading) && <Loader2 size={14} className="animate-spin text-muted-foreground" />}
+              <Button variant="outline" size="sm" className="ml-auto font-mono text-[10px] gap-1.5" onClick={() => setShowNewLane(!showNewLane)}>
+                <Plus size={12} /> {showNewLane ? "Close" : "New Lane"}
+              </Button>
+            </div>
           </div>
 
           {showNewLane && (
