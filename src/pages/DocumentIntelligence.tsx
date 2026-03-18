@@ -108,6 +108,7 @@ export default function DocumentIntelligence() {
         </TabsContent>
 
         <TabsContent value="memory" className="mt-0">
+          <TabContextBanner tabId="memory" />
           <RepeatShipmentMemory
             originCountry={laneContext.origin}
             destinationCountry={laneContext.destination}
