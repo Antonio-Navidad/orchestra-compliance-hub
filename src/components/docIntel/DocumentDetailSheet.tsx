@@ -279,5 +279,46 @@ export function DocumentDetailSheet({ document: doc, open, onOpenChange, onRetry
         </ScrollArea>
       </SheetContent>
     </Sheet>
+
+    {/* Fullscreen document viewer dialog */}
+    <Dialog open={fullscreen} onOpenChange={setFullscreen}>
+      <DialogContent className="max-w-[90vw] w-[90vw] h-[90vh] p-0 flex flex-col gap-0">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30">
+          <span className="text-xs font-mono truncate">{doc.file_name}</span>
+          <Button
+            variant="ghost" size="sm"
+            className="text-[10px] font-mono gap-1"
+            onClick={() => {
+              if (previewUrl) {
+                const a = document.createElement("a");
+                a.href = previewUrl;
+                a.download = doc.file_name;
+                a.click();
+              }
+            }}
+          >
+            <Download size={12} /> Download
+          </Button>
+        </div>
+        <div className="flex-1 min-h-0">
+          {previewUrl && isImage && (
+            <img src={previewUrl} alt={doc.file_name} className="w-full h-full object-contain bg-muted/10" />
+          )}
+          {previewUrl && isPdf && (
+            <iframe
+              src={`${previewUrl}#toolbar=1&navpanes=1`}
+              title={doc.file_name}
+              className="w-full h-full border-0"
+            />
+          )}
+          {previewUrl && !isImage && !isPdf && (
+            <div className="flex items-center justify-center h-full text-muted-foreground text-sm font-mono">
+              Preview not available for this file type
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
