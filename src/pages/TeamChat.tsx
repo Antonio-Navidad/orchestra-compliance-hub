@@ -175,7 +175,7 @@ export default function TeamChat() {
                   className="text-xs h-7"
                   onKeyDown={(e) => e.key === "Enter" && handleCreateChannel()}
                 />
-                <Button size="sm" className="h-7 text-xs" onClick={handleCreateChannel}>Add</Button>
+                <Button size="sm" className="h-7 text-xs" onClick={handleCreateChannel}>{t("common.add")}</Button>
               </div>
             )}
           </CardHeader>
