@@ -482,10 +482,105 @@ function runComparison(fieldMap: Map<string, FieldEntry[]>): ComparisonResult {
     debugLog.push(logEntry);
   }
 
+  // ── HS code vs product description cross-validation ──
+  // Check if HS codes and descriptions within the same document set are semantically consistent
+  const hsCodes = fieldMap.get("hs_code");
+  const descriptions = fieldMap.get("item_description");
+  if (hsCodes && descriptions) {
+    const hsDescMismatches = detectHsDescriptionMismatches(hsCodes, descriptions);
+    mismatches.push(...hsDescMismatches);
+  }
+
   // Sort: high first, then medium, then low
   const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
   const typeOrder: Record<string, number> = { true_conflict: 0, unit_conversion: 1, port_gateway: 2, semantic_variant: 3, expected_difference: 4 };
   mismatches.sort((a, b) => sevOrder[a.severity] - sevOrder[b.severity] || (typeOrder[a.mismatchType] ?? 5) - (typeOrder[b.mismatchType] ?? 5));
 
   return { mismatches, debugLog };
+}
+
+// ── HS code vs description mismatch detection ─────────────────────────
+// Known HS code category prefixes mapped to expected product keywords
+const HS_CATEGORY_KEYWORDS: Record<string, { category: string; keywords: string[] }> = {
+  "01": { category: "live animals", keywords: ["animal", "livestock", "horse", "cattle", "pig", "poultry", "sheep"] },
+  "02": { category: "meat", keywords: ["meat", "beef", "pork", "chicken", "lamb", "poultry"] },
+  "03": { category: "fish/seafood", keywords: ["fish", "seafood", "shrimp", "salmon", "tuna", "lobster", "crab"] },
+  "06": { category: "plants/flowers", keywords: ["plant", "flower", "bulb", "seed", "tree"] },
+  "07": { category: "vegetables", keywords: ["vegetable", "potato", "tomato", "onion", "carrot", "legume"] },
+  "08": { category: "fruit/nuts", keywords: ["fruit", "apple", "banana", "orange", "nut", "almond", "walnut"] },
+  "09": { category: "coffee/tea/spices", keywords: ["coffee", "tea", "spice", "pepper", "cinnamon", "vanilla"] },
+  "10": { category: "cereals", keywords: ["wheat", "rice", "corn", "maize", "barley", "oat", "cereal", "grain"] },
+  "22": { category: "beverages", keywords: ["wine", "beer", "spirit", "juice", "water", "beverage", "alcohol"] },
+  "27": { category: "mineral fuels/oils", keywords: ["oil", "petroleum", "gas", "fuel", "coal", "bitumen"] },
+  "30": { category: "pharmaceuticals", keywords: ["pharmaceutical", "medicine", "drug", "tablet", "capsule", "vaccine"] },
+  "39": { category: "plastics", keywords: ["plastic", "polymer", "polyethylene", "PVC", "resin"] },
+  "44": { category: "wood", keywords: ["wood", "timber", "lumber", "plywood", "furniture", "wooden"] },
+  "48": { category: "paper", keywords: ["paper", "cardboard", "carton", "tissue"] },
+  "50": { category: "silk", keywords: ["silk"] },
+  "52": { category: "cotton", keywords: ["cotton"] },
+  "61": { category: "knitted apparel", keywords: ["shirt", "t-shirt", "sweater", "jersey", "blouse", "dress", "knit", "apparel", "clothing", "garment"] },
+  "62": { category: "woven apparel", keywords: ["suit", "jacket", "coat", "trouser", "skirt", "dress", "woven", "apparel", "clothing"] },
+  "64": { category: "footwear", keywords: ["shoe", "boot", "sandal", "slipper", "footwear", "sneaker"] },
+  "71": { category: "precious stones/metals", keywords: ["gold", "silver", "diamond", "jewelry", "jewellery", "precious", "pearl"] },
+  "72": { category: "iron/steel", keywords: ["iron", "steel", "metal"] },
+  "73": { category: "iron/steel articles", keywords: ["pipe", "tube", "wire", "nail", "screw", "bolt", "steel", "iron"] },
+  "84": { category: "machinery", keywords: ["machine", "engine", "pump", "compressor", "turbine", "machinery", "equipment", "industrial"] },
+  "85": { category: "electrical equipment", keywords: ["electric", "electronic", "circuit", "battery", "transformer", "motor", "led", "cable", "wire", "semiconductor", "chip"] },
+  "87": { category: "vehicles", keywords: ["car", "vehicle", "automobile", "truck", "bus", "motorcycle", "tractor", "trailer"] },
+  "8471": { category: "computers/laptops", keywords: ["computer", "laptop", "notebook", "desktop", "server", "processing"] },
+  "8517": { category: "telephones", keywords: ["phone", "telephone", "smartphone", "mobile", "cellular"] },
+  "9401": { category: "seats/chairs", keywords: ["seat", "chair", "sofa", "couch", "stool"] },
+  "9403": { category: "furniture", keywords: ["furniture", "desk", "table", "cabinet", "shelf", "wardrobe", "bed"] },
+};
+
+function detectHsDescriptionMismatches(
+  hsCodes: FieldEntry[],
+  descriptions: FieldEntry[]
+): CrossDocMismatch[] {
+  const mismatches: CrossDocMismatch[] = [];
+
+  for (const hsEntry of hsCodes) {
+    const code = hsEntry.value.replace(/[^0-9]/g, "");
+    if (code.length < 2) continue;
+
+    // Find the description from the same document
+    const sameDocDesc = descriptions.find(d => d.docName === hsEntry.docName);
+    if (!sameDocDesc) continue;
+
+    const descLower = sameDocDesc.value.toLowerCase();
+
+    // Check against known categories - try most specific prefix first
+    const prefixes = [code.slice(0, 4), code.slice(0, 2)];
+    let matched = false;
+    let categoryInfo: { category: string; keywords: string[] } | null = null;
+
+    for (const prefix of prefixes) {
+      if (HS_CATEGORY_KEYWORDS[prefix]) {
+        categoryInfo = HS_CATEGORY_KEYWORDS[prefix];
+        const hasKeyword = categoryInfo.keywords.some(kw => descLower.includes(kw));
+        if (hasKeyword) {
+          matched = true;
+          break;
+        }
+      }
+    }
+
+    // If we found a category mapping but no keyword match, it's a mismatch
+    if (categoryInfo && !matched) {
+      mismatches.push({
+        fieldName: "hs_code_description_match",
+        severity: "high",
+        mismatchType: "true_conflict",
+        documents: [
+          { docName: hsEntry.docName, docType: hsEntry.docType, value: `HS ${hsEntry.value} (${categoryInfo.category})`, confidence: hsEntry.confidence },
+          { docName: sameDocDesc.docName, docType: sameDocDesc.docType, value: sameDocDesc.value, confidence: sameDocDesc.confidence },
+        ],
+        description: `HS code ${hsEntry.value} (${categoryInfo.category}) does not match product description`,
+        reason: `The HS code classifies this as "${categoryInfo.category}" but the product description does not contain expected keywords for this category.`,
+        customsImpact: "HS code does not match product description — may trigger customs examination.",
+      });
+    }
+  }
+
+  return mismatches;
 }
