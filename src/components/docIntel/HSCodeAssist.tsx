@@ -362,7 +362,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                     onClick={() => onSelectCode?.(s.code)}
                     className="text-[10px] font-mono h-6 gap-1"
                   >
-                    <CheckCircle size={10} /> Use This Code
+                    <CheckCircle size={10} /> {t("hsAssist.useThisCode")}
                   </Button>
                   <Button
                     variant="ghost"
