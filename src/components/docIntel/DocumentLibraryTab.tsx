@@ -177,7 +177,7 @@ export function DocumentLibraryTab() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {documents.map(doc => (
-            <Card key={doc.id} className="group hover:border-primary/40 transition-colors">
+            <Card key={doc.id} className="group hover:border-primary/40 transition-colors cursor-pointer" onClick={() => setSelectedDoc(doc)}>
               <CardContent className="p-3 space-y-2">
                 <div className="flex items-start gap-2">
                   <FileText size={16} className="text-primary/60 mt-0.5 shrink-0" />
