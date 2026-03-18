@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Bell, Search, Command, X, Loader2, CheckCheck, AlertTriangle, Info, ShieldAlert } from "lucide-react";
 
 type Notification = {
@@ -32,6 +33,7 @@ function SeverityIcon({ severity }: { severity: string }) {
 export function GlobalTopBar() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<{ shipment_id: string; description: string; status: string }[]>([]);
@@ -39,7 +41,6 @@ export function GlobalTopBar() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Load notifications
   useEffect(() => {
     if (!user) return;
     const load = async () => {
@@ -56,7 +57,6 @@ export function GlobalTopBar() {
     };
     load();
 
-    // Realtime subscription
     const channel = supabase
       .channel("notifications-rt")
       .on("postgres_changes", {
@@ -95,26 +95,24 @@ export function GlobalTopBar() {
 
   return (
     <div className="flex items-center gap-1.5">
-      {/* Global Search trigger (Cmd+K) */}
       <Button
         variant="ghost"
         size="sm"
         className="h-7 gap-1.5 text-muted-foreground hover:text-foreground px-2"
         onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
-        title="Search (⌘K)"
+        title={t("nav.search") + " (⌘K)"}
       >
         <Search className="h-3.5 w-3.5" />
-        <span className="hidden md:inline text-[10px] font-mono">Search</span>
+        <span className="hidden md:inline text-[10px] font-mono">{t("nav.search")}</span>
         <kbd className="hidden md:inline-flex h-4 items-center rounded border border-border bg-muted px-1 text-[9px] font-mono text-muted-foreground">
           <Command className="h-2.5 w-2.5" />K
         </kbd>
       </Button>
 
-      {/* Legacy popover search (kept for direct shipment lookup) */}
       <Popover open={searchOpen} onOpenChange={setSearchOpen}>
         <PopoverTrigger asChild>
           <span className="hidden">
-            <Button variant="ghost" size="icon" className="h-7 w-7" title="Search shipments">
+            <Button variant="ghost" size="icon" className="h-7 w-7">
               <Search className="h-3.5 w-3.5" />
             </Button>
           </span>
@@ -125,7 +123,7 @@ export function GlobalTopBar() {
             <Input
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Search shipments, HS codes..."
+              placeholder={t("search.shipments")}
               className="h-7 text-xs border-0 focus-visible:ring-0 shadow-none"
               autoFocus
             />
@@ -152,15 +150,14 @@ export function GlobalTopBar() {
             </div>
           )}
           {!searching && searchQuery.length >= 2 && searchResults.length === 0 && (
-            <p className="text-[10px] text-muted-foreground text-center py-3 font-mono">No results</p>
+            <p className="text-[10px] text-muted-foreground text-center py-3 font-mono">{t("common.noResults")}</p>
           )}
         </PopoverContent>
       </Popover>
 
-      {/* Notifications */}
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-7 w-7 relative" title="Notifications">
+          <Button variant="ghost" size="icon" className="h-7 w-7 relative" title={t("notifications.title")}>
             <Bell className="h-3.5 w-3.5" />
             {unreadCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-destructive text-destructive-foreground rounded-full text-[9px] font-bold flex items-center justify-center">
@@ -171,16 +168,16 @@ export function GlobalTopBar() {
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0" align="end">
           <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-            <span className="text-xs font-mono font-medium">NOTIFICATIONS</span>
+            <span className="text-xs font-mono font-medium">{t("notifications.title")}</span>
             {unreadCount > 0 && (
               <Button variant="ghost" size="sm" className="text-[10px] h-5 px-1.5" onClick={markAllRead}>
-                <CheckCheck className="h-3 w-3 mr-1" /> Mark all read
+                <CheckCheck className="h-3 w-3 mr-1" /> {t("notifications.markAllRead")}
               </Button>
             )}
           </div>
           <ScrollArea className="max-h-72">
             {notifications.length === 0 ? (
-              <p className="text-[10px] text-muted-foreground text-center py-8 font-mono">No notifications</p>
+              <p className="text-[10px] text-muted-foreground text-center py-8 font-mono">{t("notifications.empty")}</p>
             ) : (
               <div className="p-1">
                 {notifications.map((n) => (
