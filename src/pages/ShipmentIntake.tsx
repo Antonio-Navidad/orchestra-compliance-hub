@@ -400,7 +400,7 @@ export default function ShipmentIntake() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Planned Departure</Label>
+                  <Label className="text-xs font-mono">{t("intake.plannedDeparture")}</Label>
                   <Input type="date" value={form.planned_departure} onChange={e => updateField('planned_departure', e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
