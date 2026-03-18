@@ -84,7 +84,7 @@ export default function ShipmentDetail() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground font-mono text-sm">LOADING SHIPMENT DATA...</div>
+        <div className="text-muted-foreground font-mono text-sm">{t("detail.loadingShipment")}</div>
       </div>
     );
   }
@@ -93,8 +93,8 @@ export default function ShipmentDetail() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-2">
-          <p className="text-muted-foreground">Shipment not found</p>
-          <Link to="/" className="text-primary text-sm hover:underline">Return to Dashboard</Link>
+          <p className="text-muted-foreground">{t("detail.shipmentNotFound")}</p>
+          <Link to="/" className="text-primary text-sm hover:underline">{t("detail.returnToDashboard")}</Link>
         </div>
       </div>
     );
