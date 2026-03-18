@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Save, Shield, UserPlus, Trash2, Users, Ban, Search, Mail, History, Globe } from "lucide-react";
+import { ArrowLeft, Save, Shield, UserPlus, Trash2, Users, Ban, Search, Mail, History, Globe, Languages } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -184,6 +185,7 @@ export default function AdminSettings() {
             <TabsTrigger value="team" className="font-mono text-xs"><Users size={12} className="mr-1" /> TEAM</TabsTrigger>
             <TabsTrigger value="rules" className="font-mono text-xs"><Shield size={12} className="mr-1" /> AI RULES</TabsTrigger>
             <TabsTrigger value="integrations" className="font-mono text-xs">INTEGRATIONS</TabsTrigger>
+            <TabsTrigger value="language" className="font-mono text-xs"><Languages size={12} className="mr-1" /> LANGUAGE</TabsTrigger>
             <Link to="/jurisdiction-settings">
               <Button variant="ghost" size="sm" className="font-mono text-xs h-8 gap-1">
                 <Globe size={12} /> JURISDICTIONS
@@ -391,8 +393,79 @@ export default function AdminSettings() {
               <MakeIntegrationPanel />
             </div>
           </TabsContent>
+
+          <TabsContent value="language" className="mt-4 space-y-6">
+            <LanguageResetPanel />
+          </TabsContent>
         </Tabs>
       </main>
+    </div>
+  );
+}
+
+function LanguageResetPanel() {
+  const { language, setLanguage } = useLanguage();
+  const langList = [
+    { code: "en", nativeLabel: "English", englishLabel: "English" },
+    { code: "es", nativeLabel: "Español", englishLabel: "Spanish" },
+    { code: "pt", nativeLabel: "Português", englishLabel: "Portuguese" },
+    { code: "de", nativeLabel: "Deutsch", englishLabel: "German" },
+    { code: "zh", nativeLabel: "中文", englishLabel: "Chinese" },
+    { code: "ja", nativeLabel: "日本語", englishLabel: "Japanese" },
+    { code: "ko", nativeLabel: "한국어", englishLabel: "Korean" },
+    { code: "nl", nativeLabel: "Nederlands", englishLabel: "Dutch" },
+    { code: "hi", nativeLabel: "हिन्दी", englishLabel: "Hindi" },
+    { code: "fr", nativeLabel: "Français", englishLabel: "French" },
+    { code: "it", nativeLabel: "Italiano", englishLabel: "Italian" },
+  ];
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-6 space-y-6">
+      {/* This section is ALWAYS in English for recovery */}
+      <div className="space-y-2">
+        <h3 className="font-mono text-xs text-muted-foreground">LANGUAGE SETTINGS</h3>
+        <p className="text-sm text-muted-foreground">
+          Current language: <span className="font-medium text-foreground">{langList.find((l) => l.code === language)?.nativeLabel || language}</span>
+        </p>
+      </div>
+
+      {/* Always displayed in English regardless of current language */}
+      <div className="p-4 rounded-md border border-border bg-secondary/30 space-y-3">
+        <p className="text-sm font-medium">Reset language to English</p>
+        <p className="text-xs text-muted-foreground">
+          If you are stuck in a language you cannot read, click the button below to reset to English.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setLanguage("en")}
+          disabled={language === "en"}
+          className="font-mono text-xs"
+        >
+          <Globe size={12} className="mr-1" /> Reset language to English
+        </Button>
+      </div>
+
+      {/* Language selector grid */}
+      <div className="space-y-2">
+        <h4 className="text-xs font-mono text-muted-foreground">ALL LANGUAGES</h4>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {langList.map((lang) => (
+            <button
+              key={lang.code}
+              onClick={() => setLanguage(lang.code as any)}
+              className={`p-3 rounded-md border text-left transition-colors text-sm ${
+                language === lang.code
+                  ? "border-primary bg-primary/10 font-medium"
+                  : "border-border hover:bg-secondary/50"
+              }`}
+            >
+              <span className="block">{lang.nativeLabel}</span>
+              <span className="block text-[10px] text-muted-foreground">{lang.englishLabel}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
