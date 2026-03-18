@@ -642,25 +642,7 @@ export default function DocumentValidator() {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl space-y-6">
-      {/* Resolved Lane Context Banner */}
-      {resolvedLane && resolvedLane.resolved && (
-        <div className="rounded border border-primary/20 bg-primary/5 px-4 py-2.5 space-y-1">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="font-mono text-xs font-bold text-primary">{resolvedLane.laneLabel}</span>
-            <Badge variant="outline" className="text-[9px] font-mono">{shipmentMode.toUpperCase()}</Badge>
-            <Badge variant="outline" className="text-[9px] font-mono">{resolvedLane.stageOverlay.label}</Badge>
-            {resolvedLane.commodityOverlay.id !== "general" && (
-              <Badge variant="secondary" className="text-[9px] font-mono">{resolvedLane.commodityOverlay.name}</Badge>
-            )}
-            <span className="text-[10px] font-mono text-muted-foreground ml-auto">rules v{resolvedLane.rulesVersion}</span>
-          </div>
-          <div className="flex items-center gap-4 text-[10px] font-mono text-muted-foreground flex-wrap">
-            <span>Export: <strong className="text-foreground">{resolvedLane.origin.pack.name}</strong> via {resolvedLane.origin.pack.customsDeclarationSystem.name}</span>
-            <span>→</span>
-            <span>Import: <strong className="text-foreground">{resolvedLane.destination.pack.name}</strong> via {resolvedLane.destination.pack.customsDeclarationSystem.name}</span>
-          </div>
-        </div>
-      )}
+      {/* Unresolved lane warning */}
       {resolvedLane && !resolvedLane.resolved && (originCountry || destinationCountry) && (
         <div className="rounded border border-dashed border-risk-medium/40 bg-risk-medium/5 px-4 py-2 font-mono text-xs text-risk-medium">
           ⚠ {(resolvedLane as import("@/lib/laneResolver").UnresolvedLaneContext).reason}
