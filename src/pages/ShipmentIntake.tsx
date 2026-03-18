@@ -327,7 +327,7 @@ export default function ShipmentIntake() {
                   <Input type="number" value={form.declared_value} onChange={e => updateField('declared_value', e.target.value)} placeholder="50000" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Currency</Label>
+                  <Label className="text-xs font-mono">{t("intake.currency")}</Label>
                   <Select value={form.currency} onValueChange={v => updateField('currency', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
