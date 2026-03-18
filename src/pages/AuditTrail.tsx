@@ -216,7 +216,7 @@ export default function AuditTrail() {
         {/* Log Table */}
         {isLoading ? (
           <div className="text-center py-16 text-muted-foreground font-mono text-sm animate-pulse">
-            LOADING AUDIT TRAIL...
+            {t("audit.loading")}
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
