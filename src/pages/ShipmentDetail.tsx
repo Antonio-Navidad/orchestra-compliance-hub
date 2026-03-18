@@ -183,7 +183,7 @@ export default function ShipmentDetail() {
         {/* Status Workflow */}
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <span className="font-mono text-xs text-muted-foreground">WORKFLOW STATUS</span>
+            <span className="font-mono text-xs text-muted-foreground">{t("detail.workflowStatus")}</span>
             <StatusWorkflow shipmentId={shipment.shipment_id} currentStatus={shipment.status} />
           </div>
         </div>
