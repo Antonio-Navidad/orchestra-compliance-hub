@@ -251,7 +251,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
           </p>
           <div className="flex items-center gap-2">
             <Label htmlFor="reverse-mode" className="text-[10px] font-mono text-muted-foreground cursor-pointer">
-              {isReverseMode ? "Lookup by HS Code" : "Lookup by Description"}
+              {isReverseMode ? t("hsAssist.lookupByHs") : t("hsAssist.lookupByDesc")}
             </Label>
             <Switch
               id="reverse-mode"
