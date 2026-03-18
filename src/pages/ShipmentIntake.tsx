@@ -362,7 +362,7 @@ export default function ShipmentIntake() {
             {/* Broker & Logistics */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="font-mono text-sm">BROKER & LOGISTICS</CardTitle>
+                <CardTitle className="font-mono text-sm">{t("intake.brokerLogistics")}</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
