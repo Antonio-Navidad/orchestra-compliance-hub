@@ -641,16 +641,33 @@ export default function DocumentValidator() {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl space-y-6">
-      {/* Debug: Active Lane Context */}
-      {(originCountry || destinationCountry) && (
-        <div className="rounded border border-dashed border-muted-foreground/30 bg-muted/30 px-3 py-1.5 font-mono text-[10px] text-muted-foreground flex items-center gap-4 flex-wrap">
-          <span className="font-bold text-foreground/70">ACTIVE CONTEXT</span>
-          <span>Origin: <strong className="text-foreground">{originCountry || "—"}</strong></span>
-          <span>Dest: <strong className="text-foreground">{destinationCountry || "—"}</strong></span>
-          <span>Mode: <strong className="text-foreground">{shipmentMode}</strong></span>
-          <span>Stage: <strong className="text-foreground">{workflowStage}</strong></span>
-          {selectedTemplate && <span>Template: <strong className="text-foreground">{selectedTemplate.name}</strong></span>}
-          {!selectedTemplate && <span className="text-muted-foreground/50">No template</span>}
+      {/* Resolved Lane Context Banner */}
+      {resolvedLane && resolvedLane.resolved && (
+        <div className="rounded border border-primary/20 bg-primary/5 px-4 py-2.5 space-y-1">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="font-mono text-xs font-bold text-primary">{resolvedLane.laneLabel}</span>
+            <Badge variant="outline" className="text-[9px] font-mono">{shipmentMode.toUpperCase()}</Badge>
+            <Badge variant="outline" className="text-[9px] font-mono">{resolvedLane.stageOverlay.label}</Badge>
+            {resolvedLane.commodityOverlay.id !== "general" && (
+              <Badge variant="secondary" className="text-[9px] font-mono">{resolvedLane.commodityOverlay.name}</Badge>
+            )}
+            <span className="text-[10px] font-mono text-muted-foreground ml-auto">rules v{resolvedLane.rulesVersion}</span>
+          </div>
+          <div className="flex items-center gap-4 text-[10px] font-mono text-muted-foreground flex-wrap">
+            <span>Export: <strong className="text-foreground">{resolvedLane.origin.pack.name}</strong> via {resolvedLane.origin.pack.customsDeclarationSystem.name}</span>
+            <span>→</span>
+            <span>Import: <strong className="text-foreground">{resolvedLane.destination.pack.name}</strong> via {resolvedLane.destination.pack.customsDeclarationSystem.name}</span>
+          </div>
+        </div>
+      )}
+      {resolvedLane && !resolvedLane.resolved && (originCountry || destinationCountry) && (
+        <div className="rounded border border-dashed border-risk-medium/40 bg-risk-medium/5 px-4 py-2 font-mono text-xs text-risk-medium">
+          ⚠ {resolvedLane.reason}
+        </div>
+      )}
+      {!resolvedLane && !originCountry && !destinationCountry && (
+        <div className="rounded border border-dashed border-muted-foreground/30 bg-muted/30 px-3 py-1.5 font-mono text-[10px] text-muted-foreground">
+          No lane selected — choose a lane from Templates or set Origin/Destination to load jurisdiction rule packs.
         </div>
       )}
       {/* Header */}
