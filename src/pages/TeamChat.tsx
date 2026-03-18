@@ -151,8 +151,8 @@ export default function TeamChat() {
           <MessageSquare className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-xl font-bold tracking-tight">Team Chat</h1>
-          <p className="text-xs text-muted-foreground font-mono">WORKSPACE COLLABORATION & SHIPMENT THREADS</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("chat.title")}</h1>
+          <p className="text-xs text-muted-foreground font-mono">{t("chat.subtitle")}</p>
         </div>
       </div>
 
