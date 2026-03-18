@@ -284,7 +284,7 @@ export default function ShipmentIntake() {
                   <Input value={form.import_country} onChange={e => updateField('import_country', e.target.value)} placeholder="US" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Export Country</Label>
+                  <Label className="text-xs font-mono">{t("intake.exportCountry")}</Label>
                   <Input value={form.export_country} onChange={e => updateField('export_country', e.target.value)} placeholder="CN" />
                 </div>
                 <div className="space-y-1.5">
