@@ -36,25 +36,25 @@ const TYPE_COLORS: Record<string, string> = {
   customs_declaration: "bg-rose-500/20 text-rose-400 border-rose-500/30",
 };
 
-function ExtractionStatusBadge({ status, onRetry }: { status: string; onRetry?: () => void }) {
+function ExtractionStatusBadge({ status, onRetry, t }: { status: string; onRetry?: () => void; t: (key: string) => string }) {
   switch (status) {
     case "processing":
       return (
         <Badge variant="outline" className="text-[9px] font-mono bg-blue-500/10 text-blue-400 border-blue-500/30 gap-1">
-          <Loader2 size={10} className="animate-spin" /> Processing
+          <Loader2 size={10} className="animate-spin" /> {t("library.extraction.processing")}
         </Badge>
       );
     case "complete":
       return (
         <Badge variant="outline" className="text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
-          Extracted
+          {t("library.extraction.extracted")}
         </Badge>
       );
     case "failed":
       return (
         <div className="flex items-center gap-1">
           <Badge variant="outline" className="text-[9px] font-mono bg-destructive/10 text-destructive border-destructive/30 gap-1">
-            <AlertTriangle size={10} /> Failed
+            <AlertTriangle size={10} /> {t("library.extraction.failed")}
           </Badge>
           {onRetry && (
             <Button
@@ -62,7 +62,7 @@ function ExtractionStatusBadge({ status, onRetry }: { status: string; onRetry?: 
               size="icon"
               className="h-5 w-5 text-muted-foreground hover:text-primary"
               onClick={(e) => { e.stopPropagation(); onRetry(); }}
-              title="Retry extraction"
+              title={t("library.retryExtraction")}
             >
               <RotateCw size={10} />
             </Button>
@@ -72,7 +72,7 @@ function ExtractionStatusBadge({ status, onRetry }: { status: string; onRetry?: 
     default:
       return (
         <Badge variant="outline" className="text-[9px] font-mono bg-yellow-500/10 text-yellow-500 border-yellow-500/30">
-          Pending Extract
+          {t("library.extraction.pending")}
         </Badge>
       );
   }
