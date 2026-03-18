@@ -327,7 +327,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                       </Badge>
                     )}
                     <Badge variant="outline" className="text-[9px] font-mono">
-                      {Math.round(s.confidence * 100)}% confidence
+                      {Math.round(s.confidence * 100)}% {t("hsAssist.confidence")}
                     </Badge>
                     <Badge variant="outline" className={cn("text-[9px] font-mono", riskColor(s.riskLevel))}>
                       {s.riskLevel === "high" && <ShieldAlert size={8} className="mr-0.5" />}
