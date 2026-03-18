@@ -402,3 +402,58 @@ export default function AdminSettings() {
     </div>
   );
 }
+
+function LanguageResetPanel() {
+  const { language, setLanguage } = useLanguage();
+  const { LANGUAGES } = require("@/lib/i18n/translations");
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-6 space-y-6">
+      {/* This section is ALWAYS in English for recovery */}
+      <div className="space-y-2">
+        <h3 className="font-mono text-xs text-muted-foreground">LANGUAGE SETTINGS</h3>
+        <p className="text-sm text-muted-foreground">
+          Current language: <span className="font-medium text-foreground">{LANGUAGES.find((l: any) => l.code === language)?.nativeLabel || language}</span>
+        </p>
+      </div>
+
+      {/* Always displayed in English regardless of current language */}
+      <div className="p-4 rounded-md border border-border bg-secondary/30 space-y-3">
+        <p className="text-sm font-medium">Reset language to English</p>
+        <p className="text-xs text-muted-foreground">
+          If you are stuck in a language you cannot read, click the button below to reset to English.
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setLanguage("en")}
+          disabled={language === "en"}
+          className="font-mono text-xs"
+        >
+          <Globe size={12} className="mr-1" /> Reset language to English
+        </Button>
+      </div>
+
+      {/* Language selector grid */}
+      <div className="space-y-2">
+        <h4 className="text-xs font-mono text-muted-foreground">ALL LANGUAGES</h4>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {LANGUAGES.map((lang: any) => (
+            <button
+              key={lang.code}
+              onClick={() => setLanguage(lang.code)}
+              className={`p-3 rounded-md border text-left transition-colors text-sm ${
+                language === lang.code
+                  ? "border-primary bg-primary/10 font-medium"
+                  : "border-border hover:bg-secondary/50"
+              }`}
+            >
+              <span className="block">{lang.nativeLabel}</span>
+              <span className="block text-[10px] text-muted-foreground">{lang.englishLabel}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
