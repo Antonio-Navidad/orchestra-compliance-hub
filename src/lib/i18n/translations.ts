@@ -156,7 +156,6 @@ const en = {
   "docIntel.title": "Document Intelligence",
   "classify.title": "Product Classification",
   "validate.title": "Document Validator",
-  "route.title": "Route Builder",
   "team.title": "Team Chat",
   "watch.title": "Watch Mode",
   "decision.title": "Decision Twin",
