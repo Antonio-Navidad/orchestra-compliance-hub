@@ -45,6 +45,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <OnboardingTour />
+          <GlobalSearchDialog />
         </SidebarProvider>
       </ViewModeContext.Provider>
     </WorkspaceContext.Provider>
