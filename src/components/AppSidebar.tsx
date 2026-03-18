@@ -107,6 +107,7 @@ export function AppSidebar() {
               <Repeat size={10} className="mr-1" /> Switch Workspace
             </Button>
           )}
+          <LanguageSwitcher collapsed={collapsed} />
           <div className="flex items-center gap-2">
             <ThemeToggle />
             {!collapsed && (

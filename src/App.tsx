@@ -72,9 +72,12 @@ function PurposeGate({ children }: { children: React.ReactNode }) {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <WorkspacePurposeWrapper />
+      <LanguageProvider>
+        <Toaster />
+        <Sonner />
+        <LanguageBanner />
+        <WorkspacePurposeWrapper />
+      </LanguageProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
