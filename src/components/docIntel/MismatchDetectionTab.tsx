@@ -84,11 +84,11 @@ export function MismatchDetectionTab() {
 
           {loading ? (
             <div className="py-8 text-center text-muted-foreground font-mono text-sm animate-pulse">
-              Loading documents...
+              {t("mismatch.loadingDocs")}
             </div>
           ) : extractedDocs.length < 2 ? (
             <div className="py-8 text-center text-muted-foreground font-mono text-sm">
-              Need at least 2 extracted documents to compare. Upload and extract documents first.
+              {t("mismatch.needTwoDocs")}
             </div>
           ) : (
             <>
