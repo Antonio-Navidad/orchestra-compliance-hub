@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useDocumentLibrary, type LibraryFilters } from "@/hooks/useDocumentLibrary";
+import { useDocumentLibrary, type LibraryFilters, type LibraryDocument } from "@/hooks/useDocumentLibrary";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Upload, Search, FileText, Trash2, Eye, Filter, FolderOpen } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { DocumentDetailSheet } from "./DocumentDetailSheet";
 
 const DOC_TYPE_OPTIONS = [
   { value: "", label: "All Types" },
@@ -39,6 +40,7 @@ export function DocumentLibraryTab() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [filters, setFilters] = useState<Partial<LibraryFilters>>({});
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedDoc, setSelectedDoc] = useState<LibraryDocument | null>(null);
 
   useEffect(() => { fetchDocuments(filters); }, [fetchDocuments]);
 
@@ -175,7 +177,7 @@ export function DocumentLibraryTab() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {documents.map(doc => (
-            <Card key={doc.id} className="group hover:border-primary/40 transition-colors">
+            <Card key={doc.id} className="group hover:border-primary/40 transition-colors cursor-pointer" onClick={() => setSelectedDoc(doc)}>
               <CardContent className="p-3 space-y-2">
                 <div className="flex items-start gap-2">
                   <FileText size={16} className="text-primary/60 mt-0.5 shrink-0" />
@@ -191,7 +193,7 @@ export function DocumentLibraryTab() {
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"
-                    onClick={() => deleteDocument(doc)}
+                    onClick={(e) => { e.stopPropagation(); deleteDocument(doc); }}
                   >
                     <Trash2 size={12} />
                   </Button>
@@ -246,6 +248,12 @@ export function DocumentLibraryTab() {
           ))}
         </div>
       )}
+
+      <DocumentDetailSheet
+        document={selectedDoc}
+        open={!!selectedDoc}
+        onOpenChange={(open) => { if (!open) setSelectedDoc(null); }}
+      />
     </div>
   );
 }
