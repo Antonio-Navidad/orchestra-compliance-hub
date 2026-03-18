@@ -240,8 +240,8 @@ export default function RouteBuilder() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-mono">Cargo Type</Label>
-              <Input placeholder="e.g. Electronics, Textiles" value={cargoType} onChange={(e) => setCargoType(e.target.value)} className="text-sm" />
+              <Label className="text-xs font-mono">{t("route.cargoType")}</Label>
+              <Input placeholder={t("route.cargoTypePlaceholder")} value={cargoType} onChange={(e) => setCargoType(e.target.value)} className="text-sm" />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
