@@ -247,11 +247,11 @@ export default function ShipmentDetail() {
               </div>
 
               <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-                <h3 className="font-mono text-xs text-muted-foreground">DESCRIPTION</h3>
+                <h3 className="font-mono text-xs text-muted-foreground">{t("detail.description")}</h3>
                 <p className="text-sm">{shipment.description}</p>
                 {shipment.risk_notes && (
                   <>
-                    <h3 className="font-mono text-xs text-muted-foreground mt-4">RISK ANALYSIS</h3>
+                    <h3 className="font-mono text-xs text-muted-foreground mt-4">{t("detail.riskAnalysis")}</h3>
                     <p className="text-sm text-muted-foreground">{shipment.risk_notes}</p>
                   </>
                 )}
