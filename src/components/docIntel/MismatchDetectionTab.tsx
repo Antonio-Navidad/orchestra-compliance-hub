@@ -79,7 +79,7 @@ export function MismatchDetectionTab() {
         </CardHeader>
         <CardContent className="px-4 pb-4">
           <p className="text-[10px] font-mono text-muted-foreground mb-3">
-            Select two or more extracted documents to run a fresh cross-document comparison.
+            {t("mismatch.selectHint")}
           </p>
 
           {loading ? (
