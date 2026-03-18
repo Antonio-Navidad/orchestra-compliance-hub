@@ -198,7 +198,7 @@ export default function RouteBuilder() {
         <Card className="lg:col-span-1">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-mono flex items-center gap-2">
-              <Navigation className="h-4 w-4" /> Route Parameters
+              <Navigation className="h-4 w-4" /> {t("route.parameters")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
