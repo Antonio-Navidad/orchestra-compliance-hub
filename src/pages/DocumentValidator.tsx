@@ -662,7 +662,7 @@ export default function DocumentValidator() {
       )}
       {resolvedLane && !resolvedLane.resolved && (originCountry || destinationCountry) && (
         <div className="rounded border border-dashed border-risk-medium/40 bg-risk-medium/5 px-4 py-2 font-mono text-xs text-risk-medium">
-          ⚠ {resolvedLane.reason}
+          ⚠ {(resolvedLane as import("@/lib/laneResolver").UnresolvedLaneContext).reason}
         </div>
       )}
       {!resolvedLane && !originCountry && !destinationCountry && (
