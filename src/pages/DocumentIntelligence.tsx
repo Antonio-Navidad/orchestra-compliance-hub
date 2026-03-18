@@ -13,7 +13,9 @@ import { toast } from "sonner";
 import DocumentValidator from "./DocumentValidator";
 
 export default function DocumentIntelligence() {
-  const [activeTab, setActiveTab] = useState("library");
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") || "library";
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   // Shared lane context for HS Code Assist
   const [laneContext, setLaneContext] = useState({
