@@ -309,7 +309,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
 
         {destinationCountry && (
           <p className="text-[9px] font-mono text-muted-foreground">
-            Destination: {destinationCountry} · Origin: {originCountry || "—"} · Mode: {transportMode || "—"}
+            {t("hsAssist.destination")}: {destinationCountry} · {t("hsAssist.origin")}: {originCountry || "—"} · {t("hsAssist.mode")}: {transportMode || "—"}
           </p>
         )}
 
