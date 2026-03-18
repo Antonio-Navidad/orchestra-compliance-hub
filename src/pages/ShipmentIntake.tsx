@@ -440,7 +440,7 @@ export default function ShipmentIntake() {
                   onDrop={handleDrop}
                 >
                   <Upload className="mx-auto mb-2 text-muted-foreground" size={24} />
-                  <p className="text-sm text-muted-foreground">Drag & drop files here</p>
+                  <p className="text-sm text-muted-foreground">{t("intake.dragDrop")}</p>
                   <p className="text-[10px] text-muted-foreground mt-1">
                     Type: {DOC_TYPES.find(d => d.value === selectedDocType)?.label}
                   </p>
