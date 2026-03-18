@@ -123,6 +123,7 @@ interface ValidationAuditMeta {
 }
 
 export default function DocumentValidator({ embedded }: { embedded?: boolean } = {}) {
+  const { t } = useLanguage();
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
   const [shipmentMode, setShipmentMode] = useState("sea");
   const [originCountry, setOriginCountry] = useState("");
