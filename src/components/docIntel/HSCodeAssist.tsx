@@ -440,7 +440,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                 {reverseResult.tradeRestrictions.length > 0 && (
                   <div className="bg-amber-500/10 border border-amber-500/20 rounded p-2">
                     <p className="text-[10px] font-mono text-amber-600 dark:text-amber-400 mb-1 flex items-center gap-1">
-                      <ShieldAlert size={10} /> Trade Restriction Flags
+                      <ShieldAlert size={10} /> {t("hsAssist.tradeRestrictions")}
                     </p>
                     <ul className="text-[10px] font-mono space-y-0.5">
                       {reverseResult.tradeRestrictions.map((r, i) => (
