@@ -304,7 +304,7 @@ export default function AuditTrail() {
                       {/* Reason */}
                       {entry.reason && (
                         <div className="text-xs">
-                          <p className="text-muted-foreground/70 mb-0.5">Reason</p>
+                          <p className="text-muted-foreground/70 mb-0.5">{t("audit.reason")}</p>
                           <p className="bg-secondary/50 rounded p-2 border border-border">{entry.reason}</p>
                         </div>
                       )}
