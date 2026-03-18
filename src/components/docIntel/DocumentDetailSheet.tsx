@@ -80,11 +80,27 @@ export function DocumentDetailSheet({ document: doc, open, onOpenChange, onRetry
       setPreviewUrl(null);
       return;
     }
+
     supabase.storage
       .from("document-library")
-      .createSignedUrl(doc.file_path, 3600)
-      .then(({ data }) => {
-        if (data?.signedUrl) setPreviewUrl(data.signedUrl);
+      .createSignedUrl(doc.file_path, 3600, { download: false })
+      .then(({ data, error }) => {
+        if (error) {
+          setPreviewUrl(null);
+          return;
+        }
+
+        const rawSignedUrl = data?.signedUrl ?? (data as { signedURL?: string } | null)?.signedURL ?? null;
+        if (!rawSignedUrl) {
+          setPreviewUrl(null);
+          return;
+        }
+
+        const absoluteSignedUrl = rawSignedUrl.startsWith("http")
+          ? rawSignedUrl
+          : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1${rawSignedUrl.startsWith("/") ? rawSignedUrl : `/${rawSignedUrl}`}`;
+
+        setPreviewUrl(absoluteSignedUrl);
       });
   }, [doc, open]);
 
