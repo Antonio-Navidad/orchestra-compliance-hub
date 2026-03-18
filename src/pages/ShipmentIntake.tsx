@@ -404,7 +404,7 @@ export default function ShipmentIntake() {
                   <Input type="date" value={form.planned_departure} onChange={e => updateField('planned_departure', e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Estimated Arrival</Label>
+                  <Label className="text-xs font-mono">{t("intake.estimatedArrival")}</Label>
                   <Input type="date" value={form.estimated_arrival} onChange={e => updateField('estimated_arrival', e.target.value)} />
                 </div>
               </CardContent>
