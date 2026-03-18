@@ -288,7 +288,7 @@ export default function AuditTrail() {
                           <p className="font-mono">{entry.action_type}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground/70 mb-0.5">Rule Set</p>
+                          <p className="text-muted-foreground/70 mb-0.5">{t("audit.ruleSet")}</p>
                           <p className="font-mono">{entry.rule_set || "—"}</p>
                         </div>
                         <div>
