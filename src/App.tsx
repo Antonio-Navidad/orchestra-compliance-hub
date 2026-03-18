@@ -23,6 +23,7 @@ import AuditTrail from "./pages/AuditTrail";
 import JurisdictionSettings from "./pages/JurisdictionSettings";
 import ProductClassification from "./pages/ProductClassification";
 import DocumentValidator from "./pages/DocumentValidator";
+import DocumentIntelligence from "./pages/DocumentIntelligence";
 import DecisionTwin from "./pages/DecisionTwin";
 import RouteBuilder from "./pages/RouteBuilder";
 import TeamChat from "./pages/TeamChat";
