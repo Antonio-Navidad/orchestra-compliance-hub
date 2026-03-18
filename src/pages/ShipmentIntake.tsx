@@ -323,7 +323,7 @@ export default function ShipmentIntake() {
                   <Input type="number" value={form.quantity} onChange={e => updateField('quantity', e.target.value)} placeholder="100" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Declared Value</Label>
+                  <Label className="text-xs font-mono">{t("intake.declaredValue")}</Label>
                   <Input type="number" value={form.declared_value} onChange={e => updateField('declared_value', e.target.value)} placeholder="50000" />
                 </div>
                 <div className="space-y-1.5">
