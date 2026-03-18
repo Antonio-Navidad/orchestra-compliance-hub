@@ -292,7 +292,7 @@ export default function AuditTrail() {
                           <p className="font-mono">{entry.rule_set || "—"}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground/70 mb-0.5">Jurisdiction</p>
+                          <p className="text-muted-foreground/70 mb-0.5">{t("intake.jurisdiction")}</p>
                           <p className="font-mono">{entry.jurisdiction || "Global"}</p>
                         </div>
                         <div>
