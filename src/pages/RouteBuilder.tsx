@@ -203,12 +203,12 @@ export default function RouteBuilder() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-xs font-mono">Origin</Label>
-              <Input placeholder="e.g. Shanghai, China" value={origin} onChange={(e) => setOrigin(e.target.value)} className="text-sm" />
+              <Label className="text-xs font-mono">{t("route.origin")}</Label>
+              <Input placeholder={t("route.originPlaceholder")} value={origin} onChange={(e) => setOrigin(e.target.value)} className="text-sm" />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-mono">Destination</Label>
-              <Input placeholder="e.g. Miami, FL, USA" value={destination} onChange={(e) => setDestination(e.target.value)} className="text-sm" />
+              <Label className="text-xs font-mono">{t("route.destination")}</Label>
+              <Input placeholder={t("route.destinationPlaceholder")} value={destination} onChange={(e) => setDestination(e.target.value)} className="text-sm" />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
