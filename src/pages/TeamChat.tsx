@@ -171,7 +171,7 @@ export default function TeamChat() {
                 <Input
                   value={newChannelName}
                   onChange={(e) => setNewChannelName(e.target.value)}
-                  placeholder="Channel name"
+                  placeholder={t("chat.channelName")}
                   className="text-xs h-7"
                   onKeyDown={(e) => e.key === "Enter" && handleCreateChannel()}
                 />
