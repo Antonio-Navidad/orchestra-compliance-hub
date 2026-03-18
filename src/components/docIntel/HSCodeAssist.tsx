@@ -246,8 +246,8 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
         <div className="flex items-center justify-between">
           <p className="text-[10px] font-mono text-muted-foreground">
             {isReverseMode
-              ? "Enter an HS code to look up its definition, coverage, and risk flags."
-              : "Enter a plain-English product description to get suggested HS codes."}
+              ? t("hsAssist.reverseHint")
+              : t("hsAssist.forwardHint")}
           </p>
           <div className="flex items-center gap-2">
             <Label htmlFor="reverse-mode" className="text-[10px] font-mono text-muted-foreground cursor-pointer">
