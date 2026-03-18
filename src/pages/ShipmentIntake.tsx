@@ -243,7 +243,7 @@ export default function ShipmentIntake() {
             {/* Core Details */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="font-mono text-sm">SHIPMENT DETAILS</CardTitle>
+                <CardTitle className="font-mono text-sm">{t("intake.shipmentDetails")}</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
