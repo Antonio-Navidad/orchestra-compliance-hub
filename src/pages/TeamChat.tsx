@@ -161,7 +161,7 @@ export default function TeamChat() {
         <Card className="md:col-span-1 flex flex-col">
           <CardHeader className="pb-2 flex-none">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-xs font-mono">CHANNELS</CardTitle>
+              <CardTitle className="text-xs font-mono">{t("chat.channels")}</CardTitle>
               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowNewChannel(!showNewChannel)}>
                 <Plus className="h-3.5 w-3.5" />
               </Button>
