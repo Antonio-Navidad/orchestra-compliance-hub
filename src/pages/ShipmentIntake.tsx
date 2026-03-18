@@ -391,7 +391,7 @@ export default function ShipmentIntake() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Priority</Label>
+                  <Label className="text-xs font-mono">{t("intake.priority")}</Label>
                   <Select value={form.priority} onValueChange={v => updateField('priority', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
