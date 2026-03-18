@@ -371,7 +371,7 @@ export default function ShipmentIntake() {
                     const broker = brokers.find(b => b.id === v);
                     setForm(prev => ({ ...prev, broker_id: v, assigned_broker: broker?.canonical_name || '' }));
                   }}>
-                    <SelectTrigger><SelectValue placeholder="Select broker..." /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("intake.selectBroker")} /></SelectTrigger>
                     <SelectContent>
                       {brokers.map(b => <SelectItem key={b.id} value={b.id}>{b.canonical_name}</SelectItem>)}
                     </SelectContent>
