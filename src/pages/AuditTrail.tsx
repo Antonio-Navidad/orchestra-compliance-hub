@@ -328,7 +328,7 @@ export default function AuditTrail() {
                               size="sm" className="text-xs h-7 gap-1"
                               onClick={() => approveMutation.mutate({ id: entry.id, approved: true })}
                             >
-                              <CheckCircle2 size={12} /> Approve
+                              <CheckCircle2 size={12} /> {t("audit.approve")}
                             </Button>
                             <Button
                               variant="destructive" size="sm" className="text-xs h-7 gap-1"
