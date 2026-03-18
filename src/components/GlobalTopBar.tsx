@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Bell, Search, X, Loader2, CheckCheck, AlertTriangle, Info, ShieldAlert } from "lucide-react";
+import { Bell, Search, Command, X, Loader2, CheckCheck, AlertTriangle, Info, ShieldAlert } from "lucide-react";
 
 type Notification = {
   id: string;
