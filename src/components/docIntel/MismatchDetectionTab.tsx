@@ -72,6 +72,7 @@ export function MismatchDetectionTab() {
           <CardTitle className="text-sm font-mono flex items-center gap-2">
             <GitCompare size={14} className="text-primary" />
             Compare Documents
+            <HelpInfoIcon helpKey="compare_documents" size={13} />
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4">
