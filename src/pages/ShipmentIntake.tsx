@@ -492,7 +492,7 @@ export default function ShipmentIntake() {
                   <span className="font-mono font-bold">{docs.length}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground font-mono">Doc Types</span>
+                  <span className="text-muted-foreground font-mono">{t("intake.docTypes")}</span>
                   <span className="font-mono font-bold">{new Set(uploadedDocTypes).size}</span>
                 </div>
                 <div className="flex justify-between text-xs">
