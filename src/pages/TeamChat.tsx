@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { useLanguage } from "@/hooks/useLanguage";
 import {
   MessageSquare, Plus, Hash, Ship, Send, Pin, Loader2, Users
 } from "lucide-react";
@@ -32,6 +33,7 @@ type Message = {
 
 export default function TeamChat() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -149,8 +151,8 @@ export default function TeamChat() {
           <MessageSquare className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-xl font-bold tracking-tight">Team Chat</h1>
-          <p className="text-xs text-muted-foreground font-mono">WORKSPACE COLLABORATION & SHIPMENT THREADS</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("chat.title")}</h1>
+          <p className="text-xs text-muted-foreground font-mono">{t("chat.subtitle")}</p>
         </div>
       </div>
 
@@ -159,7 +161,7 @@ export default function TeamChat() {
         <Card className="md:col-span-1 flex flex-col">
           <CardHeader className="pb-2 flex-none">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-xs font-mono">CHANNELS</CardTitle>
+              <CardTitle className="text-xs font-mono">{t("chat.channels")}</CardTitle>
               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowNewChannel(!showNewChannel)}>
                 <Plus className="h-3.5 w-3.5" />
               </Button>
@@ -169,11 +171,11 @@ export default function TeamChat() {
                 <Input
                   value={newChannelName}
                   onChange={(e) => setNewChannelName(e.target.value)}
-                  placeholder="Channel name"
+                  placeholder={t("chat.channelName")}
                   className="text-xs h-7"
                   onKeyDown={(e) => e.key === "Enter" && handleCreateChannel()}
                 />
-                <Button size="sm" className="h-7 text-xs" onClick={handleCreateChannel}>Add</Button>
+                <Button size="sm" className="h-7 text-xs" onClick={handleCreateChannel}>{t("common.add")}</Button>
               </div>
             )}
           </CardHeader>
@@ -194,7 +196,7 @@ export default function TeamChat() {
                 </button>
               ))}
               {channels.length === 0 && (
-                <p className="text-[10px] text-muted-foreground/60 text-center py-4">No channels yet. Create one!</p>
+                <p className="text-[10px] text-muted-foreground/60 text-center py-4">{t("chat.noChannels")}</p>
               )}
             </div>
           </CardContent>
@@ -206,7 +208,7 @@ export default function TeamChat() {
             <div className="flex items-center gap-2">
               {activeChannelData && channelIcon(activeChannelData.channel_type)}
               <CardTitle className="text-sm font-mono">
-                {activeChannelData?.name || "Select a channel"}
+                {activeChannelData?.name || t("chat.selectChannel")}
               </CardTitle>
               {activeChannelData?.channel_type === "shipment" && activeChannelData.shipment_id && (
                 <Badge variant="outline" className="text-[10px]">{activeChannelData.shipment_id}</Badge>
@@ -223,13 +225,13 @@ export default function TeamChat() {
               {messages.length === 0 && activeChannel && (
                 <div className="text-center py-12">
                   <MessageSquare className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
-                  <p className="text-xs text-muted-foreground font-mono">No messages yet. Start the conversation!</p>
+                  <p className="text-xs text-muted-foreground font-mono">{t("chat.noMessages")}</p>
                 </div>
               )}
               {!activeChannel && (
                 <div className="text-center py-12">
                   <Hash className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
-                  <p className="text-xs text-muted-foreground font-mono">Select or create a channel</p>
+                  <p className="text-xs text-muted-foreground font-mono">{t("chat.selectOrCreate")}</p>
                 </div>
               )}
               {messages.map((msg) => {
@@ -272,7 +274,7 @@ export default function TeamChat() {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-                placeholder="Type a message... Use @name to mention"
+                placeholder={t("chat.typePlaceholder")}
                 className="text-sm"
                 disabled={sending}
               />

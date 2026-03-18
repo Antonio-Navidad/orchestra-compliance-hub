@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useLanguage } from "@/hooks/useLanguage";
 import {
   Map, Navigation, Plane, Ship, Truck, Zap, Clock, DollarSign,
   ShieldAlert, AlertTriangle, ArrowRight, Loader2, BarChart3, Route
@@ -136,6 +137,7 @@ function RouteCard({ route, recommended }: { route: RouteScenario; recommended?:
 }
 
 export default function RouteBuilder() {
+  const { t } = useLanguage();
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [mode, setMode] = useState("sea");
@@ -186,8 +188,8 @@ export default function RouteBuilder() {
           <Map className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-xl font-bold tracking-tight">Route Builder</h1>
-          <p className="text-xs text-muted-foreground font-mono">AI-POWERED ORIGIN-TO-DESTINATION ROUTE PLANNER</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("route.title")}</h1>
+          <p className="text-xs text-muted-foreground font-mono">{t("route.subtitle")}</p>
         </div>
       </div>
 
@@ -196,22 +198,22 @@ export default function RouteBuilder() {
         <Card className="lg:col-span-1">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-mono flex items-center gap-2">
-              <Navigation className="h-4 w-4" /> Route Parameters
+              <Navigation className="h-4 w-4" /> {t("route.parameters")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-xs font-mono">Origin</Label>
-              <Input placeholder="e.g. Shanghai, China" value={origin} onChange={(e) => setOrigin(e.target.value)} className="text-sm" />
+              <Label className="text-xs font-mono">{t("route.origin")}</Label>
+              <Input placeholder={t("route.originPlaceholder")} value={origin} onChange={(e) => setOrigin(e.target.value)} className="text-sm" />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-mono">Destination</Label>
-              <Input placeholder="e.g. Miami, FL, USA" value={destination} onChange={(e) => setDestination(e.target.value)} className="text-sm" />
+              <Label className="text-xs font-mono">{t("route.destination")}</Label>
+              <Input placeholder={t("route.destinationPlaceholder")} value={destination} onChange={(e) => setDestination(e.target.value)} className="text-sm" />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs font-mono">Mode</Label>
+                <Label className="text-xs font-mono">{t("detail.mode")}</Label>
                 <Select value={mode} onValueChange={setMode}>
                   <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -223,7 +225,7 @@ export default function RouteBuilder() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-mono">Priority</Label>
+                <Label className="text-xs font-mono">{t("route.priority")}</Label>
                 <Select value={priority} onValueChange={setPriority}>
                   <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -238,8 +240,8 @@ export default function RouteBuilder() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-mono">Cargo Type</Label>
-              <Input placeholder="e.g. Electronics, Textiles" value={cargoType} onChange={(e) => setCargoType(e.target.value)} className="text-sm" />
+              <Label className="text-xs font-mono">{t("route.cargoType")}</Label>
+              <Input placeholder={t("route.cargoTypePlaceholder")} value={cargoType} onChange={(e) => setCargoType(e.target.value)} className="text-sm" />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -278,7 +280,7 @@ export default function RouteBuilder() {
 
             <Button onClick={handlePlan} disabled={loading} className="w-full font-mono">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2" />}
-              {loading ? "PLANNING ROUTES..." : "AI ROUTE PLAN"}
+              {loading ? t("route.planningRoutes") : t("route.aiRoutePlan")}
             </Button>
           </CardContent>
         </Card>
@@ -289,8 +291,8 @@ export default function RouteBuilder() {
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                 <Map className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                <h3 className="font-mono text-sm text-muted-foreground">NO ROUTES GENERATED YET</h3>
-                <p className="text-xs text-muted-foreground/60 mt-1">Enter origin, destination, and preferences to get AI-powered route recommendations</p>
+                <h3 className="font-mono text-sm text-muted-foreground">{t("route.noRoutesYet")}</h3>
+                <p className="text-xs text-muted-foreground/60 mt-1">{t("route.noRoutesHint")}</p>
               </CardContent>
             </Card>
           )}
@@ -299,7 +301,7 @@ export default function RouteBuilder() {
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-16">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                <p className="font-mono text-sm text-muted-foreground">Analyzing routes, costs, and risks...</p>
+                <p className="font-mono text-sm text-muted-foreground">{t("route.analyzing")}</p>
               </CardContent>
             </Card>
           )}

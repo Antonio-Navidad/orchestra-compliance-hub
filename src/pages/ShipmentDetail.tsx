@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useLanguage } from "@/hooks/useLanguage";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { RiskBadge } from "@/components/RiskBadge";
@@ -31,6 +32,7 @@ export default function ShipmentDetail() {
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") || "overview";
   const [activeTab, setActiveTab] = useState(initialTab);
+  const { t } = useLanguage();
 
   const { data: shipment, isLoading } = useQuery({
     queryKey: ["shipment", id],
@@ -82,7 +84,7 @@ export default function ShipmentDetail() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground font-mono text-sm">LOADING SHIPMENT DATA...</div>
+        <div className="text-muted-foreground font-mono text-sm">{t("detail.loadingShipment")}</div>
       </div>
     );
   }
@@ -91,8 +93,8 @@ export default function ShipmentDetail() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-2">
-          <p className="text-muted-foreground">Shipment not found</p>
-          <Link to="/" className="text-primary text-sm hover:underline">Return to Dashboard</Link>
+          <p className="text-muted-foreground">{t("detail.shipmentNotFound")}</p>
+          <Link to="/" className="text-primary text-sm hover:underline">{t("detail.returnToDashboard")}</Link>
         </div>
       </div>
     );
@@ -146,7 +148,7 @@ export default function ShipmentDetail() {
               to={`/decision-twin/${shipment.shipment_id}`}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-primary/30 text-primary text-xs font-mono hover:bg-primary/10 transition-colors"
             >
-              <Zap size={12} /> DECISION TWIN
+              <Zap size={12} /> {t("detail.decisionTwin")}
             </Link>
             <BrokerSelector
               shipmentId={shipment.shipment_id}
@@ -181,7 +183,7 @@ export default function ShipmentDetail() {
         {/* Status Workflow */}
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <span className="font-mono text-xs text-muted-foreground">WORKFLOW STATUS</span>
+            <span className="font-mono text-xs text-muted-foreground">{t("detail.workflowStatus")}</span>
             <StatusWorkflow shipmentId={shipment.shipment_id} currentStatus={shipment.status} />
           </div>
         </div>
@@ -195,7 +197,7 @@ export default function ShipmentDetail() {
               <AlertTriangle size={18} className={shipment.risk_score >= 85 ? 'text-risk-critical' : 'text-risk-medium'} />
               <div>
                 <p className="text-sm font-semibold">
-                  {shipment.risk_score >= 85 ? 'Critical Risk Alert' : 'Compliance Warning'}
+                  {shipment.risk_score >= 85 ? t("detail.criticalRiskAlert") : t("detail.complianceWarning")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">{shipment.risk_notes}</p>
               </div>
@@ -205,28 +207,28 @@ export default function ShipmentDetail() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-secondary/50 border border-border flex-wrap h-auto gap-1 p-1">
-            <TabsTrigger value="overview" className="font-mono text-xs">OVERVIEW</TabsTrigger>
+            <TabsTrigger value="overview" className="font-mono text-xs">{t("detail.tab.overview")}</TabsTrigger>
             <TabsTrigger value="fix" className="font-mono text-xs">
-              <Zap size={12} className="mr-1" /> FIX NOW
+              <Zap size={12} className="mr-1" /> {t("detail.tab.fixNow")}
             </TabsTrigger>
             <TabsTrigger value="exposure" className="font-mono text-xs">
-              <TrendingDown size={12} className="mr-1" /> EXPOSURE
+              <TrendingDown size={12} className="mr-1" /> {t("detail.tab.exposure")}
             </TabsTrigger>
             <TabsTrigger value="packet" className="font-mono text-xs">
-              <ClipboardCheck size={12} className="mr-1" /> PACKET
+              <ClipboardCheck size={12} className="mr-1" /> {t("detail.tab.packet")}
             </TabsTrigger>
             <TabsTrigger value="documents" className="font-mono text-xs">
-              <FileText size={12} className="mr-1" /> DOCUMENTS
+              <FileText size={12} className="mr-1" /> {t("detail.tab.documents")}
             </TabsTrigger>
             <TabsTrigger value="eta" className="font-mono text-xs">
-              <Navigation size={12} className="mr-1" /> ETA
+              <Navigation size={12} className="mr-1" /> {t("detail.tab.eta")}
             </TabsTrigger>
             <TabsTrigger value="audit" className="font-mono text-xs">
-              <Clock size={12} className="mr-1" /> AUDIT TRAIL
+              <Clock size={12} className="mr-1" /> {t("detail.tab.auditTrail")}
             </TabsTrigger>
             {(shipment.status === "cleared" || shipment.status === "closed_avoided" || shipment.status === "closed_incident") && (
               <TabsTrigger value="outcome" className="font-mono text-xs">
-                <BarChart3 size={12} className="mr-1" /> OUTCOME
+                <BarChart3 size={12} className="mr-1" /> {t("detail.tab.outcome")}
               </TabsTrigger>
             )}
           </TabsList>
@@ -234,22 +236,22 @@ export default function ShipmentDetail() {
           <TabsContent value="overview" className="mt-4 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-                <h3 className="font-mono text-xs text-muted-foreground">SHIPMENT INFO</h3>
+                <h3 className="font-mono text-xs text-muted-foreground">{t("detail.shipmentInfo")}</h3>
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Mode</span><span className="font-mono uppercase">{shipment.mode}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Consignee</span><span>{shipment.consignee}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">HS Code</span><span className="font-mono">{shipment.hs_code}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Declared Value</span><span className="font-mono">${shipment.declared_value.toLocaleString()}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Jurisdiction</span><span className="font-mono">{jurisdictionCode}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.mode")}</span><span className="font-mono uppercase">{shipment.mode}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.consignee")}</span><span>{shipment.consignee}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.hsCode")}</span><span className="font-mono">{shipment.hs_code}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.declaredValue")}</span><span className="font-mono">${shipment.declared_value.toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.jurisdiction")}</span><span className="font-mono">{jurisdictionCode}</span></div>
                 </div>
               </div>
 
               <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-                <h3 className="font-mono text-xs text-muted-foreground">DESCRIPTION</h3>
+                <h3 className="font-mono text-xs text-muted-foreground">{t("detail.description")}</h3>
                 <p className="text-sm">{shipment.description}</p>
                 {shipment.risk_notes && (
                   <>
-                    <h3 className="font-mono text-xs text-muted-foreground mt-4">RISK ANALYSIS</h3>
+                    <h3 className="font-mono text-xs text-muted-foreground mt-4">{t("detail.riskAnalysis")}</h3>
                     <p className="text-sm text-muted-foreground">{shipment.risk_notes}</p>
                   </>
                 )}
@@ -261,13 +263,13 @@ export default function ShipmentDetail() {
             {/* Comparison View */}
             <div className="space-y-3">
               <h3 className="font-mono text-xs text-muted-foreground flex items-center gap-2">
-                <FileText size={14} /> INVOICE vs MANIFEST COMPARISON
+                <FileText size={14} /> {t("detail.invoiceVsManifest")}
               </h3>
               {invoice && manifest ? (
                 <ComparisonView mismatches={mismatches} />
               ) : (
                 <div className="rounded-lg border border-border bg-card p-6 text-center">
-                  <p className="text-sm text-muted-foreground">No invoice/manifest data available for comparison.</p>
+                  <p className="text-sm text-muted-foreground">{t("detail.noComparisonData")}</p>
                 </div>
               )}
             </div>
@@ -277,29 +279,29 @@ export default function ShipmentDetail() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {invoice && (
                   <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-                    <h3 className="font-mono text-xs text-muted-foreground">INVOICE DATA</h3>
+                    <h3 className="font-mono text-xs text-muted-foreground">{t("detail.invoiceData")}</h3>
                     <div className="space-y-1.5 text-sm">
-                      <div className="flex justify-between"><span className="text-muted-foreground">Item</span><span className="text-right max-w-[200px] truncate">{invoice.item_description}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Qty</span><span className="font-mono">{invoice.quantity}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">HS Code</span><span className="font-mono">{invoice.hs_code}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-mono">${invoice.total_value.toLocaleString()}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Net Weight</span><span className="font-mono">{invoice.net_weight_kg.toLocaleString()} kg</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Gross Weight</span><span className="font-mono">{invoice.gross_weight_kg.toLocaleString()} kg</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Exporter</span><span className="text-right max-w-[200px] truncate">{invoice.exporter_name}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.item")}</span><span className="text-right max-w-[200px] truncate">{invoice.item_description}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.qty")}</span><span className="font-mono">{invoice.quantity}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.hsCode")}</span><span className="font-mono">{invoice.hs_code}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.total")}</span><span className="font-mono">${invoice.total_value.toLocaleString()}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.netWeight")}</span><span className="font-mono">{invoice.net_weight_kg.toLocaleString()} kg</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.grossWeight")}</span><span className="font-mono">{invoice.gross_weight_kg.toLocaleString()} kg</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.exporter")}</span><span className="text-right max-w-[200px] truncate">{invoice.exporter_name}</span></div>
                     </div>
                   </div>
                 )}
                 {manifest && (
                   <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-                    <h3 className="font-mono text-xs text-muted-foreground">MANIFEST DATA</h3>
+                    <h3 className="font-mono text-xs text-muted-foreground">{t("detail.manifestData")}</h3>
                     <div className="space-y-1.5 text-sm">
-                      <div className="flex justify-between"><span className="text-muted-foreground">Item</span><span className="text-right max-w-[200px] truncate">{manifest.item_description}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Qty</span><span className="font-mono">{manifest.quantity}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">HS Code</span><span className="font-mono">{manifest.hs_code}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-mono">${manifest.total_value.toLocaleString()}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Net Weight</span><span className="font-mono">{manifest.net_weight_kg.toLocaleString()} kg</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Gross Weight</span><span className="font-mono">{manifest.gross_weight_kg.toLocaleString()} kg</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">B/L</span><span className="font-mono">{manifest.bill_of_lading || '—'}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.item")}</span><span className="text-right max-w-[200px] truncate">{manifest.item_description}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.qty")}</span><span className="font-mono">{manifest.quantity}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.hsCode")}</span><span className="font-mono">{manifest.hs_code}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.total")}</span><span className="font-mono">${manifest.total_value.toLocaleString()}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.netWeight")}</span><span className="font-mono">{manifest.net_weight_kg.toLocaleString()} kg</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.grossWeight")}</span><span className="font-mono">{manifest.gross_weight_kg.toLocaleString()} kg</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.billOfLading")}</span><span className="font-mono">{manifest.bill_of_lading || '—'}</span></div>
                     </div>
                   </div>
                 )}
@@ -356,3 +358,4 @@ export default function ShipmentDetail() {
     </div>
   );
 }
+
