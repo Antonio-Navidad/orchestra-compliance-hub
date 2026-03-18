@@ -1295,7 +1295,7 @@ export default function DocumentValidator({ embedded }: { embedded?: boolean } =
                       <CardContent className="space-y-2">
                         {trueConflicts.length > 0 ? trueConflicts.slice(0, 3).map((mm, i) => (
                           <div key={i} className="flex items-center gap-2 text-xs">
-                            <Badge variant={mm.severity === "critical" ? "destructive" : "outline"} className="text-[10px] font-mono">{mm.severity}</Badge>
+                            <Badge variant={mm.severity === "high" ? "destructive" : "outline"} className="text-[10px] font-mono">{mm.severity}</Badge>
                             <span className="font-mono">{mm.fieldName.replace(/_/g, " ")}</span>
                             <span className="text-muted-foreground">— {mm.reason.slice(0, 60)}</span>
                           </div>
