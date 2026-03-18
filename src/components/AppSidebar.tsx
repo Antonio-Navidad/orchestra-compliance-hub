@@ -6,6 +6,7 @@ import { useWorkspacePurpose, WORKSPACE_PURPOSES } from "@/hooks/useWorkspacePur
 import { getNavigationForPurpose } from "@/lib/workspaceNavigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NAV_TOOLTIPS } from "@/lib/helpContent";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
