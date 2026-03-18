@@ -1,9 +1,10 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FileText, ExternalLink, ShieldCheck, AlertTriangle, Clock, RotateCw, Loader2 } from "lucide-react";
+import { FileText, Maximize2, ShieldCheck, AlertTriangle, Clock, RotateCw, Loader2, Download } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -72,6 +73,7 @@ function ExtractionStatusSection({ status, onRetry }: { status: string; onRetry?
 
 export function DocumentDetailSheet({ document: doc, open, onOpenChange, onRetryExtraction }: Props) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
     if (!doc || !open) {
@@ -96,6 +98,7 @@ export function DocumentDetailSheet({ document: doc, open, onOpenChange, onRetry
   const isPdf = doc.mime_type === "application/pdf";
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
         <SheetHeader className="p-4 pb-0">
@@ -235,21 +238,39 @@ export function DocumentDetailSheet({ document: doc, open, onOpenChange, onRetry
               {previewUrl ? (
                 <div className="space-y-2">
                   {isImage && (
-                    <img src={previewUrl} alt={doc.file_name} className="w-full rounded border border-border object-contain max-h-[400px] bg-black/20" />
+                    <img src={previewUrl} alt={doc.file_name} className="w-full rounded border border-border object-contain max-h-[400px] bg-muted/20" />
                   )}
                   {isPdf && (
-                    <iframe src={previewUrl} title={doc.file_name} className="w-full h-[400px] rounded border border-border bg-black/20" />
+                    <iframe
+                      src={`${previewUrl}#toolbar=1&navpanes=0`}
+                      title={doc.file_name}
+                      className="w-full h-[400px] rounded border border-border bg-muted/20"
+                    />
                   )}
                   {!isImage && !isPdf && (
                     <p className="text-[10px] font-mono text-muted-foreground/60 text-center py-6">Preview not available for this file type</p>
                   )}
-                  <Button
-                    variant="outline" size="sm"
-                    className="w-full text-[10px] font-mono gap-1.5"
-                    onClick={() => window.open(previewUrl, "_blank")}
-                  >
-                    <ExternalLink size={12} /> Open Full Document
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline" size="sm"
+                      className="flex-1 text-[10px] font-mono gap-1.5"
+                      onClick={() => setFullscreen(true)}
+                    >
+                      <Maximize2 size={12} /> View Full Document
+                    </Button>
+                    <Button
+                      variant="outline" size="sm"
+                      className="text-[10px] font-mono gap-1.5"
+                      onClick={() => {
+                        const a = document.createElement("a");
+                        a.href = previewUrl;
+                        a.download = doc.file_name;
+                        a.click();
+                      }}
+                    >
+                      <Download size={12} />
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-6 text-muted-foreground/40 text-[10px] font-mono animate-pulse">Loading preview…</div>
@@ -259,5 +280,46 @@ export function DocumentDetailSheet({ document: doc, open, onOpenChange, onRetry
         </ScrollArea>
       </SheetContent>
     </Sheet>
+
+    {/* Fullscreen document viewer dialog */}
+    <Dialog open={fullscreen} onOpenChange={setFullscreen}>
+      <DialogContent className="max-w-[90vw] w-[90vw] h-[90vh] p-0 flex flex-col gap-0">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30">
+          <span className="text-xs font-mono truncate">{doc.file_name}</span>
+          <Button
+            variant="ghost" size="sm"
+            className="text-[10px] font-mono gap-1"
+            onClick={() => {
+              if (previewUrl) {
+                const a = document.createElement("a");
+                a.href = previewUrl;
+                a.download = doc.file_name;
+                a.click();
+              }
+            }}
+          >
+            <Download size={12} /> Download
+          </Button>
+        </div>
+        <div className="flex-1 min-h-0">
+          {previewUrl && isImage && (
+            <img src={previewUrl} alt={doc.file_name} className="w-full h-full object-contain bg-muted/10" />
+          )}
+          {previewUrl && isPdf && (
+            <iframe
+              src={`${previewUrl}#toolbar=1&navpanes=1`}
+              title={doc.file_name}
+              className="w-full h-full border-0"
+            />
+          )}
+          {previewUrl && !isImage && !isPdf && (
+            <div className="flex items-center justify-center h-full text-muted-foreground text-sm font-mono">
+              Preview not available for this file type
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
