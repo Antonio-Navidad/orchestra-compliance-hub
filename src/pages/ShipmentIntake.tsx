@@ -315,7 +315,7 @@ export default function ShipmentIntake() {
                   <Textarea value={form.description} onChange={e => updateField('description', e.target.value)} placeholder={t("intake.commodityPlaceholder")} rows={2} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">HS Code</Label>
+                  <Label className="text-xs font-mono">{t("intake.hsCode")}</Label>
                   <Input value={form.hs_code} onChange={e => updateField('hs_code', e.target.value)} placeholder="8471.30" className="font-mono" />
                 </div>
                 <div className="space-y-1.5">
