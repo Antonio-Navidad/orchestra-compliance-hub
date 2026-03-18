@@ -248,6 +248,12 @@ export function DocumentLibraryTab() {
           ))}
         </div>
       )}
+
+      <DocumentDetailSheet
+        document={selectedDoc}
+        open={!!selectedDoc}
+        onOpenChange={(open) => { if (!open) setSelectedDoc(null); }}
+      />
     </div>
   );
 }
