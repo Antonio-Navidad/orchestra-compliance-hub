@@ -207,28 +207,28 @@ export default function ShipmentDetail() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-secondary/50 border border-border flex-wrap h-auto gap-1 p-1">
-            <TabsTrigger value="overview" className="font-mono text-xs">OVERVIEW</TabsTrigger>
+            <TabsTrigger value="overview" className="font-mono text-xs">{t("detail.tab.overview")}</TabsTrigger>
             <TabsTrigger value="fix" className="font-mono text-xs">
-              <Zap size={12} className="mr-1" /> FIX NOW
+              <Zap size={12} className="mr-1" /> {t("detail.tab.fixNow")}
             </TabsTrigger>
             <TabsTrigger value="exposure" className="font-mono text-xs">
-              <TrendingDown size={12} className="mr-1" /> EXPOSURE
+              <TrendingDown size={12} className="mr-1" /> {t("detail.tab.exposure")}
             </TabsTrigger>
             <TabsTrigger value="packet" className="font-mono text-xs">
-              <ClipboardCheck size={12} className="mr-1" /> PACKET
+              <ClipboardCheck size={12} className="mr-1" /> {t("detail.tab.packet")}
             </TabsTrigger>
             <TabsTrigger value="documents" className="font-mono text-xs">
-              <FileText size={12} className="mr-1" /> DOCUMENTS
+              <FileText size={12} className="mr-1" /> {t("detail.tab.documents")}
             </TabsTrigger>
             <TabsTrigger value="eta" className="font-mono text-xs">
-              <Navigation size={12} className="mr-1" /> ETA
+              <Navigation size={12} className="mr-1" /> {t("detail.tab.eta")}
             </TabsTrigger>
             <TabsTrigger value="audit" className="font-mono text-xs">
-              <Clock size={12} className="mr-1" /> AUDIT TRAIL
+              <Clock size={12} className="mr-1" /> {t("detail.tab.auditTrail")}
             </TabsTrigger>
             {(shipment.status === "cleared" || shipment.status === "closed_avoided" || shipment.status === "closed_incident") && (
               <TabsTrigger value="outcome" className="font-mono text-xs">
-                <BarChart3 size={12} className="mr-1" /> OUTCOME
+                <BarChart3 size={12} className="mr-1" /> {t("detail.tab.outcome")}
               </TabsTrigger>
             )}
           </TabsList>
