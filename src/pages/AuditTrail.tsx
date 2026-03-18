@@ -432,7 +432,7 @@ export default function AuditTrail() {
                 className="bg-secondary/50"
               />
               <div className="flex gap-2 justify-end">
-                <Button variant="ghost" onClick={() => setRollbackTarget(null)}>Cancel</Button>
+                <Button variant="ghost" onClick={() => setRollbackTarget(null)}>{t("common.cancel")}</Button>
                 <Button
                   variant="destructive"
                   onClick={() => rollbackMutation.mutate(rollbackTarget)}
