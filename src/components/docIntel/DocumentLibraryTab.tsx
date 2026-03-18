@@ -188,7 +188,7 @@ export function DocumentLibraryTab() {
             </SelectContent>
           </Select>
           <Input
-            placeholder="Shipment ID"
+            placeholder={t("library.shipmentId")}
             value={filters.shipmentId || ""}
             onChange={e => handleFilterChange("shipmentId", e.target.value)}
             className="w-[160px] h-8 text-xs font-mono"
