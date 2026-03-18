@@ -110,7 +110,7 @@ export function MismatchDetectionTab() {
                     <div className="flex-1 min-w-0">
                       <span className="font-medium truncate block">{doc.file_name}</span>
                       <span className="text-[9px] text-muted-foreground">
-                        {doc.document_type || "Unknown type"}
+                        {doc.document_type || t("mismatch.unknownType")}
                         {doc.origin_country && doc.destination_country && ` · ${doc.origin_country} → ${doc.destination_country}`}
                       </span>
                     </div>
