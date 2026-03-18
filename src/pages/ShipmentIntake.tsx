@@ -353,7 +353,7 @@ export default function ShipmentIntake() {
                   <Input value={form.consignee} onChange={e => updateField('consignee', e.target.value)} placeholder="Company name" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Shipper</Label>
+                  <Label className="text-xs font-mono">{t("intake.shipper")}</Label>
                   <Input value={form.shipper} onChange={e => updateField('shipper', e.target.value)} placeholder="Shipper name" />
                 </div>
               </CardContent>
