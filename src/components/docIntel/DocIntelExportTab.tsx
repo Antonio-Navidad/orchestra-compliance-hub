@@ -46,14 +46,27 @@ export function DocIntelExportTab() {
 
     // Sheet 3: Mismatch Flags
     const mismatches = Array.isArray(session.cross_doc_mismatches) ? session.cross_doc_mismatches : [];
-    const mismatchRows = mismatches.map((m: any) => ({
-      "Field": m.field || m.fieldName || "—",
-      "Doc A": m.docA || m.sourceA || "—",
-      "Value A": String(m.valueA ?? m.docAValue ?? "—"),
-      "Doc B": m.docB || m.sourceB || "—",
-      "Value B": String(m.valueB ?? m.docBValue ?? "—"),
-      "Severity": m.severity || "—",
-    }));
+    const mismatchRows = mismatches.map((m: any) => {
+      const docs = m.documents;
+      if (Array.isArray(docs) && docs.length >= 2) {
+        return {
+          "Field": m.fieldName || m.field || "—",
+          "Doc A": docs[0].docName || docs[0].docType || "—",
+          "Value A": String(docs[0].value ?? "—"),
+          "Doc B": docs[1].docName || docs[1].docType || "—",
+          "Value B": String(docs[1].value ?? "—"),
+          "Severity": m.severity || "—",
+        };
+      }
+      return {
+        "Field": m.field || m.fieldName || "—",
+        "Doc A": m.docA || m.sourceA || "—",
+        "Value A": String(m.valueA ?? m.docAValue ?? "—"),
+        "Doc B": m.docB || m.sourceB || "—",
+        "Value B": String(m.valueB ?? m.docBValue ?? "—"),
+        "Severity": m.severity || "—",
+      };
+    });
     const ws3 = XLSX.utils.json_to_sheet(mismatchRows.length ? mismatchRows : [{ Note: "No mismatches" }]);
     XLSX.utils.book_append_sheet(wb, ws3, "Mismatch Flags");
 
