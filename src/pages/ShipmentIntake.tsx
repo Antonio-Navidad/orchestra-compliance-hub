@@ -311,8 +311,8 @@ export default function ShipmentIntake() {
                   </Select>
                 </div>
                 <div className="md:col-span-2 space-y-1.5">
-                  <Label className="text-xs font-mono">Commodity Description *</Label>
-                  <Textarea value={form.description} onChange={e => updateField('description', e.target.value)} placeholder="Detailed product description..." rows={2} />
+                  <Label className="text-xs font-mono">{t("intake.commodityDesc")} *</Label>
+                  <Textarea value={form.description} onChange={e => updateField('description', e.target.value)} placeholder={t("intake.commodityPlaceholder")} rows={2} />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-mono">HS Code</Label>
