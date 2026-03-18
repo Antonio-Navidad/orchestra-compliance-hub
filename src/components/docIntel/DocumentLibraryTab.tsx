@@ -80,6 +80,7 @@ function ExtractionStatusBadge({ status, onRetry, t }: { status: string; onRetry
 
 export function DocumentLibraryTab() {
   const { documents, loading, uploading, fetchDocuments, uploadDocument, deleteDocument, extractDocument } = useDocumentLibrary();
+  const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [filters, setFilters] = useState<Partial<LibraryFilters>>({});
   const [showFilters, setShowFilters] = useState(false);
