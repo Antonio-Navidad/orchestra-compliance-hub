@@ -237,21 +237,39 @@ export function DocumentDetailSheet({ document: doc, open, onOpenChange, onRetry
               {previewUrl ? (
                 <div className="space-y-2">
                   {isImage && (
-                    <img src={previewUrl} alt={doc.file_name} className="w-full rounded border border-border object-contain max-h-[400px] bg-black/20" />
+                    <img src={previewUrl} alt={doc.file_name} className="w-full rounded border border-border object-contain max-h-[400px] bg-muted/20" />
                   )}
                   {isPdf && (
-                    <iframe src={previewUrl} title={doc.file_name} className="w-full h-[400px] rounded border border-border bg-black/20" />
+                    <iframe
+                      src={`${previewUrl}#toolbar=1&navpanes=0`}
+                      title={doc.file_name}
+                      className="w-full h-[400px] rounded border border-border bg-muted/20"
+                    />
                   )}
                   {!isImage && !isPdf && (
                     <p className="text-[10px] font-mono text-muted-foreground/60 text-center py-6">Preview not available for this file type</p>
                   )}
-                  <Button
-                    variant="outline" size="sm"
-                    className="w-full text-[10px] font-mono gap-1.5"
-                    onClick={() => window.open(previewUrl, "_blank")}
-                  >
-                    <ExternalLink size={12} /> Open Full Document
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline" size="sm"
+                      className="flex-1 text-[10px] font-mono gap-1.5"
+                      onClick={() => setFullscreen(true)}
+                    >
+                      <Maximize2 size={12} /> View Full Document
+                    </Button>
+                    <Button
+                      variant="outline" size="sm"
+                      className="text-[10px] font-mono gap-1.5"
+                      onClick={() => {
+                        const a = document.createElement("a");
+                        a.href = previewUrl;
+                        a.download = doc.file_name;
+                        a.click();
+                      }}
+                    >
+                      <Download size={12} />
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-6 text-muted-foreground/40 text-[10px] font-mono animate-pulse">Loading preview…</div>
