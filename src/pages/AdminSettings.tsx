@@ -425,7 +425,7 @@ function LanguageResetPanel() {
       <div className="space-y-2">
         <h3 className="font-mono text-xs text-muted-foreground">LANGUAGE SETTINGS</h3>
         <p className="text-sm text-muted-foreground">
-          Current language: <span className="font-medium text-foreground">{LANGUAGES.find((l: any) => l.code === language)?.nativeLabel || language}</span>
+          Current language: <span className="font-medium text-foreground">{langList.find((l) => l.code === language)?.nativeLabel || language}</span>
         </p>
       </div>
 
