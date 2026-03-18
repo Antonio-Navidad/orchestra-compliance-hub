@@ -378,7 +378,7 @@ export default function ShipmentIntake() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Forwarder</Label>
+                  <Label className="text-xs font-mono">{t("intake.forwarder")}</Label>
                   <Input value={form.forwarder} onChange={e => updateField('forwarder', e.target.value)} placeholder="Forwarder name" />
                 </div>
                 <div className="space-y-1.5">
