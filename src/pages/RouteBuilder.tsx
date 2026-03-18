@@ -301,7 +301,7 @@ export default function RouteBuilder() {
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-16">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                <p className="font-mono text-sm text-muted-foreground">Analyzing routes, costs, and risks...</p>
+                <p className="font-mono text-sm text-muted-foreground">{t("route.analyzing")}</p>
               </CardContent>
             </Card>
           )}

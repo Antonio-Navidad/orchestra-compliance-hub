@@ -85,7 +85,7 @@ export function ShipmentTable({ shipments, mode }: ShipmentTableProps) {
             {sorted.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={mode ? 7 : 8} className="text-center text-muted-foreground py-12">
-                  No shipments found for this mode.
+                  {t("table.noShipments")}
                 </TableCell>
               </TableRow>
             ) : (

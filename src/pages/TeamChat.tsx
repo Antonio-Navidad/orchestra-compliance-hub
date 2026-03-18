@@ -274,7 +274,7 @@ export default function TeamChat() {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-                placeholder="Type a message... Use @name to mention"
+                placeholder={t("chat.typePlaceholder")}
                 className="text-sm"
                 disabled={sending}
               />
