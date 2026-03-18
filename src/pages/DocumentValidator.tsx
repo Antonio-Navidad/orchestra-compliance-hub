@@ -868,7 +868,7 @@ export default function DocumentValidator({ embedded }: { embedded?: boolean } =
           <TabsTrigger value="mismatches" className="text-xs" disabled={crossDocMismatches.length === 0}>
             <GitCompare size={12} className="mr-1.5" /> {t("validator.tab.mismatches")} ({crossDocMismatches.length})
           </TabsTrigger>
-          <TabsTrigger value="results" className="text-xs" disabled={!ruleResult}><CheckCircle size={12} className="mr-1.5" /> RESULTS</TabsTrigger>
+          <TabsTrigger value="results" className="text-xs" disabled={!ruleResult}><CheckCircle size={12} className="mr-1.5" /> {t("validator.tab.results")}</TabsTrigger>
         </TabsList>
 
         {/* ═══ UPLOAD TAB ═══ */}
