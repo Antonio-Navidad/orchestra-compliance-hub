@@ -150,7 +150,7 @@ export function DocIntelExportTab() {
               className="text-xs font-mono gap-1.5"
             >
               <Download size={12} />
-              Export XLSX
+              {t("export.exportXlsx")}
             </Button>
           </div>
 
