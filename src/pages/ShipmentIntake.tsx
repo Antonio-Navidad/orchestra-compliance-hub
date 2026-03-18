@@ -58,6 +58,7 @@ interface UploadedDoc {
 export default function ShipmentIntake() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const [form, setForm] = useState({
     shipment_id: '',
