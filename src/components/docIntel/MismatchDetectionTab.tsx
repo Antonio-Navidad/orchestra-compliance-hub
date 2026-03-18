@@ -26,14 +26,37 @@ export function MismatchDetectionTab() {
     if (!session.cross_doc_mismatches) return [];
     const raw = session.cross_doc_mismatches;
     if (!Array.isArray(raw)) return [];
-    return raw.map((m: any) => ({
-      field: m.field || m.fieldName || "Unknown",
-      sourceA: m.docA || m.sourceA || "Doc A",
-      valueA: String(m.valueA ?? m.docAValue ?? "—"),
-      sourceB: m.docB || m.sourceB || "Doc B",
-      valueB: String(m.valueB ?? m.docBValue ?? "—"),
-      severity: m.severity || "warning",
-    }));
+    return raw
+      .filter((m: any) => {
+        // Support both flat (docA/valueA) and nested (documents[]) shapes
+        const docs = m.documents;
+        const hasFlat = (m.valueA != null && m.valueA !== "") || (m.docAValue != null && m.docAValue !== "");
+        const hasNested = Array.isArray(docs) && docs.length >= 2;
+        return hasFlat || hasNested;
+      })
+      .map((m: any) => {
+        const docs = m.documents;
+        // Prefer the nested `documents` array (from CrossDocMismatch)
+        if (Array.isArray(docs) && docs.length >= 2) {
+          return {
+            field: m.fieldName || m.field || "Unknown",
+            sourceA: docs[0].docName || docs[0].docType || "Doc A",
+            valueA: String(docs[0].value ?? "—"),
+            sourceB: docs[1].docName || docs[1].docType || "Doc B",
+            valueB: String(docs[1].value ?? "—"),
+            severity: m.severity || "warning",
+          };
+        }
+        // Fallback: flat shape
+        return {
+          field: m.field || m.fieldName || "Unknown",
+          sourceA: m.docA || m.sourceA || "Doc A",
+          valueA: String(m.valueA ?? m.docAValue ?? "—"),
+          sourceB: m.docB || m.sourceB || "Doc B",
+          valueB: String(m.valueB ?? m.docBValue ?? "—"),
+          severity: m.severity || "warning",
+        };
+      });
   };
 
   const severityColor = (s: string) => {
