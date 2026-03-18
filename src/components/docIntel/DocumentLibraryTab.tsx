@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useDocumentLibrary, type LibraryFilters } from "@/hooks/useDocumentLibrary";
+import { useDocumentLibrary, type LibraryFilters, type LibraryDocument } from "@/hooks/useDocumentLibrary";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Upload, Search, FileText, Trash2, Eye, Filter, FolderOpen } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { DocumentDetailSheet } from "./DocumentDetailSheet";
 
 const DOC_TYPE_OPTIONS = [
   { value: "", label: "All Types" },
