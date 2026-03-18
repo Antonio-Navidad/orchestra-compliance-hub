@@ -344,7 +344,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                     <span className="font-medium">{s.dutyRate}</span>
                   </div>
                   <div className="bg-muted/20 rounded p-1.5">
-                    <span className="text-muted-foreground">Reason:</span>{" "}
+                    <span className="text-muted-foreground">{t("hsAssist.reason")}:</span>{" "}
                     <span className="font-medium">{s.reason}</span>
                   </div>
                 </div>
