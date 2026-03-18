@@ -40,6 +40,7 @@ export function DocumentLibraryTab() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [filters, setFilters] = useState<Partial<LibraryFilters>>({});
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedDoc, setSelectedDoc] = useState<LibraryDocument | null>(null);
 
   useEffect(() => { fetchDocuments(filters); }, [fetchDocuments]);
 
