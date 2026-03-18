@@ -61,6 +61,7 @@ const PRODUCT_SUGGESTIONS = [
 ];
 
 export function HSCodeAssist({ destinationCountry, originCountry, transportMode, onSelectCode, onFlagForReview }: HSCodeAssistProps) {
+  const { t } = useLanguage();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<HsSuggestion[]>([]);
