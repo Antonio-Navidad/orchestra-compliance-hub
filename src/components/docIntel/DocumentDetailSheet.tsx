@@ -98,6 +98,7 @@ export function DocumentDetailSheet({ document: doc, open, onOpenChange, onRetry
   const isPdf = doc.mime_type === "application/pdf";
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
         <SheetHeader className="p-4 pb-0">
