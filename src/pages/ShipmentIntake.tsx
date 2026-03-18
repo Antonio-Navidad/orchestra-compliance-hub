@@ -340,7 +340,7 @@ export default function ShipmentIntake() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Incoterm</Label>
+                  <Label className="text-xs font-mono">{t("intake.incoterm")}</Label>
                   <Select value={form.incoterm} onValueChange={v => updateField('incoterm', v)}>
                     <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                     <SelectContent>
