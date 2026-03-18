@@ -236,13 +236,13 @@ export default function ShipmentDetail() {
           <TabsContent value="overview" className="mt-4 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-                <h3 className="font-mono text-xs text-muted-foreground">SHIPMENT INFO</h3>
+                <h3 className="font-mono text-xs text-muted-foreground">{t("detail.shipmentInfo")}</h3>
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Mode</span><span className="font-mono uppercase">{shipment.mode}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Consignee</span><span>{shipment.consignee}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">HS Code</span><span className="font-mono">{shipment.hs_code}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Declared Value</span><span className="font-mono">${shipment.declared_value.toLocaleString()}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Jurisdiction</span><span className="font-mono">{jurisdictionCode}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.mode")}</span><span className="font-mono uppercase">{shipment.mode}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.consignee")}</span><span>{shipment.consignee}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.hsCode")}</span><span className="font-mono">{shipment.hs_code}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.declaredValue")}</span><span className="font-mono">${shipment.declared_value.toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.jurisdiction")}</span><span className="font-mono">{jurisdictionCode}</span></div>
                 </div>
               </div>
 
