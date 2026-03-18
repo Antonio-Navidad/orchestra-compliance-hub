@@ -64,6 +64,7 @@ export default function AuditTrail() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { isAdmin } = useRole();
+  const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [moduleFilter, setModuleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
