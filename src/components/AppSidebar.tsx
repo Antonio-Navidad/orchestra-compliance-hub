@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWorkspacePurpose, WORKSPACE_PURPOSES } from "@/hooks/useWorkspacePurpose";
 import { getNavigationForPurpose } from "@/lib/workspaceNavigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { NAV_TOOLTIPS } from "@/lib/helpContent";
+import { NAV_TOOLTIP_KEYS } from "@/lib/helpContent";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
@@ -70,7 +70,7 @@ export function AppSidebar() {
                         {!collapsed && (
                           <span className="text-xs font-mono flex-1">{t(item.titleKey)}</span>
                         )}
-                        {!collapsed && NAV_TOOLTIPS[item.url] && (
+                        {!collapsed && NAV_TOOLTIP_KEYS[item.url] && (
                           <TooltipProvider delayDuration={200}>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -82,7 +82,7 @@ export function AppSidebar() {
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent side="right" className="max-w-[220px] text-[10px]">
-                                {NAV_TOOLTIPS[item.url]}
+                                {t(NAV_TOOLTIP_KEYS[item.url])}
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
