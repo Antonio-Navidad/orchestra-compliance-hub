@@ -73,6 +73,7 @@ function ExtractionStatusSection({ status, onRetry }: { status: string; onRetry?
 
 export function DocumentDetailSheet({ document: doc, open, onOpenChange, onRetryExtraction }: Props) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
     if (!doc || !open) {
