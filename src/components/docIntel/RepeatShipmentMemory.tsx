@@ -48,6 +48,7 @@ export function RepeatShipmentMemory({
   onApplyPrior,
 }: RepeatShipmentMemoryProps) {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [priorSessions, setPriorSessions] = useState<PriorSession[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPrior, setSelectedPrior] = useState<PriorSession | null>(null);
