@@ -124,8 +124,7 @@ export function RepeatShipmentMemory({
       </CardHeader>
       <CardContent className="px-4 pb-3 space-y-3">
         <p className="text-[10px] font-mono text-muted-foreground">
-          You've shipped on <strong>{originCountry} → {destinationCountry}</strong> ({shipmentMode}) before.
-          Pre-fill from a prior session?
+          {t("memory.preFillHint")} <strong>{originCountry} → {destinationCountry}</strong> ({shipmentMode})
         </p>
 
         {complianceChanged && (
