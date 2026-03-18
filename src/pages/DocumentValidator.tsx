@@ -896,8 +896,13 @@ export default function DocumentValidator() {
                 </div>
               </div>
 
-              {/* Template checklist */}
-              {templateChecklist && (
+              {/* ═══ UNIFIED LANE GUIDANCE — central placement for all lane types ═══ */}
+              {resolvedLane && resolvedLane.resolved && (
+                <LaneGuidancePanel lane={resolvedLane} mode={shipmentMode} detectedDocTypes={allDetectedDocTypes} />
+              )}
+
+              {/* Template checklist (shown only for preset templates without resolved lane) */}
+              {templateChecklist && !(resolvedLane && resolvedLane.resolved) && (
                 <Card className="border-primary/20 bg-primary/5">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-xs font-mono text-primary">REQUIRED DOCUMENTS — {selectedTemplate?.name}</CardTitle>
