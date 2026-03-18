@@ -343,7 +343,7 @@ export default function AuditTrail() {
                             variant="outline" size="sm" className="text-xs h-7 gap-1 text-destructive"
                             onClick={() => setRollbackTarget(entry)}
                           >
-                            <RotateCcw size={12} /> Rollback
+                            <RotateCcw size={12} /> {t("audit.rollback")}
                           </Button>
                         )}
                       </div>
