@@ -1,10 +1,12 @@
-import { Activity, LogOut, Repeat } from "lucide-react";
+import { Activity, LogOut, Repeat, Info } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspacePurpose, WORKSPACE_PURPOSES } from "@/hooks/useWorkspacePurpose";
 import { getNavigationForPurpose } from "@/lib/workspaceNavigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NAV_TOOLTIPS } from "@/lib/helpContent";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
