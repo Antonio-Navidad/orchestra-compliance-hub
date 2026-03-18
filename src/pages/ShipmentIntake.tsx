@@ -292,7 +292,7 @@ export default function ShipmentIntake() {
                   <Input value={form.port_of_entry} onChange={e => updateField('port_of_entry', e.target.value)} placeholder="Port of Los Angeles" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Jurisdiction</Label>
+                  <Label className="text-xs font-mono">{t("intake.jurisdiction")}</Label>
                   <Select value={form.jurisdiction_code} onValueChange={v => updateField('jurisdiction_code', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
