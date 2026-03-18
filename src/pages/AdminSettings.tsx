@@ -185,6 +185,7 @@ export default function AdminSettings() {
             <TabsTrigger value="team" className="font-mono text-xs"><Users size={12} className="mr-1" /> TEAM</TabsTrigger>
             <TabsTrigger value="rules" className="font-mono text-xs"><Shield size={12} className="mr-1" /> AI RULES</TabsTrigger>
             <TabsTrigger value="integrations" className="font-mono text-xs">INTEGRATIONS</TabsTrigger>
+            <TabsTrigger value="language" className="font-mono text-xs"><Languages size={12} className="mr-1" /> LANGUAGE</TabsTrigger>
             <Link to="/jurisdiction-settings">
               <Button variant="ghost" size="sm" className="font-mono text-xs h-8 gap-1">
                 <Globe size={12} /> JURISDICTIONS
