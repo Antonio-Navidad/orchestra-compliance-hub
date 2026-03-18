@@ -127,10 +127,10 @@ export function DocIntelExportTab() {
 
           <div className="flex items-end gap-3">
             <div className="flex-1">
-              <label className="text-[10px] font-mono text-muted-foreground block mb-1">Select Session</label>
+              <label className="text-[10px] font-mono text-muted-foreground block mb-1">{t("export.selectSession")}</label>
               <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
                 <SelectTrigger className="h-8 text-xs font-mono">
-                  <SelectValue placeholder={loading ? "Loading..." : "Choose a session"} />
+                  <SelectValue placeholder={loading ? t("common.loading") : t("export.chooseSession")} />
                 </SelectTrigger>
                 <SelectContent>
                   {sessions.map(s => (
