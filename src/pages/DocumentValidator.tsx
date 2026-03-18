@@ -665,7 +665,7 @@ export default function DocumentValidator({ embedded }: { embedded?: boolean } =
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm" className="font-mono text-[10px] gap-1.5" onClick={() => setShowTemplates(true)}>
-            <LayoutTemplate size={12} /> Templates
+            <LayoutTemplate size={12} /> {t("validator.templates")}
           </Button>
           <Button variant="outline" size="sm" className="font-mono text-[10px] gap-1.5" onClick={() => { setShowHistory(true); fetchSessions(); }}>
             <History size={12} /> History
