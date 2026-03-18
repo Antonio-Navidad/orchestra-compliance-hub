@@ -197,7 +197,7 @@ export default function ShipmentDetail() {
               <AlertTriangle size={18} className={shipment.risk_score >= 85 ? 'text-risk-critical' : 'text-risk-medium'} />
               <div>
                 <p className="text-sm font-semibold">
-                  {shipment.risk_score >= 85 ? 'Critical Risk Alert' : 'Compliance Warning'}
+                  {shipment.risk_score >= 85 ? t("detail.criticalRiskAlert") : t("detail.complianceWarning")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">{shipment.risk_notes}</p>
               </div>
