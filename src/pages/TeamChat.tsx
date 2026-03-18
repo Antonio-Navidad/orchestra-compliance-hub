@@ -196,7 +196,7 @@ export default function TeamChat() {
                 </button>
               ))}
               {channels.length === 0 && (
-                <p className="text-[10px] text-muted-foreground/60 text-center py-4">No channels yet. Create one!</p>
+                <p className="text-[10px] text-muted-foreground/60 text-center py-4">{t("chat.noChannels")}</p>
               )}
             </div>
           </CardContent>
