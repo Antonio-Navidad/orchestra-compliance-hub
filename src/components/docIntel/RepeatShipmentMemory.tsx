@@ -131,8 +131,7 @@ export function RepeatShipmentMemory({
           <div className="flex items-center gap-2 p-2 rounded bg-destructive/10 border border-destructive/20">
             <AlertTriangle size={14} className="text-destructive shrink-0" />
             <p className="text-[10px] font-mono text-destructive">
-              Compliance requirements on this lane have been updated since your last shipment.
-              Review the current lane guidance before proceeding.
+              {t("memory.complianceChanged")}
             </p>
           </div>
         )}
