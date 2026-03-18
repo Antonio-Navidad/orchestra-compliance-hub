@@ -366,7 +366,7 @@ export default function ShipmentIntake() {
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Assigned Broker</Label>
+                  <Label className="text-xs font-mono">{t("intake.assignedBroker")}</Label>
                   <Select value={form.broker_id} onValueChange={v => {
                     const broker = brokers.find(b => b.id === v);
                     setForm(prev => ({ ...prev, broker_id: v, assigned_broker: broker?.canonical_name || '' }));
