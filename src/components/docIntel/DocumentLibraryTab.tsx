@@ -9,6 +9,7 @@ import { Upload, Search, FileText, Trash2, Filter, FolderOpen, RotateCw, AlertTr
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { DocumentDetailSheet } from "./DocumentDetailSheet";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const DOC_TYPE_OPTIONS = [
   { value: "", label: "All Types" },
