@@ -33,6 +33,7 @@ type Message = {
 
 export default function TeamChat() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [channels, setChannels] = useState<Channel[]>([]);
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
