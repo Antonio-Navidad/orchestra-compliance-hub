@@ -231,8 +231,8 @@ export default function ShipmentIntake() {
           <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft size={18} />
           </Link>
-          <h1 className="text-lg font-bold font-mono">SHIPMENT INTAKE</h1>
-          <Badge variant="outline" className="font-mono text-[10px]">NEW SHIPMENT</Badge>
+          <h1 className="text-lg font-bold font-mono">{t("intake.pageTitle")}</h1>
+          <Badge variant="outline" className="font-mono text-[10px]">{t("shipment.intake")}</Badge>
         </div>
       </header>
 
