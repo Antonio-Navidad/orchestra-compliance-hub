@@ -457,7 +457,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
               <div className="border rounded p-3 space-y-2">
                 <p className="text-[10px] font-mono font-medium flex items-center gap-1">
                   <Info size={10} className="text-primary" />
-                  Similar / Commonly Confused Codes
+                  {t("hsAssist.similarCodes")}
                 </p>
                 {reverseResult.adjacentCodes.map((adj, i) => (
                   <div key={i} className="bg-muted/20 rounded p-2 flex items-start gap-2">
