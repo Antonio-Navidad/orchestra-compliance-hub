@@ -9,6 +9,7 @@ import { Loader2, Search, AlertTriangle, Flag, CheckCircle, RotateCcw, BookOpen,
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface HsSuggestion {
   code: string;
