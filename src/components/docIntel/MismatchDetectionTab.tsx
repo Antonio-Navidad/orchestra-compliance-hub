@@ -115,7 +115,7 @@ export function MismatchDetectionTab() {
                       </span>
                     </div>
                     <Badge variant="outline" className="text-[9px] shrink-0 bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
-                      Extracted
+                      {t("library.extraction.extracted")}
                     </Badge>
                   </label>
                 ))}
