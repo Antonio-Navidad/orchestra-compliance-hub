@@ -850,7 +850,7 @@ export default function DocumentValidator({ embedded }: { embedded?: boolean } =
             <p className="text-2xl font-bold font-mono text-risk-medium">{lowConfFields}</p>
           </CardContent></Card>
           <Card className="border-border bg-card"><CardContent className="py-3 px-4">
-            <p className="text-[10px] font-mono text-muted-foreground">MISMATCHES</p>
+            <p className="text-[10px] font-mono text-muted-foreground">{t("validator.stat.mismatches")}</p>
             <p className="text-2xl font-bold font-mono text-risk-high">
               {crossDocMismatches.filter(m => m.mismatchType === "true_conflict").length}
             </p>
