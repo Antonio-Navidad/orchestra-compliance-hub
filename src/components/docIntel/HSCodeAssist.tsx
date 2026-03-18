@@ -340,7 +340,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
 
                 <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
                   <div className="bg-muted/20 rounded p-1.5">
-                    <span className="text-muted-foreground">Duty Rate:</span>{" "}
+                    <span className="text-muted-foreground">{t("hsAssist.dutyRate")}:</span>{" "}
                     <span className="font-medium">{s.dutyRate}</span>
                   </div>
                   <div className="bg-muted/20 rounded p-1.5">
