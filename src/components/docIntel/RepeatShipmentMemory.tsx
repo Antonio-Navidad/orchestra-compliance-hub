@@ -6,6 +6,7 @@ import { AlertTriangle, CheckCircle, History, ArrowRight, RefreshCw } from "luci
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/hooks/useLanguage";
 import { RULE_PACKS_VERSION } from "@/lib/jurisdictionRulePacks";
 
 interface PriorSession {
