@@ -179,7 +179,7 @@ export function DocumentLibraryTab() {
         <div className="flex items-center gap-2 flex-wrap">
           <Select value={filters.documentType || ""} onValueChange={v => handleFilterChange("documentType", v)}>
             <SelectTrigger className="w-[180px] h-8 text-xs font-mono">
-              <SelectValue placeholder="Document type" />
+              <SelectValue placeholder={t("library.docType")} />
             </SelectTrigger>
             <SelectContent>
               {DOC_TYPE_OPTIONS.map(o => (
