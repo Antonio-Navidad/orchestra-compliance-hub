@@ -155,7 +155,7 @@ export function MismatchDetectionTab() {
               <div className="py-6 text-center flex flex-col items-center gap-2">
                 <CheckCircle size={20} className="text-emerald-400" />
                 <p className="text-xs font-mono text-muted-foreground">
-                  No cross-document mismatches detected
+                  {t("mismatch.noMismatches")}
                 </p>
               </div>
             ) : (
