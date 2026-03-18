@@ -168,9 +168,9 @@ export default function AuditTrail() {
             <ArrowLeft size={18} />
           </Link>
           <History size={18} className="text-primary" />
-          <h1 className="text-lg font-bold">Logic Change Audit Trail</h1>
+          <h1 className="text-lg font-bold">{t("audit.pageTitle")}</h1>
           <Badge variant="outline" className="ml-auto font-mono text-[10px]">
-            {filtered.length} ENTRIES
+            {filtered.length} {t("audit.entries")}
           </Badge>
         </div>
       </header>
