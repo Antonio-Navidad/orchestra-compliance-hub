@@ -42,6 +42,7 @@ const MARKETPLACE_NAV: NavGroup[] = [
       { title: "Hand-off Chain", url: "/watch-mode", icon: Radio },
       { title: "Classify Product", url: "/classify", icon: Search },
       { title: "Doc Intelligence", url: "/doc-intel", icon: FileSearch },
+    ],
   },
   {
     label: "INSIGHTS",
