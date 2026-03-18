@@ -15,6 +15,7 @@ import { PacketScoreCard } from "@/components/PacketScoreCard";
 import { computePacketScore } from "@/lib/packetScore";
 import { ArrowLeft, Upload, X, FileText, Plane, Ship, Truck } from "lucide-react";
 import type { TransportMode } from "@/types/orchestra";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const DOC_TYPES = [
   { value: 'commercial_invoice', label: 'Commercial Invoice' },
