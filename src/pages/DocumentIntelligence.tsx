@@ -80,14 +80,17 @@ export default function DocumentIntelligence() {
         </TabsList>
 
         <TabsContent value="library" className="mt-0">
+          <TabContextBanner tabId="library" />
           <DocumentLibraryTab />
         </TabsContent>
 
         <TabsContent value="validator" className="mt-0">
+          <TabContextBanner tabId="validator" />
           <DocumentValidator embedded />
         </TabsContent>
 
         <TabsContent value="mismatches" className="mt-0">
+          <TabContextBanner tabId="mismatches" />
           <MismatchDetectionTab />
         </TabsContent>
 
