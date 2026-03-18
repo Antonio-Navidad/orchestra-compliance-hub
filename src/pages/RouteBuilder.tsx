@@ -213,7 +213,7 @@ export default function RouteBuilder() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs font-mono">Mode</Label>
+                <Label className="text-xs font-mono">{t("detail.mode")}</Label>
                 <Select value={mode} onValueChange={setMode}>
                   <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
