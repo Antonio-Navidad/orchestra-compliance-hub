@@ -331,7 +331,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                     </Badge>
                     <Badge variant="outline" className={cn("text-[9px] font-mono", riskColor(s.riskLevel))}>
                       {s.riskLevel === "high" && <ShieldAlert size={8} className="mr-0.5" />}
-                      {s.riskLevel} risk
+                      {s.riskLevel} {t("hsAssist.risk")}
                     </Badge>
                   </div>
                 </div>
