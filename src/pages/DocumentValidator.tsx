@@ -842,7 +842,7 @@ export default function DocumentValidator({ embedded }: { embedded?: boolean } =
             <p className="text-2xl font-bold font-mono">{totalFields}</p>
           </CardContent></Card>
           <Card className="border-border bg-card"><CardContent className="py-3 px-4">
-            <p className="text-[10px] font-mono text-muted-foreground">AUTO-APPROVED</p>
+            <p className="text-[10px] font-mono text-muted-foreground">{t("validator.stat.autoApproved")}</p>
             <p className="text-2xl font-bold font-mono text-risk-low">{highConfFields}</p>
           </CardContent></Card>
           <Card className="border-border bg-card"><CardContent className="py-3 px-4">
