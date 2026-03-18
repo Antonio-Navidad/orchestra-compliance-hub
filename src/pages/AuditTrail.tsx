@@ -427,7 +427,7 @@ export default function AuditTrail() {
               <Textarea
                 value={rollbackReason}
                 onChange={(e) => setRollbackReason(e.target.value)}
-                placeholder="Reason for rollback (required for audit)..."
+                placeholder={t("audit.rollbackReason")}
                 rows={3}
                 className="bg-secondary/50"
               />
