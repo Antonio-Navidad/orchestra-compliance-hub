@@ -9,6 +9,7 @@ import { Shipment, TransportMode } from "@/types/orchestra";
 import { getScoreBorderClass } from "@/lib/compliance";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowUpDown } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
 
 type SortKey = "shipment_id" | "consignee" | "declared_value" | "risk_score" | "status" | "hs_code";
 type SortDir = "asc" | "desc";
