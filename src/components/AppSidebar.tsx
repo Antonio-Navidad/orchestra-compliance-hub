@@ -1,10 +1,12 @@
-import { Activity, LogOut, Repeat } from "lucide-react";
+import { Activity, LogOut, Repeat, Info } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspacePurpose, WORKSPACE_PURPOSES } from "@/hooks/useWorkspacePurpose";
 import { getNavigationForPurpose } from "@/lib/workspaceNavigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NAV_TOOLTIPS } from "@/lib/helpContent";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
@@ -62,7 +64,26 @@ export function AppSidebar() {
                         activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                       >
                         <item.icon className="h-4 w-4" />
-                        {!collapsed && <span className="text-xs font-mono">{item.title}</span>}
+                        {!collapsed && (
+                          <span className="text-xs font-mono flex-1">{item.title}</span>
+                        )}
+                        {!collapsed && NAV_TOOLTIPS[item.url] && (
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span
+                                  className="shrink-0 text-muted-foreground/40 hover:text-primary transition-colors"
+                                  onClick={(e) => e.preventDefault()}
+                                >
+                                  <Info size={12} />
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="max-w-[220px] text-[10px]">
+                                {NAV_TOOLTIPS[item.url]}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

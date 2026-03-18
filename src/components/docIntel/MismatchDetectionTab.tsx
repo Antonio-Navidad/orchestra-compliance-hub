@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertTriangle, CheckCircle, GitCompare, ArrowRight, ShieldAlert, Bug, ChevronDown } from "lucide-react";
+import { HelpInfoIcon } from "@/components/HelpInfoIcon";
 import { useDocumentLibrary, type LibraryDocument } from "@/hooks/useDocumentLibrary";
 import { detectLibraryDocMismatches, type CrossDocMismatch, type FieldComparisonLog, type ComparisonResult } from "@/lib/crossDocMatching";
 import { cn } from "@/lib/utils";
@@ -71,6 +72,7 @@ export function MismatchDetectionTab() {
           <CardTitle className="text-sm font-mono flex items-center gap-2">
             <GitCompare size={14} className="text-primary" />
             Compare Documents
+            <HelpInfoIcon helpKey="compare_documents" size={13} />
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4">
@@ -175,6 +177,7 @@ export function MismatchDetectionTab() {
                         <Badge variant="outline" className={cn("text-[9px] font-mono uppercase", severityColor(m.severity))}>
                           {m.severity}
                         </Badge>
+                        <HelpInfoIcon helpKey={`severity_${m.severity}`} size={12} />
                       </div>
                     </div>
                     <div className="grid grid-cols-[1fr,auto,1fr] items-center gap-2">

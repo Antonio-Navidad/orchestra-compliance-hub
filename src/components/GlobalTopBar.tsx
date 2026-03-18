@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Bell, Search, X, Loader2, CheckCheck, AlertTriangle, Info, ShieldAlert } from "lucide-react";
+import { Bell, Search, Command, X, Loader2, CheckCheck, AlertTriangle, Info, ShieldAlert } from "lucide-react";
 
 type Notification = {
   id: string;
@@ -95,12 +95,29 @@ export function GlobalTopBar() {
 
   return (
     <div className="flex items-center gap-1.5">
-      {/* Search */}
+      {/* Global Search trigger (Cmd+K) */}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 gap-1.5 text-muted-foreground hover:text-foreground px-2"
+        onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
+        title="Search (⌘K)"
+      >
+        <Search className="h-3.5 w-3.5" />
+        <span className="hidden md:inline text-[10px] font-mono">Search</span>
+        <kbd className="hidden md:inline-flex h-4 items-center rounded border border-border bg-muted px-1 text-[9px] font-mono text-muted-foreground">
+          <Command className="h-2.5 w-2.5" />K
+        </kbd>
+      </Button>
+
+      {/* Legacy popover search (kept for direct shipment lookup) */}
       <Popover open={searchOpen} onOpenChange={setSearchOpen}>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-7 w-7" title="Search shipments">
-            <Search className="h-3.5 w-3.5" />
-          </Button>
+          <span className="hidden">
+            <Button variant="ghost" size="icon" className="h-7 w-7" title="Search shipments">
+              <Search className="h-3.5 w-3.5" />
+            </Button>
+          </span>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-2" align="end">
           <div className="flex items-center gap-1 mb-2">

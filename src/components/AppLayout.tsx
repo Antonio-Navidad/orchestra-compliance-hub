@@ -8,6 +8,7 @@ import { ViewModeContext, useViewModeState } from "@/hooks/useViewMode";
 import { WorkspaceContext, useWorkspaceProvider } from "@/hooks/useWorkspace";
 import { useWorkspacePurpose, WORKSPACE_PURPOSES } from "@/hooks/useWorkspacePurpose";
 import { OnboardingTour } from "@/components/OnboardingTour";
+import { GlobalSearchDialog } from "@/components/GlobalSearchDialog";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const viewMode = useViewModeState();
@@ -44,6 +45,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <OnboardingTour />
+          <GlobalSearchDialog />
         </SidebarProvider>
       </ViewModeContext.Provider>
     </WorkspaceContext.Provider>

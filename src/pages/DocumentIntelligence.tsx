@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Library, FileSearch, GitCompare, Download, Search, History } from "lucide-react";
 import { DocumentLibraryTab } from "@/components/docIntel/DocumentLibraryTab";
@@ -6,12 +7,15 @@ import { MismatchDetectionTab } from "@/components/docIntel/MismatchDetectionTab
 import { DocIntelExportTab } from "@/components/docIntel/DocIntelExportTab";
 import { HSCodeAssist } from "@/components/docIntel/HSCodeAssist";
 import { RepeatShipmentMemory } from "@/components/docIntel/RepeatShipmentMemory";
+import { TabContextBanner } from "@/components/TabContextBanner";
 import { toast } from "sonner";
 
 import DocumentValidator from "./DocumentValidator";
 
 export default function DocumentIntelligence() {
-  const [activeTab, setActiveTab] = useState("library");
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") || "library";
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   // Shared lane context for HS Code Assist
   const [laneContext, setLaneContext] = useState({
@@ -76,18 +80,22 @@ export default function DocumentIntelligence() {
         </TabsList>
 
         <TabsContent value="library" className="mt-0">
+          <TabContextBanner tabId="library" />
           <DocumentLibraryTab />
         </TabsContent>
 
         <TabsContent value="validator" className="mt-0">
+          <TabContextBanner tabId="validator" />
           <DocumentValidator embedded />
         </TabsContent>
 
         <TabsContent value="mismatches" className="mt-0">
+          <TabContextBanner tabId="mismatches" />
           <MismatchDetectionTab />
         </TabsContent>
 
         <TabsContent value="hs-assist" className="mt-0">
+          <TabContextBanner tabId="hs-assist" />
           <HSCodeAssist
             destinationCountry={laneContext.destination}
             originCountry={laneContext.origin}
@@ -100,6 +108,7 @@ export default function DocumentIntelligence() {
         </TabsContent>
 
         <TabsContent value="memory" className="mt-0">
+          <TabContextBanner tabId="memory" />
           <RepeatShipmentMemory
             originCountry={laneContext.origin}
             destinationCountry={laneContext.destination}
@@ -118,6 +127,7 @@ export default function DocumentIntelligence() {
         </TabsContent>
 
         <TabsContent value="export" className="mt-0">
+          <TabContextBanner tabId="export" />
           <DocIntelExportTab />
         </TabsContent>
       </Tabs>
