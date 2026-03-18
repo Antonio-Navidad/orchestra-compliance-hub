@@ -438,7 +438,7 @@ export default function AuditTrail() {
                   onClick={() => rollbackMutation.mutate(rollbackTarget)}
                   disabled={rollbackMutation.isPending}
                 >
-                  <RotateCcw size={14} className="mr-1" /> Rollback
+                  <RotateCcw size={14} className="mr-1" /> {t("audit.rollback")}
                 </Button>
               </div>
             </div>
