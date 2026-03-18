@@ -204,11 +204,11 @@ export default function AuditTrail() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="reverted">Reverted</SelectItem>
-              <SelectItem value="pending_approval">Pending</SelectItem>
+              <SelectItem value="all">{t("audit.allStatuses")}</SelectItem>
+              <SelectItem value="active">{t("status.approved")}</SelectItem>
+              <SelectItem value="draft">{t("status.draft")}</SelectItem>
+              <SelectItem value="reverted">{t("audit.reverted")}</SelectItem>
+              <SelectItem value="pending_approval">{t("status.pending")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
