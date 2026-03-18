@@ -1,185 +1,191 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CheckCircle, GitCompare, ArrowRight } from "lucide-react";
-import { useValidationHistory, type ValidationSession } from "@/hooks/useValidationHistory";
-import { useEffect } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AlertTriangle, CheckCircle, GitCompare, ArrowRight, ShieldAlert } from "lucide-react";
+import { useDocumentLibrary, type LibraryDocument } from "@/hooks/useDocumentLibrary";
+import { detectLibraryDocMismatches, type CrossDocMismatch } from "@/lib/crossDocMatching";
 import { cn } from "@/lib/utils";
 
-interface MismatchItem {
-  field: string;
-  sourceA: string;
-  valueA: string;
-  sourceB: string;
-  valueB: string;
-  severity: "critical" | "warning" | "info";
-}
-
 export function MismatchDetectionTab() {
-  const { sessions, loading, fetchSessions } = useValidationHistory();
-  const [selectedSession, setSelectedSession] = useState<ValidationSession | null>(null);
+  const { documents, loading, fetchDocuments } = useDocumentLibrary();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [comparedMismatches, setComparedMismatches] = useState<CrossDocMismatch[] | null>(null);
 
-  useEffect(() => { fetchSessions(); }, [fetchSessions]);
+  useEffect(() => { fetchDocuments(); }, [fetchDocuments]);
 
-  const getMismatches = (session: ValidationSession): MismatchItem[] => {
-    if (!session.cross_doc_mismatches) return [];
-    const raw = session.cross_doc_mismatches;
-    if (!Array.isArray(raw)) return [];
-    return raw
-      .filter((m: any) => {
-        // Support both flat (docA/valueA) and nested (documents[]) shapes
-        const docs = m.documents;
-        const hasFlat = (m.valueA != null && m.valueA !== "") || (m.docAValue != null && m.docAValue !== "");
-        const hasNested = Array.isArray(docs) && docs.length >= 2;
-        return hasFlat || hasNested;
-      })
-      .map((m: any) => {
-        const docs = m.documents;
-        // Prefer the nested `documents` array (from CrossDocMismatch)
-        if (Array.isArray(docs) && docs.length >= 2) {
-          return {
-            field: m.fieldName || m.field || "Unknown",
-            sourceA: docs[0].docName || docs[0].docType || "Doc A",
-            valueA: String(docs[0].value ?? "—"),
-            sourceB: docs[1].docName || docs[1].docType || "Doc B",
-            valueB: String(docs[1].value ?? "—"),
-            severity: m.severity || "warning",
-          };
-        }
-        // Fallback: flat shape
-        return {
-          field: m.field || m.fieldName || "Unknown",
-          sourceA: m.docA || m.sourceA || "Doc A",
-          valueA: String(m.valueA ?? m.docAValue ?? "—"),
-          sourceB: m.docB || m.sourceB || "Doc B",
-          valueB: String(m.valueB ?? m.docBValue ?? "—"),
-          severity: m.severity || "warning",
-        };
-      });
+  const extractedDocs = useMemo(
+    () => documents.filter((d) => d.extraction_status === "complete" && d.extracted_fields && Object.keys(d.extracted_fields).length > 0),
+    [documents]
+  );
+
+  const toggleDoc = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+    setComparedMismatches(null);
+  };
+
+  const runComparison = () => {
+    const selected = extractedDocs.filter((d) => selectedIds.has(d.id));
+    if (selected.length < 2) return;
+    const results = detectLibraryDocMismatches(selected);
+    setComparedMismatches(results);
   };
 
   const severityColor = (s: string) => {
     switch (s) {
-      case "critical": return "bg-destructive/20 text-destructive border-destructive/30";
-      case "warning": return "bg-amber-500/20 text-amber-400 border-amber-500/30";
-      default: return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+      case "high": return "bg-destructive/20 text-destructive border-destructive/30";
+      case "medium": return "bg-amber-500/20 text-amber-400 border-amber-500/30";
+      default: return "bg-yellow-500/20 text-yellow-500 border-yellow-500/30";
     }
+  };
+
+  const severityIcon = (s: string) => {
+    if (s === "high") return <ShieldAlert size={12} className="text-destructive" />;
+    return null;
   };
 
   return (
     <div className="space-y-4">
+      {/* Document selector */}
       <Card>
         <CardHeader className="py-3 px-4">
           <CardTitle className="text-sm font-mono flex items-center gap-2">
             <GitCompare size={14} className="text-primary" />
-            Cross-Document Mismatch Detection
+            Compare Documents
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4">
           <p className="text-[10px] font-mono text-muted-foreground mb-3">
-            Select a validation session to view side-by-side field comparisons and flagged inconsistencies.
+            Select two or more extracted documents to run a fresh cross-document comparison.
           </p>
 
           {loading ? (
             <div className="py-8 text-center text-muted-foreground font-mono text-sm animate-pulse">
-              Loading sessions...
+              Loading documents...
             </div>
-          ) : sessions.length === 0 ? (
+          ) : extractedDocs.length < 2 ? (
             <div className="py-8 text-center text-muted-foreground font-mono text-sm">
-              No validation sessions found. Run a validation first.
+              Need at least 2 extracted documents to compare. Upload and extract documents first.
             </div>
           ) : (
-            <div className="grid gap-2 max-h-[300px] overflow-y-auto">
-              {sessions.slice(0, 20).map(s => {
-                const mismatches = getMismatches(s);
-                const hasMismatches = mismatches.length > 0;
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => setSelectedSession(s)}
+            <>
+              <div className="grid gap-2 max-h-[250px] overflow-y-auto mb-3">
+                {extractedDocs.map((doc) => (
+                  <label
+                    key={doc.id}
                     className={cn(
-                      "w-full text-left p-2.5 rounded border transition-colors text-xs font-mono",
-                      selectedSession?.id === s.id
+                      "flex items-center gap-3 p-2.5 rounded border cursor-pointer transition-colors text-xs font-mono",
+                      selectedIds.has(doc.id)
                         ? "border-primary bg-primary/10"
                         : "border-border hover:border-primary/40"
                     )}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{s.shipment_id || "Untitled"}</span>
-                      <div className="flex items-center gap-1.5">
-                        {hasMismatches ? (
-                          <Badge variant="outline" className="text-[9px] bg-amber-500/10 text-amber-400 border-amber-500/30">
-                            {mismatches.length} mismatches
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[9px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
-                            Clean
-                          </Badge>
-                        )}
-                      </div>
+                    <Checkbox
+                      checked={selectedIds.has(doc.id)}
+                      onCheckedChange={() => toggleDoc(doc.id)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium truncate block">{doc.file_name}</span>
+                      <span className="text-[9px] text-muted-foreground">
+                        {doc.document_type || "Unknown type"}
+                        {doc.origin_country && doc.destination_country && ` · ${doc.origin_country} → ${doc.destination_country}`}
+                      </span>
                     </div>
-                    <p className="text-[9px] text-muted-foreground mt-0.5">
-                      {s.origin_country} → {s.destination_country} · {s.shipment_mode}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
+                    <Badge variant="outline" className="text-[9px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shrink-0">
+                      Extracted
+                    </Badge>
+                  </label>
+                ))}
+              </div>
+              <Button
+                size="sm"
+                onClick={runComparison}
+                disabled={selectedIds.size < 2}
+                className="w-full font-mono text-xs"
+              >
+                <GitCompare size={12} className="mr-1.5" />
+                Compare {selectedIds.size} Document{selectedIds.size !== 1 ? "s" : ""}
+              </Button>
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* Mismatch Detail */}
-      {selectedSession && (
+      {/* Mismatch Results */}
+      {comparedMismatches !== null && (
         <Card>
           <CardHeader className="py-3 px-4">
             <CardTitle className="text-sm font-mono flex items-center gap-2">
               <AlertTriangle size={14} className="text-amber-400" />
-              Mismatches: {selectedSession.shipment_id || "Session"}
+              Comparison Results
+              {comparedMismatches.length > 0 && (
+                <Badge variant="outline" className="ml-auto text-[9px] bg-destructive/10 text-destructive border-destructive/30">
+                  {comparedMismatches.filter((m) => m.severity === "high").length} high ·{" "}
+                  {comparedMismatches.filter((m) => m.severity === "medium").length} medium ·{" "}
+                  {comparedMismatches.filter((m) => m.severity === "low").length} low
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4">
-            {(() => {
-              const mismatches = getMismatches(selectedSession);
-              if (mismatches.length === 0) {
-                return (
-                  <div className="py-6 text-center flex flex-col items-center gap-2">
-                    <CheckCircle size={20} className="text-emerald-400" />
-                    <p className="text-xs font-mono text-muted-foreground">
-                      No cross-document mismatches detected
-                    </p>
-                  </div>
-                );
-              }
-              return (
-                <div className="space-y-3">
-                  {mismatches.map((m, i) => (
-                    <div key={i} className="border rounded p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-mono font-medium capitalize">
-                          {m.field.replace(/_/g, " ")}
-                        </span>
-                        <Badge variant="outline" className={cn("text-[9px] font-mono", severityColor(m.severity))}>
+            {comparedMismatches.length === 0 ? (
+              <div className="py-6 text-center flex flex-col items-center gap-2">
+                <CheckCircle size={20} className="text-emerald-400" />
+                <p className="text-xs font-mono text-muted-foreground">
+                  No cross-document mismatches detected
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {comparedMismatches.map((m, i) => (
+                  <div key={i} className={cn(
+                    "border rounded p-3 space-y-2",
+                    m.severity === "high" && "border-destructive/40 bg-destructive/5"
+                  )}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-mono font-medium capitalize flex items-center gap-1.5">
+                        {severityIcon(m.severity)}
+                        {m.fieldName.replace(/_/g, " ")}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {m.valueDifference && (
+                          <Badge variant="outline" className="text-[9px] font-mono bg-destructive/10 text-destructive border-destructive/30">
+                            Δ {m.valueDifference}
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className={cn("text-[9px] font-mono uppercase", severityColor(m.severity))}>
                           {m.severity}
                         </Badge>
                       </div>
-                      <div className="grid grid-cols-[1fr,auto,1fr] items-center gap-2">
-                        <div className="bg-muted/30 rounded p-2">
-                          <p className="text-[9px] font-mono text-muted-foreground mb-0.5">{m.sourceA}</p>
-                          <p className="text-xs font-mono font-medium text-foreground">{m.valueA}</p>
-                        </div>
-                        <ArrowRight size={14} className="text-muted-foreground shrink-0" />
-                        <div className="bg-muted/30 rounded p-2">
-                          <p className="text-[9px] font-mono text-muted-foreground mb-0.5">{m.sourceB}</p>
-                          <p className="text-xs font-mono font-medium text-foreground">{m.valueB}</p>
-                        </div>
+                    </div>
+                    <div className="grid grid-cols-[1fr,auto,1fr] items-center gap-2">
+                      <div className="bg-muted/30 rounded p-2">
+                        <p className="text-[9px] font-mono text-muted-foreground mb-0.5">{m.documents[0]?.docName}</p>
+                        <p className="text-xs font-mono font-medium text-foreground">{m.documents[0]?.value}</p>
+                      </div>
+                      <ArrowRight size={14} className="text-muted-foreground shrink-0" />
+                      <div className="bg-muted/30 rounded p-2">
+                        <p className="text-[9px] font-mono text-muted-foreground mb-0.5">{m.documents[1]?.docName}</p>
+                        <p className="text-xs font-mono font-medium text-foreground">{m.documents[1]?.value}</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              );
-            })()}
+                    {m.customsImpact && (
+                      <div className="flex items-start gap-1.5 bg-destructive/10 rounded px-2.5 py-1.5 border border-destructive/20">
+                        <ShieldAlert size={11} className="text-destructive mt-0.5 shrink-0" />
+                        <p className="text-[10px] font-mono text-destructive/90">
+                          {m.customsImpact}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
