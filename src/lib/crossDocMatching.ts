@@ -51,12 +51,13 @@ const FIELD_ALIAS_MAP: Record<string, string> = {
   discharge_port: "port_of_discharge",
   destination_port: "port_of_discharge",
   arrival_port: "port_of_discharge",
-  // Quantities
-  total_pieces: "quantity",
-  total_qty: "quantity",
-  pieces: "quantity",
-  number_of_pieces: "quantity",
-  total_quantity: "quantity",
+  // Aggregate quantities (totals only — line-item "quantity" is excluded)
+  total_pieces: "total_quantity",
+  total_qty: "total_quantity",
+  number_of_pieces: "total_quantity",
+  total_quantity: "total_quantity",
+  total_packages: "total_quantity",
+  package_count: "total_quantity",
   // Weights
   total_gross_weight_kg: "gross_weight_kg",
   total_net_weight_kg: "net_weight_kg",
@@ -77,7 +78,7 @@ function canonicalFieldName(raw: string): string {
 const HIGH_SEVERITY_FIELDS = [
   "declared_value", "total_price", "unit_price", "subtotal",
   "hs_code", "consignee_name", "exporter_name", "origin_country",
-  "destination_country", "quantity", "package_count",
+  "destination_country", "total_quantity", "quantity", "package_count",
   "gross_weight_kg", "net_weight_kg",
   "container_number",
 ];
@@ -108,8 +109,8 @@ const CUSTOMS_IMPACT: Record<string, string> = {
   exporter_name: "Shipper/exporter name inconsistency may flag sanctions or denied-party concerns.",
   origin_country: "Origin country mismatch affects preferential duty rates and trade agreement eligibility.",
   destination_country: "Destination mismatch can result in wrong regulatory requirements being applied.",
+  total_quantity: "Quantity discrepancy may trigger physical inspection or cargo examination.",
   quantity: "Quantity discrepancy may trigger physical inspection or cargo examination.",
-  package_count: "Package count mismatch between documents may result in cargo hold at port.",
   gross_weight_kg: "Weight discrepancy may trigger physical verification and delays.",
   net_weight_kg: "Net weight mismatch affects duty calculation for weight-based tariffs.",
   container_number: "Container number mismatch is a critical logistics discrepancy that may prevent release.",
