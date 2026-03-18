@@ -586,6 +586,12 @@ export default function DocumentValidator() {
   };
   const removeDocument = (id: string) => setDocuments((prev) => prev.filter((d) => d.id !== id));
 
+  // ── Lane resolver: recompute whenever context changes ────────────────
+  const resolvedLane = useMemo<LaneResolverResult | null>(() => {
+    if (!originCountry && !destinationCountry) return null;
+    return resolveLane(originCountry, destinationCountry, shipmentMode, workflowStage, hsCode);
+  }, [originCountry, destinationCountry, shipmentMode, workflowStage, hsCode]);
+
   const allExtracted = documents.length > 0 && documents.filter(d => !d.isMultiDocument).length > 0 && documents.filter(d => !d.isMultiDocument).every((d) => d.status === "extracted");
   const anyExtracting = documents.some((d) => d.status === "extracting");
   const nonPacketDocs = documents.filter(d => !d.isMultiDocument);
