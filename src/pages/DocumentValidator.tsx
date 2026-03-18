@@ -652,7 +652,7 @@ export default function DocumentValidator({ embedded }: { embedded?: boolean } =
       )}
       {!resolvedLane && !originCountry && !destinationCountry && (
         <div className="rounded border border-dashed border-muted-foreground/30 bg-muted/30 px-3 py-1.5 font-mono text-[10px] text-muted-foreground">
-          No lane selected — choose a lane from Templates or set Origin/Destination to load jurisdiction rule packs.
+          {t("validator.noLane")}
         </div>
       )}
       {/* Header */}
