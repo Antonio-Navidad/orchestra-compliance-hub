@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useLanguage } from "@/hooks/useLanguage";
 import {
   Map, Navigation, Plane, Ship, Truck, Zap, Clock, DollarSign,
   ShieldAlert, AlertTriangle, ArrowRight, Loader2, BarChart3, Route
