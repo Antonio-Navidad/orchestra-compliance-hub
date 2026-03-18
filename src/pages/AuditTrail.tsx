@@ -268,7 +268,7 @@ export default function AuditTrail() {
                       {/* Side-by-side diff */}
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="font-mono text-[10px] text-destructive/70 mb-1">OLD VALUE</p>
+                          <p className="font-mono text-[10px] text-destructive/70 mb-1">{t("audit.oldValue")}</p>
                           <div className="rounded border border-destructive/20 p-3 bg-destructive/5 min-h-[60px]">
                             {renderValue(entry.old_value)}
                           </div>
