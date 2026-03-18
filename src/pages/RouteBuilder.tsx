@@ -291,8 +291,8 @@ export default function RouteBuilder() {
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                 <Map className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                <h3 className="font-mono text-sm text-muted-foreground">NO ROUTES GENERATED YET</h3>
-                <p className="text-xs text-muted-foreground/60 mt-1">Enter origin, destination, and preferences to get AI-powered route recommendations</p>
+                <h3 className="font-mono text-sm text-muted-foreground">{t("route.noRoutesYet")}</h3>
+                <p className="text-xs text-muted-foreground/60 mt-1">{t("route.noRoutesHint")}</p>
               </CardContent>
             </Card>
           )}
