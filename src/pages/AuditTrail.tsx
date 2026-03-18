@@ -193,7 +193,7 @@ export default function AuditTrail() {
               <SelectValue placeholder="Module" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Modules</SelectItem>
+              <SelectItem value="all">{t("audit.allModules")}</SelectItem>
               {MODULE_OPTIONS.map((m) => (
                 <SelectItem key={m} value={m}>{m.replace(/_/g, " ")}</SelectItem>
               ))}
