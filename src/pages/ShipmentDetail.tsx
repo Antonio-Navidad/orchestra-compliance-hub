@@ -263,13 +263,13 @@ export default function ShipmentDetail() {
             {/* Comparison View */}
             <div className="space-y-3">
               <h3 className="font-mono text-xs text-muted-foreground flex items-center gap-2">
-                <FileText size={14} /> INVOICE vs MANIFEST COMPARISON
+                <FileText size={14} /> {t("detail.invoiceVsManifest")}
               </h3>
               {invoice && manifest ? (
                 <ComparisonView mismatches={mismatches} />
               ) : (
                 <div className="rounded-lg border border-border bg-card p-6 text-center">
-                  <p className="text-sm text-muted-foreground">No invoice/manifest data available for comparison.</p>
+                  <p className="text-sm text-muted-foreground">{t("detail.noComparisonData")}</p>
                 </div>
               )}
             </div>
