@@ -2185,6 +2185,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          preferred_language: string
           stripe_customer_id: string | null
           subscription_status: string
           subscription_tier: Database["public"]["Enums"]["subscription_tier"]
@@ -2197,6 +2198,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          preferred_language?: string
           stripe_customer_id?: string | null
           subscription_status?: string
           subscription_tier?: Database["public"]["Enums"]["subscription_tier"]
@@ -2209,6 +2211,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          preferred_language?: string
           stripe_customer_id?: string | null
           subscription_status?: string
           subscription_tier?: Database["public"]["Enums"]["subscription_tier"]
