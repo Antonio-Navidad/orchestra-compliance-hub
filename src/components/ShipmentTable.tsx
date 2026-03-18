@@ -33,6 +33,7 @@ interface ShipmentTableProps {
 export function ShipmentTable({ shipments, mode }: ShipmentTableProps) {
   const navigate = useNavigate();
   const [sortOption, setSortOption] = useState("0");
+  const { t } = useLanguage();
 
   const filtered = mode ? shipments.filter(s => s.mode === mode) : shipments;
 
