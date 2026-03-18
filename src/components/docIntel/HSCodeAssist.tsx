@@ -238,7 +238,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
       <CardHeader className="py-3 px-4">
         <CardTitle className="text-sm font-mono flex items-center gap-2">
           <Search size={14} className="text-primary" />
-          HS Code Assist
+          {t("hsAssist.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-3">
