@@ -401,7 +401,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                 {reverseResult.coveredProducts.length > 0 && (
                   <div className="bg-emerald-500/5 border border-emerald-500/20 rounded p-2">
                     <p className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 mb-1 flex items-center gap-1">
-                      <CheckCircle size={10} /> Products Covered
+                      <CheckCircle size={10} /> {t("hsAssist.productsCovered")}
                     </p>
                     <ul className="text-[10px] font-mono space-y-0.5">
                       {reverseResult.coveredProducts.map((p, i) => (
