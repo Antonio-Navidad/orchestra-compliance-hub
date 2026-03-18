@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Library, FileSearch, GitCompare, Download, Search, History } from "lucide-react";
 import { DocumentLibraryTab } from "@/components/docIntel/DocumentLibraryTab";
@@ -6,6 +7,7 @@ import { MismatchDetectionTab } from "@/components/docIntel/MismatchDetectionTab
 import { DocIntelExportTab } from "@/components/docIntel/DocIntelExportTab";
 import { HSCodeAssist } from "@/components/docIntel/HSCodeAssist";
 import { RepeatShipmentMemory } from "@/components/docIntel/RepeatShipmentMemory";
+import { TabContextBanner } from "@/components/TabContextBanner";
 import { toast } from "sonner";
 
 import DocumentValidator from "./DocumentValidator";
