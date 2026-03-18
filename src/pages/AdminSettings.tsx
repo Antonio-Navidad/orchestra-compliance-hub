@@ -392,6 +392,10 @@ export default function AdminSettings() {
               <MakeIntegrationPanel />
             </div>
           </TabsContent>
+
+          <TabsContent value="language" className="mt-4 space-y-6">
+            <LanguageResetPanel />
+          </TabsContent>
         </Tabs>
       </main>
     </div>
