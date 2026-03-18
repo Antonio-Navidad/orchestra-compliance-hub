@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveLane, type LaneResolverResult, type ResolvedLaneContext } from "@/lib/laneResolver";
+import { LaneGuidancePanel } from "@/components/LaneGuidancePanel";
 import { RULE_PACKS_VERSION } from "@/lib/jurisdictionRulePacks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -641,25 +642,7 @@ export default function DocumentValidator() {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl space-y-6">
-      {/* Resolved Lane Context Banner */}
-      {resolvedLane && resolvedLane.resolved && (
-        <div className="rounded border border-primary/20 bg-primary/5 px-4 py-2.5 space-y-1">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="font-mono text-xs font-bold text-primary">{resolvedLane.laneLabel}</span>
-            <Badge variant="outline" className="text-[9px] font-mono">{shipmentMode.toUpperCase()}</Badge>
-            <Badge variant="outline" className="text-[9px] font-mono">{resolvedLane.stageOverlay.label}</Badge>
-            {resolvedLane.commodityOverlay.id !== "general" && (
-              <Badge variant="secondary" className="text-[9px] font-mono">{resolvedLane.commodityOverlay.name}</Badge>
-            )}
-            <span className="text-[10px] font-mono text-muted-foreground ml-auto">rules v{resolvedLane.rulesVersion}</span>
-          </div>
-          <div className="flex items-center gap-4 text-[10px] font-mono text-muted-foreground flex-wrap">
-            <span>Export: <strong className="text-foreground">{resolvedLane.origin.pack.name}</strong> via {resolvedLane.origin.pack.customsDeclarationSystem.name}</span>
-            <span>→</span>
-            <span>Import: <strong className="text-foreground">{resolvedLane.destination.pack.name}</strong> via {resolvedLane.destination.pack.customsDeclarationSystem.name}</span>
-          </div>
-        </div>
-      )}
+      {/* Unresolved lane warning */}
       {resolvedLane && !resolvedLane.resolved && (originCountry || destinationCountry) && (
         <div className="rounded border border-dashed border-risk-medium/40 bg-risk-medium/5 px-4 py-2 font-mono text-xs text-risk-medium">
           ⚠ {(resolvedLane as import("@/lib/laneResolver").UnresolvedLaneContext).reason}
@@ -913,8 +896,13 @@ export default function DocumentValidator() {
                 </div>
               </div>
 
-              {/* Template checklist */}
-              {templateChecklist && (
+              {/* ═══ UNIFIED LANE GUIDANCE — central placement for all lane types ═══ */}
+              {resolvedLane && resolvedLane.resolved && (
+                <LaneGuidancePanel lane={resolvedLane} mode={shipmentMode} detectedDocTypes={allDetectedDocTypes} />
+              )}
+
+              {/* Template checklist (shown only for preset templates without resolved lane) */}
+              {templateChecklist && !(resolvedLane && resolvedLane.resolved) && (
                 <Card className="border-primary/20 bg-primary/5">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-xs font-mono text-primary">REQUIRED DOCUMENTS — {selectedTemplate?.name}</CardTitle>
@@ -1080,117 +1068,20 @@ export default function DocumentValidator() {
                 </CardContent>
               </Card>
 
-              {/* ═══ RESOLVED LANE REQUIREMENTS ═══ */}
+              {/* Compact lane status in side panel */}
               {resolvedLane && resolvedLane.resolved && (
                 <Card className="border-primary/20 bg-primary/5">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-xs font-mono text-primary">LANE REQUIREMENTS</CardTitle>
-                    <p className="text-[10px] text-muted-foreground">{resolvedLane.laneLabel} · {shipmentMode}</p>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-xs">
-                    {/* Required docs */}
-                    <div>
-                      <p className="text-[10px] font-mono text-muted-foreground mb-1">REQUIRED DOCUMENTS</p>
-                      {resolvedLane.requiredDocs.map((doc) => {
-                        const present = allDetectedDocTypes.has(doc.toLowerCase().replace(/[^a-z_]/g, ""));
-                        return (
-                          <div key={doc} className="flex items-center gap-1.5 py-0.5">
-                            {present
-                              ? <CheckCircle size={11} className="text-risk-low shrink-0" />
-                              : <XCircle size={11} className="text-risk-high shrink-0" />}
-                            <span className="font-mono text-[10px]">{doc.replace(/_/g, " ")}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Filing requirements */}
-                    <div>
-                      <p className="text-[10px] font-mono text-muted-foreground mb-1">FILING REQUIREMENTS</p>
-                      {resolvedLane.filingRequirements.map((f, i) => (
-                        <p key={i} className="text-[10px] py-0.5 flex items-start gap-1.5">
-                          <Shield size={10} className="text-primary shrink-0 mt-0.5" />
-                          <span>{f}</span>
-                        </p>
-                      ))}
-                    </div>
-
-                    {/* Beginner warnings */}
-                    {resolvedLane.beginnerWarnings.length > 0 && (
-                      <div>
-                        <p className="text-[10px] font-mono text-risk-medium mb-1">⚠ BEGINNER WARNINGS</p>
-                        {resolvedLane.beginnerWarnings.slice(0, 6).map((w, i) => (
-                          <p key={i} className="text-[10px] py-0.5 flex items-start gap-1.5">
-                            <AlertTriangle size={10} className="text-risk-medium shrink-0 mt-0.5" />
-                            <span>{w}</span>
-                          </p>
-                        ))}
-                        {resolvedLane.beginnerWarnings.length > 6 && (
-                          <p className="text-[10px] text-muted-foreground mt-1">+{resolvedLane.beginnerWarnings.length - 6} more</p>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Fine traps */}
-                    {resolvedLane.fineTraps.length > 0 && (
-                      <details className="group">
-                        <summary className="text-[10px] font-mono text-risk-high cursor-pointer hover:text-foreground select-none">
-                          ▸ FINE & DELAY TRAPS ({resolvedLane.fineTraps.length})
-                        </summary>
-                        <div className="mt-1 space-y-0.5">
-                          {resolvedLane.fineTraps.map((t, i) => (
-                            <p key={i} className="text-[10px] py-0.5 flex items-start gap-1.5">
-                              <XCircle size={10} className="text-risk-high shrink-0 mt-0.5" />
-                              <span>{t}</span>
-                            </p>
-                          ))}
-                        </div>
-                      </details>
-                    )}
-
-                    {/* Broker checkpoints */}
-                    {resolvedLane.brokerCheckpoints.length > 0 && (
-                      <details className="group">
-                        <summary className="text-[10px] font-mono text-muted-foreground cursor-pointer hover:text-foreground select-none">
-                          ▸ BROKER CHECKPOINTS ({resolvedLane.brokerCheckpoints.length})
-                        </summary>
-                        <div className="mt-1 space-y-0.5">
-                          {resolvedLane.brokerCheckpoints.map((c, i) => (
-                            <p key={i} className="text-[10px] py-0.5 flex items-start gap-1.5">
-                              <Info size={10} className="text-primary shrink-0 mt-0.5" />
-                              <span>{c}</span>
-                            </p>
-                          ))}
-                        </div>
-                      </details>
-                    )}
-
-                    {/* License triggers */}
-                    {resolvedLane.licenseTriggers.length > 0 && (
-                      <details className="group">
-                        <summary className="text-[10px] font-mono text-muted-foreground cursor-pointer hover:text-foreground select-none">
-                          ▸ LICENSE / PERMIT TRIGGERS ({resolvedLane.licenseTriggers.length})
-                        </summary>
-                        <div className="mt-1 space-y-0.5">
-                          {resolvedLane.licenseTriggers.map((l, i) => (
-                            <p key={i} className="text-[10px] py-0.5 flex items-start gap-1.5">
-                              <Shield size={10} className="text-muted-foreground shrink-0 mt-0.5" />
-                              <span>{l}</span>
-                            </p>
-                          ))}
-                        </div>
-                      </details>
-                    )}
-
-                    {/* Source metadata */}
-                    <div className="pt-2 border-t border-border/50 flex items-center gap-3 flex-wrap text-[9px] font-mono text-muted-foreground">
-                      <span>Export: {resolvedLane.origin.pack.source.authority}</span>
-                      <span>Import: {resolvedLane.destination.pack.source.authority}</span>
-                    </div>
+                  <CardContent className="py-3 px-4">
+                    <p className="text-[10px] font-mono text-primary font-bold">{resolvedLane.laneLabel}</p>
+                    <p className="text-[9px] font-mono text-muted-foreground mt-1">
+                      {resolvedLane.requiredDocs.length} required docs · {resolvedLane.filingRequirements.length} filings · {resolvedLane.fineTraps.length} traps
+                    </p>
+                    <p className="text-[9px] font-mono text-muted-foreground">
+                      See full guidance in the central panel ↑
+                    </p>
                   </CardContent>
                 </Card>
               )}
-
               {resolvedLane && !resolvedLane.resolved && (
                 <Card className="border-risk-medium/20 bg-risk-medium/5">
                   <CardContent className="py-4 px-4 text-center">
