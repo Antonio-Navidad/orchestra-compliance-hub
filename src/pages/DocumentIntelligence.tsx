@@ -95,6 +95,7 @@ export default function DocumentIntelligence() {
         </TabsContent>
 
         <TabsContent value="hs-assist" className="mt-0">
+          <TabContextBanner tabId="hs-assist" />
           <HSCodeAssist
             destinationCountry={laneContext.destination}
             originCountry={laneContext.origin}
