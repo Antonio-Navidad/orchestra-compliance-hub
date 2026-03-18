@@ -59,7 +59,7 @@ export function DocInfoDrawer({ open, onOpenChange, docKey, lane }: DocInfoDrawe
                 <Badge variant="outline" className="text-[9px] font-mono">{lane.originLabel}</Badge>
                 <span className="text-[9px] text-muted-foreground">→</span>
                 <Badge variant="outline" className="text-[9px] font-mono">{lane.destinationLabel}</Badge>
-                <Badge variant="secondary" className="text-[9px] font-mono">{lane.modeOverlay.label}</Badge>
+                <Badge variant="secondary" className="text-[9px] font-mono">{lane.modeOverlay.mode.toUpperCase()}</Badge>
               </div>
             </SheetHeader>
 
