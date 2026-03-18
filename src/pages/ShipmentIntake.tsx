@@ -247,7 +247,7 @@ export default function ShipmentIntake() {
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Shipment ID *</Label>
+                  <Label className="text-xs font-mono">{t("intake.shipmentId")} *</Label>
                   <Input value={form.shipment_id} onChange={e => updateField('shipment_id', e.target.value)} placeholder="ORC-XXX" className="font-mono" />
                 </div>
                 <div className="space-y-1.5">
