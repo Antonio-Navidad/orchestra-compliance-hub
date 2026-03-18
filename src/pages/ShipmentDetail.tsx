@@ -32,6 +32,7 @@ export default function ShipmentDetail() {
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") || "overview";
   const [activeTab, setActiveTab] = useState(initialTab);
+  const { t } = useLanguage();
 
   const { data: shipment, isLoading } = useQuery({
     queryKey: ["shipment", id],
