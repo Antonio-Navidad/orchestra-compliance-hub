@@ -261,7 +261,7 @@ export default function ShipmentIntake() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Mode *</Label>
+                  <Label className="text-xs font-mono">{t("intake.mode")} *</Label>
                   <Select value={form.mode} onValueChange={v => updateField('mode', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
