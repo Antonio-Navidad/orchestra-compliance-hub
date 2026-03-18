@@ -453,7 +453,7 @@ function LanguageResetPanel() {
           {langList.map((lang) => (
             <button
               key={lang.code}
-              onClick={() => setLanguage(lang.code)}
+              onClick={() => setLanguage(lang.code as any)}
               className={`p-3 rounded-md border text-left transition-colors text-sm ${
                 language === lang.code
                   ? "border-primary bg-primary/10 font-medium"
