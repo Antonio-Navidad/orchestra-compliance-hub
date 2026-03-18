@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, FileSpreadsheet } from "lucide-react";
 import { useValidationHistory, type ValidationSession } from "@/hooks/useValidationHistory";
+import { useLanguage } from "@/hooks/useLanguage";
 import * as XLSX from "xlsx";
 
 export function DocIntelExportTab() {
   const { sessions, loading, fetchSessions } = useValidationHistory();
+  const { t } = useLanguage();
   const [selectedSessionId, setSelectedSessionId] = useState("");
 
   useEffect(() => { fetchSessions(); }, [fetchSessions]);
@@ -115,21 +117,20 @@ export function DocIntelExportTab() {
         <CardHeader className="py-3 px-4">
           <CardTitle className="text-sm font-mono flex items-center gap-2">
             <FileSpreadsheet size={14} className="text-primary" />
-            Structured Export
+            {t("export.structuredExport")}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4 space-y-3">
           <p className="text-[10px] font-mono text-muted-foreground">
-            Export a validation session as a multi-sheet Excel workbook: Document Inventory, Extracted Fields, 
-            Mismatch Flags, Workflow Values, and Audit Log.
+            {t("export.exportHint")}
           </p>
 
           <div className="flex items-end gap-3">
             <div className="flex-1">
-              <label className="text-[10px] font-mono text-muted-foreground block mb-1">Select Session</label>
+              <label className="text-[10px] font-mono text-muted-foreground block mb-1">{t("export.selectSession")}</label>
               <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
                 <SelectTrigger className="h-8 text-xs font-mono">
-                  <SelectValue placeholder={loading ? "Loading..." : "Choose a session"} />
+                  <SelectValue placeholder={loading ? t("common.loading") : t("export.chooseSession")} />
                 </SelectTrigger>
                 <SelectContent>
                   {sessions.map(s => (
@@ -149,15 +150,15 @@ export function DocIntelExportTab() {
               className="text-xs font-mono gap-1.5"
             >
               <Download size={12} />
-              Export XLSX
+              {t("export.exportXlsx")}
             </Button>
           </div>
 
           {selectedSession && (
             <div className="text-[10px] font-mono text-muted-foreground border rounded p-2 bg-muted/10">
-              <p><strong>Mode:</strong> {selectedSession.shipment_mode} · <strong>Lane:</strong> {selectedSession.origin_country} → {selectedSession.destination_country}</p>
-              <p><strong>Docs:</strong> {Array.isArray(selectedSession.documents) ? selectedSession.documents.length : 0} · 
-                <strong> Mismatches:</strong> {Array.isArray(selectedSession.cross_doc_mismatches) ? selectedSession.cross_doc_mismatches.length : 0}
+              <p><strong>{t("export.mode")}:</strong> {selectedSession.shipment_mode} · <strong>{t("export.lane")}:</strong> {selectedSession.origin_country} → {selectedSession.destination_country}</p>
+              <p><strong>{t("export.docs")}:</strong> {Array.isArray(selectedSession.documents) ? selectedSession.documents.length : 0} · 
+                <strong> {t("export.mismatches")}:</strong> {Array.isArray(selectedSession.cross_doc_mismatches) ? selectedSession.cross_doc_mismatches.length : 0}
               </p>
             </div>
           )}

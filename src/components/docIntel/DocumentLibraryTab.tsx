@@ -9,6 +9,7 @@ import { Upload, Search, FileText, Trash2, Filter, FolderOpen, RotateCw, AlertTr
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { DocumentDetailSheet } from "./DocumentDetailSheet";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const DOC_TYPE_OPTIONS = [
   { value: "", label: "All Types" },
@@ -35,25 +36,25 @@ const TYPE_COLORS: Record<string, string> = {
   customs_declaration: "bg-rose-500/20 text-rose-400 border-rose-500/30",
 };
 
-function ExtractionStatusBadge({ status, onRetry }: { status: string; onRetry?: () => void }) {
+function ExtractionStatusBadge({ status, onRetry, t }: { status: string; onRetry?: () => void; t: (key: string) => string }) {
   switch (status) {
     case "processing":
       return (
         <Badge variant="outline" className="text-[9px] font-mono bg-blue-500/10 text-blue-400 border-blue-500/30 gap-1">
-          <Loader2 size={10} className="animate-spin" /> Processing
+          <Loader2 size={10} className="animate-spin" /> {t("library.extraction.processing")}
         </Badge>
       );
     case "complete":
       return (
         <Badge variant="outline" className="text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
-          Extracted
+          {t("library.extraction.extracted")}
         </Badge>
       );
     case "failed":
       return (
         <div className="flex items-center gap-1">
           <Badge variant="outline" className="text-[9px] font-mono bg-destructive/10 text-destructive border-destructive/30 gap-1">
-            <AlertTriangle size={10} /> Failed
+            <AlertTriangle size={10} /> {t("library.extraction.failed")}
           </Badge>
           {onRetry && (
             <Button
@@ -61,7 +62,7 @@ function ExtractionStatusBadge({ status, onRetry }: { status: string; onRetry?: 
               size="icon"
               className="h-5 w-5 text-muted-foreground hover:text-primary"
               onClick={(e) => { e.stopPropagation(); onRetry(); }}
-              title="Retry extraction"
+              title={t("library.retryExtraction")}
             >
               <RotateCw size={10} />
             </Button>
@@ -71,7 +72,7 @@ function ExtractionStatusBadge({ status, onRetry }: { status: string; onRetry?: 
     default:
       return (
         <Badge variant="outline" className="text-[9px] font-mono bg-yellow-500/10 text-yellow-500 border-yellow-500/30">
-          Pending Extract
+          {t("library.extraction.pending")}
         </Badge>
       );
   }
@@ -79,6 +80,7 @@ function ExtractionStatusBadge({ status, onRetry }: { status: string; onRetry?: 
 
 export function DocumentLibraryTab() {
   const { documents, loading, uploading, fetchDocuments, uploadDocument, deleteDocument, extractDocument } = useDocumentLibrary();
+  const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [filters, setFilters] = useState<Partial<LibraryFilters>>({});
   const [showFilters, setShowFilters] = useState(false);
@@ -142,10 +144,10 @@ export function DocumentLibraryTab() {
         <CardContent className="py-8 flex flex-col items-center gap-2">
           <Upload size={24} className="text-primary/60" />
           <p className="text-sm font-mono text-muted-foreground">
-            {uploading ? "Uploading..." : "Drop files here or click to upload"}
+            {uploading ? t("library.uploading") : t("library.dropHere")}
           </p>
           <p className="text-[10px] font-mono text-muted-foreground/60">
-            PDF, DOCX, JPG, PNG — Auto-extracted after upload
+            {t("library.fileTypes")}
           </p>
           <input
             ref={fileInputRef}
@@ -162,14 +164,14 @@ export function DocumentLibraryTab() {
         <div className="relative flex-1 min-w-[200px]">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search documents..."
+            placeholder={t("library.searchDocs")}
             value={filters.search || ""}
             onChange={e => handleFilterChange("search", e.target.value)}
             className="pl-9 h-8 text-xs font-mono"
           />
         </div>
         <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="text-[10px] font-mono gap-1">
-          <Filter size={12} /> Filters
+          <Filter size={12} /> {t("library.filters")}
         </Button>
       </div>
 
@@ -177,7 +179,7 @@ export function DocumentLibraryTab() {
         <div className="flex items-center gap-2 flex-wrap">
           <Select value={filters.documentType || ""} onValueChange={v => handleFilterChange("documentType", v)}>
             <SelectTrigger className="w-[180px] h-8 text-xs font-mono">
-              <SelectValue placeholder="Document type" />
+              <SelectValue placeholder={t("library.docType")} />
             </SelectTrigger>
             <SelectContent>
               {DOC_TYPE_OPTIONS.map(o => (
@@ -186,7 +188,7 @@ export function DocumentLibraryTab() {
             </SelectContent>
           </Select>
           <Input
-            placeholder="Shipment ID"
+            placeholder={t("library.shipmentId")}
             value={filters.shipmentId || ""}
             onChange={e => handleFilterChange("shipmentId", e.target.value)}
             className="w-[160px] h-8 text-xs font-mono"
@@ -195,13 +197,13 @@ export function DocumentLibraryTab() {
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground font-mono text-sm animate-pulse">Loading library...</div>
+        <div className="text-center py-12 text-muted-foreground font-mono text-sm animate-pulse">{t("library.loadingLibrary")}</div>
       ) : documents.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="py-12 flex flex-col items-center gap-2">
             <FolderOpen size={32} className="text-muted-foreground/40" />
-            <p className="text-sm font-mono text-muted-foreground">No documents yet</p>
-            <p className="text-[10px] font-mono text-muted-foreground/60">Upload documents to start building your intelligence library</p>
+            <p className="text-sm font-mono text-muted-foreground">{t("library.noDocuments")}</p>
+            <p className="text-[10px] font-mono text-muted-foreground/60">{t("library.noDocumentsHint")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -236,11 +238,12 @@ export function DocumentLibraryTab() {
                   <ExtractionStatusBadge
                     status={doc.extraction_status}
                     onRetry={() => extractDocument(doc)}
+                    t={t}
                   />
                 </div>
 
                 {doc.shipment_id && (
-                  <p className="text-[9px] font-mono text-muted-foreground">Shipment: {doc.shipment_id}</p>
+                  <p className="text-[9px] font-mono text-muted-foreground">{t("library.shipmentLabel")}: {doc.shipment_id}</p>
                 )}
                 {doc.origin_country && doc.destination_country && (
                   <p className="text-[9px] font-mono text-muted-foreground">{doc.origin_country} → {doc.destination_country}</p>

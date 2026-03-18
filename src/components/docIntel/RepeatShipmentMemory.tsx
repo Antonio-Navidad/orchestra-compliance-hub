@@ -6,6 +6,7 @@ import { AlertTriangle, CheckCircle, History, ArrowRight, RefreshCw } from "luci
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/hooks/useLanguage";
 import { RULE_PACKS_VERSION } from "@/lib/jurisdictionRulePacks";
 
 interface PriorSession {
@@ -47,6 +48,7 @@ export function RepeatShipmentMemory({
   onApplyPrior,
 }: RepeatShipmentMemoryProps) {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [priorSessions, setPriorSessions] = useState<PriorSession[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPrior, setSelectedPrior] = useState<PriorSession | null>(null);
@@ -110,28 +112,26 @@ export function RepeatShipmentMemory({
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-mono flex items-center gap-2">
             <History size={14} className="text-amber-400" />
-            Repeat Shipment Detected
+            {t("memory.repeatDetected")}
             <Badge variant="outline" className="text-[9px] font-mono bg-amber-500/10 text-amber-400 border-amber-500/30">
-              {priorSessions.length} prior
+              {priorSessions.length} {t("memory.prior")}
             </Badge>
           </CardTitle>
           <Button variant="ghost" size="sm" onClick={() => setDismissed(true)} className="text-[10px] font-mono h-6">
-            Dismiss
+            {t("memory.dismiss")}
           </Button>
         </div>
       </CardHeader>
       <CardContent className="px-4 pb-3 space-y-3">
         <p className="text-[10px] font-mono text-muted-foreground">
-          You've shipped on <strong>{originCountry} → {destinationCountry}</strong> ({shipmentMode}) before.
-          Pre-fill from a prior session?
+          {t("memory.preFillHint")} <strong>{originCountry} → {destinationCountry}</strong> ({shipmentMode})
         </p>
 
         {complianceChanged && (
           <div className="flex items-center gap-2 p-2 rounded bg-destructive/10 border border-destructive/20">
             <AlertTriangle size={14} className="text-destructive shrink-0" />
             <p className="text-[10px] font-mono text-destructive">
-              Compliance requirements on this lane have been updated since your last shipment.
-              Review the current lane guidance before proceeding.
+              {t("memory.complianceChanged")}
             </p>
           </div>
         )}
@@ -166,7 +166,7 @@ export function RepeatShipmentMemory({
           <>
             <div className="border rounded p-2.5 space-y-1.5">
               <p className="text-[10px] font-mono font-medium text-muted-foreground mb-1">
-                Field Comparison: Previous vs Current
+                {t("memory.fieldComparison")}
               </p>
               {buildDiffs(selectedPrior).map(d => (
                 <div key={d.field} className="flex items-center gap-2 text-[10px] font-mono">
@@ -195,7 +195,7 @@ export function RepeatShipmentMemory({
               className="text-xs font-mono gap-1.5 w-full"
             >
               <RefreshCw size={12} />
-              Pre-Fill From This Session
+              {t("memory.preFillBtn")}
             </Button>
           </>
         )}

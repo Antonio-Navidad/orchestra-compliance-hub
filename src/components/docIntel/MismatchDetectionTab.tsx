@@ -9,9 +9,11 @@ import { HelpInfoIcon } from "@/components/HelpInfoIcon";
 import { useDocumentLibrary, type LibraryDocument } from "@/hooks/useDocumentLibrary";
 import { detectLibraryDocMismatches, type CrossDocMismatch, type FieldComparisonLog, type ComparisonResult } from "@/lib/crossDocMatching";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export function MismatchDetectionTab() {
   const { documents, loading, fetchDocuments } = useDocumentLibrary();
+  const { t } = useLanguage();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [comparisonResult, setComparisonResult] = useState<ComparisonResult | null>(null);
   const [showDebug, setShowDebug] = useState(false);
@@ -71,22 +73,22 @@ export function MismatchDetectionTab() {
         <CardHeader className="py-3 px-4">
           <CardTitle className="text-sm font-mono flex items-center gap-2">
             <GitCompare size={14} className="text-primary" />
-            Compare Documents
+            {t("mismatch.compareDocuments")}
             <HelpInfoIcon helpKey="compare_documents" size={13} />
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4">
           <p className="text-[10px] font-mono text-muted-foreground mb-3">
-            Select two or more extracted documents to run a fresh cross-document comparison.
+            {t("mismatch.selectHint")}
           </p>
 
           {loading ? (
             <div className="py-8 text-center text-muted-foreground font-mono text-sm animate-pulse">
-              Loading documents...
+              {t("mismatch.loadingDocs")}
             </div>
           ) : extractedDocs.length < 2 ? (
             <div className="py-8 text-center text-muted-foreground font-mono text-sm">
-              Need at least 2 extracted documents to compare. Upload and extract documents first.
+              {t("mismatch.needTwoDocs")}
             </div>
           ) : (
             <>
@@ -108,12 +110,12 @@ export function MismatchDetectionTab() {
                     <div className="flex-1 min-w-0">
                       <span className="font-medium truncate block">{doc.file_name}</span>
                       <span className="text-[9px] text-muted-foreground">
-                        {doc.document_type || "Unknown type"}
+                        {doc.document_type || t("mismatch.unknownType")}
                         {doc.origin_country && doc.destination_country && ` · ${doc.origin_country} → ${doc.destination_country}`}
                       </span>
                     </div>
                     <Badge variant="outline" className="text-[9px] shrink-0 bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
-                      Extracted
+                      {t("library.extraction.extracted")}
                     </Badge>
                   </label>
                 ))}
@@ -125,7 +127,7 @@ export function MismatchDetectionTab() {
                 className="w-full font-mono text-xs"
               >
                 <GitCompare size={12} className="mr-1.5" />
-                Compare {selectedIds.size} Document{selectedIds.size !== 1 ? "s" : ""}
+                {t("mismatch.compareBtn")} ({selectedIds.size})
               </Button>
             </>
           )}
@@ -138,7 +140,7 @@ export function MismatchDetectionTab() {
           <CardHeader className="py-3 px-4">
             <CardTitle className="text-sm font-mono flex items-center gap-2">
               <AlertTriangle size={14} className="text-amber-400" />
-              Comparison Results
+              {t("mismatch.results")}
               {comparedMismatches.length > 0 && (
                 <Badge variant="outline" className="ml-auto text-[9px] bg-destructive/10 text-destructive border-destructive/30">
                   {comparedMismatches.filter((m) => m.severity === "high").length} high ·{" "}
@@ -153,7 +155,7 @@ export function MismatchDetectionTab() {
               <div className="py-6 text-center flex flex-col items-center gap-2">
                 <CheckCircle size={20} className="text-emerald-400" />
                 <p className="text-xs font-mono text-muted-foreground">
-                  No cross-document mismatches detected
+                  {t("mismatch.noMismatches")}
                 </p>
               </div>
             ) : (
@@ -214,8 +216,8 @@ export function MismatchDetectionTab() {
             <CollapsibleTrigger asChild>
               <CardHeader className="py-3 px-4 cursor-pointer hover:bg-muted/20 transition-colors">
                 <CardTitle className="text-sm font-mono flex items-center gap-2">
-                  <Bug size={14} className="text-muted-foreground" />
-                  Debug: Field Comparison Log ({debugLog.length} fields)
+                   <Bug size={14} className="text-muted-foreground" />
+                  {t("mismatch.debugLog")} ({debugLog.length})
                   <ChevronDown size={14} className={cn("ml-auto transition-transform text-muted-foreground", showDebug && "rotate-180")} />
                 </CardTitle>
               </CardHeader>

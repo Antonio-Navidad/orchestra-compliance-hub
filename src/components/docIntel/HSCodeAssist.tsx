@@ -9,6 +9,7 @@ import { Loader2, Search, AlertTriangle, Flag, CheckCircle, RotateCcw, BookOpen,
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface HsSuggestion {
   code: string;
@@ -60,6 +61,7 @@ const PRODUCT_SUGGESTIONS = [
 ];
 
 export function HSCodeAssist({ destinationCountry, originCountry, transportMode, onSelectCode, onFlagForReview }: HSCodeAssistProps) {
+  const { t } = useLanguage();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<HsSuggestion[]>([]);
@@ -236,7 +238,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
       <CardHeader className="py-3 px-4">
         <CardTitle className="text-sm font-mono flex items-center gap-2">
           <Search size={14} className="text-primary" />
-          HS Code Assist
+          {t("hsAssist.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-3">
@@ -244,12 +246,12 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
         <div className="flex items-center justify-between">
           <p className="text-[10px] font-mono text-muted-foreground">
             {isReverseMode
-              ? "Enter an HS code to look up its definition, coverage, and risk flags."
-              : "Enter a plain-English product description to get suggested HS codes."}
+              ? t("hsAssist.reverseHint")
+              : t("hsAssist.forwardHint")}
           </p>
           <div className="flex items-center gap-2">
             <Label htmlFor="reverse-mode" className="text-[10px] font-mono text-muted-foreground cursor-pointer">
-              {isReverseMode ? "Lookup by HS Code" : "Lookup by Description"}
+              {isReverseMode ? t("hsAssist.lookupByHs") : t("hsAssist.lookupByDesc")}
             </Label>
             <Switch
               id="reverse-mode"
@@ -282,7 +284,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
             />
             <Button onClick={lookupHS} disabled={loading || !query.trim()} size="sm" className="text-xs font-mono gap-1">
               {loading ? <Loader2 size={12} className="animate-spin" /> : isReverseMode ? <RotateCcw size={12} /> : <Search size={12} />}
-              {isReverseMode ? "Reverse Lookup" : "Lookup"}
+              {isReverseMode ? t("hsAssist.reverseLookup") : t("hsAssist.lookup")}
             </Button>
           </div>
 
@@ -307,7 +309,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
 
         {destinationCountry && (
           <p className="text-[9px] font-mono text-muted-foreground">
-            Destination: {destinationCountry} · Origin: {originCountry || "—"} · Mode: {transportMode || "—"}
+            {t("hsAssist.destination")}: {destinationCountry} · {t("hsAssist.origin")}: {originCountry || "—"} · {t("hsAssist.mode")}: {transportMode || "—"}
           </p>
         )}
 
@@ -321,15 +323,15 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                     <span className="text-sm font-mono font-bold text-primary">{s.code}</span>
                     {i === 0 && (
                       <Badge variant="outline" className="text-[9px] font-mono bg-primary/10 text-primary border-primary/30">
-                        Best Match
+                        {t("hsAssist.bestMatch")}
                       </Badge>
                     )}
                     <Badge variant="outline" className="text-[9px] font-mono">
-                      {Math.round(s.confidence * 100)}% confidence
+                      {Math.round(s.confidence * 100)}% {t("hsAssist.confidence")}
                     </Badge>
                     <Badge variant="outline" className={cn("text-[9px] font-mono", riskColor(s.riskLevel))}>
                       {s.riskLevel === "high" && <ShieldAlert size={8} className="mr-0.5" />}
-                      {s.riskLevel} risk
+                      {s.riskLevel} {t("hsAssist.risk")}
                     </Badge>
                   </div>
                 </div>
@@ -338,11 +340,11 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
 
                 <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
                   <div className="bg-muted/20 rounded p-1.5">
-                    <span className="text-muted-foreground">Duty Rate:</span>{" "}
+                    <span className="text-muted-foreground">{t("hsAssist.dutyRate")}:</span>{" "}
                     <span className="font-medium">{s.dutyRate}</span>
                   </div>
                   <div className="bg-muted/20 rounded p-1.5">
-                    <span className="text-muted-foreground">Reason:</span>{" "}
+                    <span className="text-muted-foreground">{t("hsAssist.reason")}:</span>{" "}
                     <span className="font-medium">{s.reason}</span>
                   </div>
                 </div>
@@ -360,7 +362,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                     onClick={() => onSelectCode?.(s.code)}
                     className="text-[10px] font-mono h-6 gap-1"
                   >
-                    <CheckCircle size={10} /> Use This Code
+                    <CheckCircle size={10} /> {t("hsAssist.useThisCode")}
                   </Button>
                   <Button
                     variant="ghost"
@@ -370,7 +372,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                     className="text-[10px] font-mono h-6 gap-1 text-amber-400"
                   >
                     <Flag size={10} />
-                    {flaggedCodes.has(s.code) ? "Flagged" : "Flag for Broker Review"}
+                    {flaggedCodes.has(s.code) ? t("hsAssist.flagged") : t("hsAssist.flagForReview")}
                   </Button>
                 </div>
               </div>
@@ -386,20 +388,20 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                 <BookOpen size={14} className="text-primary" />
                 <span className="text-sm font-mono font-bold text-primary">{reverseResult.code}</span>
                 <Badge variant="outline" className="text-[9px] font-mono bg-primary/10 text-primary border-primary/30">
-                  Reverse Lookup
+                  {t("hsAssist.reverseLookup")}
                 </Badge>
               </div>
 
               <div className="space-y-2">
                 <div className="bg-muted/20 rounded p-2">
-                  <p className="text-[10px] font-mono text-muted-foreground mb-1">Official Description</p>
+                  <p className="text-[10px] font-mono text-muted-foreground mb-1">{t("hsAssist.officialDesc")}</p>
                   <p className="text-xs font-mono font-medium">{reverseResult.officialDescription}</p>
                 </div>
 
                 {reverseResult.coveredProducts.length > 0 && (
                   <div className="bg-emerald-500/5 border border-emerald-500/20 rounded p-2">
                     <p className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 mb-1 flex items-center gap-1">
-                      <CheckCircle size={10} /> Products Covered
+                      <CheckCircle size={10} /> {t("hsAssist.productsCovered")}
                     </p>
                     <ul className="text-[10px] font-mono space-y-0.5">
                       {reverseResult.coveredProducts.map((p, i) => (
@@ -412,7 +414,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                 {reverseResult.notCoveredProducts.length > 0 && (
                   <div className="bg-destructive/5 border border-destructive/20 rounded p-2">
                     <p className="text-[10px] font-mono text-destructive mb-1 flex items-center gap-1">
-                      <AlertTriangle size={10} /> Common Misclassifications / Warnings
+                      <AlertTriangle size={10} /> {t("hsAssist.misclassifications")}
                     </p>
                     <ul className="text-[10px] font-mono space-y-0.5">
                       {reverseResult.notCoveredProducts.map((p, i) => (
@@ -424,11 +426,11 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
 
                 <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
                   <div className="bg-muted/20 rounded p-1.5">
-                    <span className="text-muted-foreground">Duty Rate Range:</span>{" "}
+                    <span className="text-muted-foreground">{t("hsAssist.dutyRateRange")}:</span>{" "}
                     <span className="font-medium">{reverseResult.dutyRateRange}</span>
                   </div>
                   <div className="bg-muted/20 rounded p-1.5">
-                    <span className="text-muted-foreground">Audit Risk Flags:</span>{" "}
+                    <span className="text-muted-foreground">{t("hsAssist.auditRiskFlags")}:</span>{" "}
                     <span className="font-medium">
                       {reverseResult.auditRiskFlags.length > 0 ? reverseResult.auditRiskFlags.join(", ") : "None"}
                     </span>
@@ -438,7 +440,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                 {reverseResult.tradeRestrictions.length > 0 && (
                   <div className="bg-amber-500/10 border border-amber-500/20 rounded p-2">
                     <p className="text-[10px] font-mono text-amber-600 dark:text-amber-400 mb-1 flex items-center gap-1">
-                      <ShieldAlert size={10} /> Trade Restriction Flags
+                      <ShieldAlert size={10} /> {t("hsAssist.tradeRestrictions")}
                     </p>
                     <ul className="text-[10px] font-mono space-y-0.5">
                       {reverseResult.tradeRestrictions.map((r, i) => (
@@ -455,7 +457,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
               <div className="border rounded p-3 space-y-2">
                 <p className="text-[10px] font-mono font-medium flex items-center gap-1">
                   <Info size={10} className="text-primary" />
-                  Similar / Commonly Confused Codes
+                  {t("hsAssist.similarCodes")}
                 </p>
                 {reverseResult.adjacentCodes.map((adj, i) => (
                   <div key={i} className="bg-muted/20 rounded p-2 flex items-start gap-2">
@@ -473,7 +475,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                       }}
                       className="text-[9px] font-mono h-5 shrink-0"
                     >
-                      Lookup
+                      {t("hsAssist.lookup")}
                     </Button>
                   </div>
                 ))}
