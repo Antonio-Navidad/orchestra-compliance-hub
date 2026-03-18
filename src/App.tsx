@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { WorkspacePurposeContext, useWorkspacePurposeState, useWorkspacePurpose } from "@/hooks/useWorkspacePurpose";
 import { AppLayout } from "@/components/AppLayout";
+import { LanguageProvider } from "@/hooks/useLanguage";
+import { LanguageBanner } from "@/components/LanguageBanner";
 import Dashboard from "./pages/Dashboard";
 import ShipmentDetail from "./pages/ShipmentDetail";
 import AdminSettings from "./pages/AdminSettings";
