@@ -71,14 +71,14 @@ export function ShipmentTable({ shipments, mode }: ShipmentTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="bg-secondary/50 hover:bg-secondary/50">
-              <TableHead className="font-mono text-xs text-muted-foreground">SHIPMENT ID</TableHead>
-              {!mode && <TableHead className="font-mono text-xs text-muted-foreground">MODE</TableHead>}
-              <TableHead className="font-mono text-xs text-muted-foreground">CONSIGNEE</TableHead>
-              <TableHead className="font-mono text-xs text-muted-foreground">DESCRIPTION</TableHead>
-              <TableHead className="font-mono text-xs text-muted-foreground">HS CODE</TableHead>
-              <TableHead className="font-mono text-xs text-muted-foreground text-right">DECLARED VALUE</TableHead>
-              <TableHead className="font-mono text-xs text-muted-foreground text-center">RISK</TableHead>
-              <TableHead className="font-mono text-xs text-muted-foreground">STATUS</TableHead>
+              <TableHead className="font-mono text-xs text-muted-foreground">{t("table.shipmentId")}</TableHead>
+              {!mode && <TableHead className="font-mono text-xs text-muted-foreground">{t("table.mode")}</TableHead>}
+              <TableHead className="font-mono text-xs text-muted-foreground">{t("table.consignee")}</TableHead>
+              <TableHead className="font-mono text-xs text-muted-foreground">{t("table.description")}</TableHead>
+              <TableHead className="font-mono text-xs text-muted-foreground">{t("table.hsCode")}</TableHead>
+              <TableHead className="font-mono text-xs text-muted-foreground text-right">{t("table.declaredValue")}</TableHead>
+              <TableHead className="font-mono text-xs text-muted-foreground text-center">{t("table.risk")}</TableHead>
+              <TableHead className="font-mono text-xs text-muted-foreground">{t("common.status")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
