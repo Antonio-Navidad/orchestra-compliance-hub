@@ -221,8 +221,8 @@ export default function AuditTrail() {
         ) : filtered.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             <History size={32} className="mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No audit entries found</p>
-            <p className="text-xs mt-1">Logic changes will appear here when rules, thresholds, or jurisdiction settings are modified.</p>
+             <p className="text-sm">{t("audit.noEntries")}</p>
+             <p className="text-xs mt-1">{t("audit.noEntriesHint")}</p>
           </div>
         ) : (
           <div className="space-y-1">
