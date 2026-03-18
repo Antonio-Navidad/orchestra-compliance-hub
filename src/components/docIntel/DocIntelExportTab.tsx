@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, FileSpreadsheet } from "lucide-react";
 import { useValidationHistory, type ValidationSession } from "@/hooks/useValidationHistory";
+import { useLanguage } from "@/hooks/useLanguage";
 import * as XLSX from "xlsx";
 
 export function DocIntelExportTab() {
