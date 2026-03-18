@@ -671,7 +671,7 @@ export default function DocumentValidator({ embedded }: { embedded?: boolean } =
             <History size={12} /> {t("validator.history")}
           </Button>
           <Button variant="outline" size="sm" className="font-mono text-[10px] gap-1.5" onClick={handleResetAll}>
-            <RotateCcw size={12} /> Reset
+            <RotateCcw size={12} /> {t("common.reset")}
           </Button>
           {ruleResult && !savedSessionId && (
             <Button variant="default" size="sm" className="font-mono text-[10px] gap-1.5" onClick={handleSaveSession}>
