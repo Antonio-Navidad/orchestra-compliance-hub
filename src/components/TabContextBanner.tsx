@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, Lightbulb } from "lucide-react";
-import { TAB_BANNERS } from "@/lib/helpContent";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const STORAGE_KEY = "orchestra-dismissed-banners";
 
@@ -18,23 +18,31 @@ function dismiss(tabId: string) {
 
 export function TabContextBanner({ tabId }: { tabId: string }) {
   const [visible, setVisible] = useState(false);
-  const banner = TAB_BANNERS[tabId];
+  const { t } = useLanguage();
+
+  const messageKey = `tabBanner.${tabId}.message`;
+  const actionKey = `tabBanner.${tabId}.action`;
+  const message = t(messageKey);
+  const action = t(actionKey);
+
+  // If the key returns itself, there's no banner for this tab
+  const hasBanner = message !== messageKey;
 
   useEffect(() => {
-    if (!banner) return;
+    if (!hasBanner) return;
     setVisible(!getDismissed().has(tabId));
-  }, [tabId, banner]);
+  }, [tabId, hasBanner]);
 
-  if (!banner || !visible) return null;
+  if (!hasBanner || !visible) return null;
 
   return (
     <div className="flex items-start gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 mb-4">
       <Lightbulb className="h-4 w-4 text-primary shrink-0 mt-0.5" />
       <div className="flex-1 min-w-0">
         <p className="text-xs text-foreground">
-          {banner.message}
-          {banner.action && (
-            <span className="text-primary font-medium ml-1">{banner.action}</span>
+          {message}
+          {action && action !== actionKey && (
+            <span className="text-primary font-medium ml-1">{action}</span>
           )}
         </p>
       </div>

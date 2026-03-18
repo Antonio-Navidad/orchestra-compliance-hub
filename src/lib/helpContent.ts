@@ -1,4 +1,31 @@
 // ── Layer 1: Sidebar tooltip descriptions ──────────────────────────────
+// Now uses i18n keys — the actual text is in translations.ts
+export const NAV_TOOLTIP_KEYS: Record<string, string> = {
+  "/": "tooltip.dashboard",
+  "/doc-intel": "tooltip.docIntel",
+  "/dian-compliance": "tooltip.dianCompliance",
+  "/classify": "tooltip.classify",
+  "/review": "tooltip.review",
+  "/decision-twin": "tooltip.decisionTwin",
+  "/legal": "tooltip.legal",
+  "/audit-trail": "tooltip.auditTrail",
+  "/intake": "tooltip.intake",
+  "/creator-mode": "tooltip.creatorMode",
+  "/route-builder": "tooltip.routeBuilder",
+  "/watch-mode": "tooltip.watchMode",
+  "/seller-mode": "tooltip.sellerMode",
+  "/analytics": "tooltip.analytics",
+  "/pricing": "tooltip.pricing",
+  "/guide": "tooltip.guide",
+  "/team-chat": "tooltip.teamChat",
+  "/brokers": "tooltip.brokers",
+  "/admin": "tooltip.admin",
+  "/jurisdiction-settings": "tooltip.jurisdictions",
+  "/teams": "tooltip.teams",
+  "/validate-docs": "tooltip.validateDocs",
+};
+
+// Legacy export kept for backward compat — components should use NAV_TOOLTIP_KEYS + t()
 export const NAV_TOOLTIPS: Record<string, string> = {
   "/": "Overview of all active shipments, compliance status, and pending actions",
   "/doc-intel": "Upload, extract, and compare shipping documents to catch errors before customs",
@@ -25,6 +52,7 @@ export const NAV_TOOLTIPS: Record<string, string> = {
 };
 
 // ── Layer 2: Tab-level context banners ──────────────────────────────────
+// Now driven by i18n keys: tabBanner.{tabId}.message / tabBanner.{tabId}.action
 export interface TabBanner {
   message: string;
   action: string;

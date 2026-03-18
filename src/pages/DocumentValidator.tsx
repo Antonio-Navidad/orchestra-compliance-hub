@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveLane, type LaneResolverResult, type ResolvedLaneContext } from "@/lib/laneResolver";
+import { useLanguage } from "@/hooks/useLanguage";
 import { LaneGuidancePanel } from "@/components/LaneGuidancePanel";
 import { RULE_PACKS_VERSION } from "@/lib/jurisdictionRulePacks";
 import { Button } from "@/components/ui/button";
@@ -122,6 +123,7 @@ interface ValidationAuditMeta {
 }
 
 export default function DocumentValidator({ embedded }: { embedded?: boolean } = {}) {
+  const { t } = useLanguage();
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
   const [shipmentMode, setShipmentMode] = useState("sea");
   const [originCountry, setOriginCountry] = useState("");
@@ -650,30 +652,30 @@ export default function DocumentValidator({ embedded }: { embedded?: boolean } =
       )}
       {!resolvedLane && !originCountry && !destinationCountry && (
         <div className="rounded border border-dashed border-muted-foreground/30 bg-muted/30 px-3 py-1.5 font-mono text-[10px] text-muted-foreground">
-          No lane selected — choose a lane from Templates or set Origin/Destination to load jurisdiction rule packs.
+          {t("validator.noLane")}
         </div>
       )}
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold font-mono">DOCUMENT PACKET VALIDATOR</h1>
+          <h1 className="text-xl font-bold font-mono">{t("validator.pageTitle")}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Deterministic · Versioned · Auditable — v{RULES_VERSION}
+            {t("validator.pageSubtitle", { version: RULES_VERSION })}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm" className="font-mono text-[10px] gap-1.5" onClick={() => setShowTemplates(true)}>
-            <LayoutTemplate size={12} /> Templates
+            <LayoutTemplate size={12} /> {t("validator.templates")}
           </Button>
           <Button variant="outline" size="sm" className="font-mono text-[10px] gap-1.5" onClick={() => { setShowHistory(true); fetchSessions(); }}>
-            <History size={12} /> History
+            <History size={12} /> {t("validator.history")}
           </Button>
           <Button variant="outline" size="sm" className="font-mono text-[10px] gap-1.5" onClick={handleResetAll}>
-            <RotateCcw size={12} /> Reset
+            <RotateCcw size={12} /> {t("common.reset")}
           </Button>
           {ruleResult && !savedSessionId && (
             <Button variant="default" size="sm" className="font-mono text-[10px] gap-1.5" onClick={handleSaveSession}>
-              <Save size={12} /> Save Session
+              <Save size={12} /> {t("validator.saveSession")}
             </Button>
           )}
           {savedSessionId && (
@@ -832,23 +834,23 @@ export default function DocumentValidator({ embedded }: { embedded?: boolean } =
       {documents.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Card className="border-border bg-card"><CardContent className="py-3 px-4">
-            <p className="text-[10px] font-mono text-muted-foreground">DOCUMENTS</p>
+            <p className="text-[10px] font-mono text-muted-foreground">{t("validator.stat.documents")}</p>
             <p className="text-2xl font-bold font-mono">{visibleDocs.length}</p>
           </CardContent></Card>
           <Card className="border-border bg-card"><CardContent className="py-3 px-4">
-            <p className="text-[10px] font-mono text-muted-foreground">FIELDS EXTRACTED</p>
+            <p className="text-[10px] font-mono text-muted-foreground">{t("validator.stat.fieldsExtracted")}</p>
             <p className="text-2xl font-bold font-mono">{totalFields}</p>
           </CardContent></Card>
           <Card className="border-border bg-card"><CardContent className="py-3 px-4">
-            <p className="text-[10px] font-mono text-muted-foreground">AUTO-APPROVED</p>
+            <p className="text-[10px] font-mono text-muted-foreground">{t("validator.stat.autoApproved")}</p>
             <p className="text-2xl font-bold font-mono text-risk-low">{highConfFields}</p>
           </CardContent></Card>
           <Card className="border-border bg-card"><CardContent className="py-3 px-4">
-            <p className="text-[10px] font-mono text-muted-foreground">NEEDS REVIEW</p>
+            <p className="text-[10px] font-mono text-muted-foreground">{t("validator.stat.needsReview")}</p>
             <p className="text-2xl font-bold font-mono text-risk-medium">{lowConfFields}</p>
           </CardContent></Card>
           <Card className="border-border bg-card"><CardContent className="py-3 px-4">
-            <p className="text-[10px] font-mono text-muted-foreground">MISMATCHES</p>
+            <p className="text-[10px] font-mono text-muted-foreground">{t("validator.stat.mismatches")}</p>
             <p className="text-2xl font-bold font-mono text-risk-high">
               {crossDocMismatches.filter(m => m.mismatchType === "true_conflict").length}
             </p>
@@ -861,12 +863,12 @@ export default function DocumentValidator({ embedded }: { embedded?: boolean } =
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="font-mono">
-          <TabsTrigger value="upload" className="text-xs"><Upload size={12} className="mr-1.5" /> UPLOAD</TabsTrigger>
-          <TabsTrigger value="fields" className="text-xs" disabled={totalFields === 0}><Eye size={12} className="mr-1.5" /> FIELDS ({totalFields})</TabsTrigger>
+          <TabsTrigger value="upload" className="text-xs"><Upload size={12} className="mr-1.5" /> {t("validator.tab.upload")}</TabsTrigger>
+          <TabsTrigger value="fields" className="text-xs" disabled={totalFields === 0}><Eye size={12} className="mr-1.5" /> {t("validator.tab.fields")} ({totalFields})</TabsTrigger>
           <TabsTrigger value="mismatches" className="text-xs" disabled={crossDocMismatches.length === 0}>
-            <GitCompare size={12} className="mr-1.5" /> MISMATCHES ({crossDocMismatches.length})
+            <GitCompare size={12} className="mr-1.5" /> {t("validator.tab.mismatches")} ({crossDocMismatches.length})
           </TabsTrigger>
-          <TabsTrigger value="results" className="text-xs" disabled={!ruleResult}><CheckCircle size={12} className="mr-1.5" /> RESULTS</TabsTrigger>
+          <TabsTrigger value="results" className="text-xs" disabled={!ruleResult}><CheckCircle size={12} className="mr-1.5" /> {t("validator.tab.results")}</TabsTrigger>
         </TabsList>
 
         {/* ═══ UPLOAD TAB ═══ */}
@@ -879,18 +881,18 @@ export default function DocumentValidator({ embedded }: { embedded?: boolean } =
                 onClick={() => fileInputRef.current?.click()}>
                 <input ref={fileInputRef} type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={(e) => handleFiles(e.target.files)} />
                 <Upload size={36} className="mx-auto text-muted-foreground/40 mb-3" />
-                <p className="text-sm font-medium">Drop documents here or click to browse</p>
+                <p className="text-sm font-medium">{t("validator.dropZone")}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  PDF, JPG, PNG — invoices, packing lists, BOL, AWB, COO, labels, product photos
+                  {t("validator.dropZoneHint")}
                 </p>
                 <div className="flex items-center justify-center gap-3 mt-4">
                   <Button variant="outline" size="sm" className="font-mono text-[10px]"
                     onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>
-                    <FileText size={12} className="mr-1.5" /> Browse Files
+                    <FileText size={12} className="mr-1.5" /> {t("validator.browseFiles")}
                   </Button>
                   <Button variant="outline" size="sm" className="font-mono text-[10px]"
                     onClick={(e) => { e.stopPropagation(); cameraInputRef.current?.click(); }}>
-                    <Camera size={12} className="mr-1.5" /> Capture Photo
+                    <Camera size={12} className="mr-1.5" /> {t("validator.capturePhoto")}
                   </Button>
                   <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleFiles(e.target.files)} />
                 </div>
