@@ -251,7 +251,7 @@ export default function ShipmentIntake() {
                   <Input value={form.shipment_id} onChange={e => updateField('shipment_id', e.target.value)} placeholder="ORC-XXX" className="font-mono" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Direction *</Label>
+                  <Label className="text-xs font-mono">{t("intake.direction")} *</Label>
                   <Select value={form.direction} onValueChange={v => updateField('direction', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
