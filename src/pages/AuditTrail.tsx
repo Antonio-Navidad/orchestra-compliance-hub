@@ -415,7 +415,7 @@ export default function AuditTrail() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
-              <RotateCcw size={16} /> Confirm Rollback
+              <RotateCcw size={16} /> {t("audit.confirmRollback")}
             </DialogTitle>
           </DialogHeader>
           {rollbackTarget && (
