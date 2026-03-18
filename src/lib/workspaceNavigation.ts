@@ -4,7 +4,7 @@ import {
   Search, Eye, ShoppingCart, Radio, Zap, ShieldCheck,
   CreditCard, Lightbulb, Fingerprint, Truck, Plane, Ship,
   AlertTriangle, Bell, GitBranch, Box, Route, Layers,
-  HelpCircle,
+  HelpCircle, FileSearch,
 } from "lucide-react";
 import type { WorkspacePurpose } from "@/hooks/useWorkspacePurpose";
 
@@ -41,6 +41,7 @@ const MARKETPLACE_NAV: NavGroup[] = [
       { title: "Route Builder", url: "/route-builder", icon: Map },
       { title: "Hand-off Chain", url: "/watch-mode", icon: Radio },
       { title: "Classify Product", url: "/classify", icon: Search },
+      { title: "Doc Intelligence", url: "/doc-intel", icon: FileSearch },
     ],
   },
   {
@@ -65,7 +66,7 @@ const COMPLIANCE_NAV: NavGroup[] = [
     label: "COMPLIANCE",
     items: [
       { title: "Dashboard", url: "/", icon: Activity },
-      { title: "Document Validation", url: "/validate-docs", icon: FileText },
+      { title: "Doc Intelligence", url: "/doc-intel", icon: FileSearch },
       { title: "DIAN / Colombia", url: "/dian-compliance", icon: Fingerprint },
       { title: "Classify Product", url: "/classify", icon: Search },
     ],
@@ -111,7 +112,7 @@ const ROUTE_PLANNING_NAV: NavGroup[] = [
     items: [
       { title: "Watch Mode", url: "/watch-mode", icon: Radio },
       { title: "Classify Product", url: "/classify", icon: Search },
-      { title: "Document Validation", url: "/validate-docs", icon: FileText },
+      { title: "Doc Intelligence", url: "/doc-intel", icon: FileSearch },
       { title: "Legal Knowledge", url: "/legal", icon: BookOpen },
     ],
   },
@@ -152,7 +153,7 @@ const OPERATIONS_NAV: NavGroup[] = [
   {
     label: "COMPLIANCE",
     items: [
-      { title: "Document Validation", url: "/validate-docs", icon: FileText },
+      { title: "Doc Intelligence", url: "/doc-intel", icon: FileSearch },
       { title: "DIAN / Colombia", url: "/dian-compliance", icon: Fingerprint },
       { title: "Audit Trail", url: "/audit-trail", icon: Scale },
     ],
@@ -201,6 +202,7 @@ const ENTERPRISE_NAV: NavGroup[] = [
       { title: "Audit Trail", url: "/audit-trail", icon: Scale },
       { title: "Legal Knowledge", url: "/legal", icon: BookOpen },
       { title: "Classify Product", url: "/classify", icon: Search },
+      { title: "Doc Intelligence", url: "/doc-intel", icon: FileSearch },
     ],
   },
   {

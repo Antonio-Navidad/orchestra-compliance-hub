@@ -731,6 +731,93 @@ export type Database = {
           },
         ]
       }
+      document_library: {
+        Row: {
+          classification_confidence: number | null
+          created_at: string
+          destination_country: string | null
+          document_type: string | null
+          extracted_fields: Json | null
+          extraction_status: string | null
+          file_name: string
+          file_path: string
+          file_size_bytes: number | null
+          id: string
+          lane_id: string | null
+          metadata: Json | null
+          mime_type: string | null
+          origin_country: string | null
+          packet_id: string | null
+          shipment_id: string | null
+          tags: string[] | null
+          transport_mode: string | null
+          updated_at: string
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          classification_confidence?: number | null
+          created_at?: string
+          destination_country?: string | null
+          document_type?: string | null
+          extracted_fields?: Json | null
+          extraction_status?: string | null
+          file_name: string
+          file_path: string
+          file_size_bytes?: number | null
+          id?: string
+          lane_id?: string | null
+          metadata?: Json | null
+          mime_type?: string | null
+          origin_country?: string | null
+          packet_id?: string | null
+          shipment_id?: string | null
+          tags?: string[] | null
+          transport_mode?: string | null
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          classification_confidence?: number | null
+          created_at?: string
+          destination_country?: string | null
+          document_type?: string | null
+          extracted_fields?: Json | null
+          extraction_status?: string | null
+          file_name?: string
+          file_path?: string
+          file_size_bytes?: number | null
+          id?: string
+          lane_id?: string | null
+          metadata?: Json | null
+          mime_type?: string | null
+          origin_country?: string | null
+          packet_id?: string | null
+          shipment_id?: string | null
+          tags?: string[] | null
+          transport_mode?: string | null
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_library_lane_id_fkey"
+            columns: ["lane_id"]
+            isOneToOne: false
+            referencedRelation: "lanes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_library_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_packets: {
         Row: {
           completeness_score: number | null

@@ -121,7 +121,7 @@ interface ValidationAuditMeta {
   docCount: number;
 }
 
-export default function DocumentValidator() {
+export default function DocumentValidator({ embedded }: { embedded?: boolean } = {}) {
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
   const [shipmentMode, setShipmentMode] = useState("sea");
   const [originCountry, setOriginCountry] = useState("");

@@ -23,6 +23,7 @@ import AuditTrail from "./pages/AuditTrail";
 import JurisdictionSettings from "./pages/JurisdictionSettings";
 import ProductClassification from "./pages/ProductClassification";
 import DocumentValidator from "./pages/DocumentValidator";
+import DocumentIntelligence from "./pages/DocumentIntelligence";
 import DecisionTwin from "./pages/DecisionTwin";
 import RouteBuilder from "./pages/RouteBuilder";
 import TeamChat from "./pages/TeamChat";
@@ -102,6 +103,7 @@ function WorkspacePurposeWrapper() {
           <Route path="/hints" element={<PurposeGate><Hints /></PurposeGate>} />
           <Route path="/classify" element={<PurposeGate><ProductClassification /></PurposeGate>} />
           <Route path="/validate-docs" element={<PurposeGate><DocumentValidator /></PurposeGate>} />
+          <Route path="/doc-intel" element={<PurposeGate><DocumentIntelligence /></PurposeGate>} />
           <Route path="/route-builder" element={<PurposeGate><RouteBuilder /></PurposeGate>} />
           <Route path="/team-chat" element={<PurposeGate><TeamChat /></PurposeGate>} />
           <Route path="/dian-compliance" element={<PurposeGate><DianCompliance /></PurposeGate>} />
