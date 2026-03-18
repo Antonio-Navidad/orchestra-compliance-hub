@@ -388,7 +388,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                 <BookOpen size={14} className="text-primary" />
                 <span className="text-sm font-mono font-bold text-primary">{reverseResult.code}</span>
                 <Badge variant="outline" className="text-[9px] font-mono bg-primary/10 text-primary border-primary/30">
-                  Reverse Lookup
+                  {t("hsAssist.reverseLookup")}
                 </Badge>
               </div>
 
