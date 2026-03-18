@@ -51,12 +51,13 @@ const FIELD_ALIAS_MAP: Record<string, string> = {
   discharge_port: "port_of_discharge",
   destination_port: "port_of_discharge",
   arrival_port: "port_of_discharge",
-  // Quantities
-  total_pieces: "quantity",
-  total_qty: "quantity",
-  pieces: "quantity",
-  number_of_pieces: "quantity",
-  total_quantity: "quantity",
+  // Aggregate quantities (totals only — line-item "quantity" is excluded)
+  total_pieces: "total_quantity",
+  total_qty: "total_quantity",
+  number_of_pieces: "total_quantity",
+  total_quantity: "total_quantity",
+  total_packages: "total_quantity",
+  package_count: "total_quantity",
   // Weights
   total_gross_weight_kg: "gross_weight_kg",
   total_net_weight_kg: "net_weight_kg",
