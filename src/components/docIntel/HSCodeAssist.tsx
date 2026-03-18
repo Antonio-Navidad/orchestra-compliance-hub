@@ -430,7 +430,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                     <span className="font-medium">{reverseResult.dutyRateRange}</span>
                   </div>
                   <div className="bg-muted/20 rounded p-1.5">
-                    <span className="text-muted-foreground">Audit Risk Flags:</span>{" "}
+                    <span className="text-muted-foreground">{t("hsAssist.auditRiskFlags")}:</span>{" "}
                     <span className="font-medium">
                       {reverseResult.auditRiskFlags.length > 0 ? reverseResult.auditRiskFlags.join(", ") : "None"}
                     </span>
