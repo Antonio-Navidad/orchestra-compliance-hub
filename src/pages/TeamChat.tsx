@@ -231,7 +231,7 @@ export default function TeamChat() {
               {!activeChannel && (
                 <div className="text-center py-12">
                   <Hash className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
-                  <p className="text-xs text-muted-foreground font-mono">Select or create a channel</p>
+                  <p className="text-xs text-muted-foreground font-mono">{t("chat.selectOrCreate")}</p>
                 </div>
               )}
               {messages.map((msg) => {
