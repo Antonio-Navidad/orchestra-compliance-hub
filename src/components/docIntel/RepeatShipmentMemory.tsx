@@ -112,13 +112,13 @@ export function RepeatShipmentMemory({
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-mono flex items-center gap-2">
             <History size={14} className="text-amber-400" />
-            Repeat Shipment Detected
+            {t("memory.repeatDetected")}
             <Badge variant="outline" className="text-[9px] font-mono bg-amber-500/10 text-amber-400 border-amber-500/30">
-              {priorSessions.length} prior
+              {priorSessions.length} {t("memory.prior")}
             </Badge>
           </CardTitle>
           <Button variant="ghost" size="sm" onClick={() => setDismissed(true)} className="text-[10px] font-mono h-6">
-            Dismiss
+            {t("memory.dismiss")}
           </Button>
         </div>
       </CardHeader>
