@@ -279,29 +279,29 @@ export default function ShipmentDetail() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {invoice && (
                   <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-                    <h3 className="font-mono text-xs text-muted-foreground">INVOICE DATA</h3>
+                    <h3 className="font-mono text-xs text-muted-foreground">{t("detail.invoiceData")}</h3>
                     <div className="space-y-1.5 text-sm">
-                      <div className="flex justify-between"><span className="text-muted-foreground">Item</span><span className="text-right max-w-[200px] truncate">{invoice.item_description}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Qty</span><span className="font-mono">{invoice.quantity}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">HS Code</span><span className="font-mono">{invoice.hs_code}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-mono">${invoice.total_value.toLocaleString()}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Net Weight</span><span className="font-mono">{invoice.net_weight_kg.toLocaleString()} kg</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Gross Weight</span><span className="font-mono">{invoice.gross_weight_kg.toLocaleString()} kg</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Exporter</span><span className="text-right max-w-[200px] truncate">{invoice.exporter_name}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.item")}</span><span className="text-right max-w-[200px] truncate">{invoice.item_description}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.qty")}</span><span className="font-mono">{invoice.quantity}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.hsCode")}</span><span className="font-mono">{invoice.hs_code}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.total")}</span><span className="font-mono">${invoice.total_value.toLocaleString()}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.netWeight")}</span><span className="font-mono">{invoice.net_weight_kg.toLocaleString()} kg</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.grossWeight")}</span><span className="font-mono">{invoice.gross_weight_kg.toLocaleString()} kg</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.exporter")}</span><span className="text-right max-w-[200px] truncate">{invoice.exporter_name}</span></div>
                     </div>
                   </div>
                 )}
                 {manifest && (
                   <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-                    <h3 className="font-mono text-xs text-muted-foreground">MANIFEST DATA</h3>
+                    <h3 className="font-mono text-xs text-muted-foreground">{t("detail.manifestData")}</h3>
                     <div className="space-y-1.5 text-sm">
-                      <div className="flex justify-between"><span className="text-muted-foreground">Item</span><span className="text-right max-w-[200px] truncate">{manifest.item_description}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Qty</span><span className="font-mono">{manifest.quantity}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">HS Code</span><span className="font-mono">{manifest.hs_code}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-mono">${manifest.total_value.toLocaleString()}</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Net Weight</span><span className="font-mono">{manifest.net_weight_kg.toLocaleString()} kg</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">Gross Weight</span><span className="font-mono">{manifest.gross_weight_kg.toLocaleString()} kg</span></div>
-                      <div className="flex justify-between"><span className="text-muted-foreground">B/L</span><span className="font-mono">{manifest.bill_of_lading || '—'}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.item")}</span><span className="text-right max-w-[200px] truncate">{manifest.item_description}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.qty")}</span><span className="font-mono">{manifest.quantity}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.hsCode")}</span><span className="font-mono">{manifest.hs_code}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.total")}</span><span className="font-mono">${manifest.total_value.toLocaleString()}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.netWeight")}</span><span className="font-mono">{manifest.net_weight_kg.toLocaleString()} kg</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.grossWeight")}</span><span className="font-mono">{manifest.gross_weight_kg.toLocaleString()} kg</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.billOfLading")}</span><span className="font-mono">{manifest.bill_of_lading || '—'}</span></div>
                     </div>
                   </div>
                 )}
