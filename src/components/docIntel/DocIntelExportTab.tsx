@@ -117,7 +117,7 @@ export function DocIntelExportTab() {
         <CardHeader className="py-3 px-4">
           <CardTitle className="text-sm font-mono flex items-center gap-2">
             <FileSpreadsheet size={14} className="text-primary" />
-            Structured Export
+            {t("export.structuredExport")}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4 space-y-3">
