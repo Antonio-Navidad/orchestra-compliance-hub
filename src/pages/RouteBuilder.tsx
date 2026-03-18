@@ -225,7 +225,7 @@ export default function RouteBuilder() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-mono">Priority</Label>
+                <Label className="text-xs font-mono">{t("route.priority")}</Label>
                 <Select value={priority} onValueChange={setPriority}>
                   <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
