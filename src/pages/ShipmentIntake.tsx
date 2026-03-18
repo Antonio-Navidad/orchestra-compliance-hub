@@ -474,9 +474,9 @@ export default function ShipmentIntake() {
                 disabled={submitMutation.isPending || !form.shipment_id || !form.destination_country || !form.description}
                 className="font-mono"
               >
-                {submitMutation.isPending ? 'CREATING...' : 'CREATE SHIPMENT'}
+                {submitMutation.isPending ? t("intake.creating") : t("intake.createShipment")}
               </Button>
-              <Button variant="outline" onClick={() => navigate('/')} className="font-mono">CANCEL</Button>
+              <Button variant="outline" onClick={() => navigate('/')} className="font-mono">{t("common.cancel").toUpperCase()}</Button>
             </div>
           </div>
 
