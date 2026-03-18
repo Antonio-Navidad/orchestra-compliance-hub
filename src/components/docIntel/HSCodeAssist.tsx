@@ -475,7 +475,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                       }}
                       className="text-[9px] font-mono h-5 shrink-0"
                     >
-                      Lookup
+                      {t("hsAssist.lookup")}
                     </Button>
                   </div>
                 ))}

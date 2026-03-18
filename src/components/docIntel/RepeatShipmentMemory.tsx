@@ -195,7 +195,7 @@ export function RepeatShipmentMemory({
               className="text-xs font-mono gap-1.5 w-full"
             >
               <RefreshCw size={12} />
-              Pre-Fill From This Session
+              {t("memory.preFillBtn")}
             </Button>
           </>
         )}

@@ -243,7 +243,7 @@ export function DocumentLibraryTab() {
                 </div>
 
                 {doc.shipment_id && (
-                  <p className="text-[9px] font-mono text-muted-foreground">Shipment: {doc.shipment_id}</p>
+                  <p className="text-[9px] font-mono text-muted-foreground">{t("library.shipmentLabel")}: {doc.shipment_id}</p>
                 )}
                 {doc.origin_country && doc.destination_country && (
                   <p className="text-[9px] font-mono text-muted-foreground">{doc.origin_country} → {doc.destination_country}</p>

@@ -216,8 +216,8 @@ export function MismatchDetectionTab() {
             <CollapsibleTrigger asChild>
               <CardHeader className="py-3 px-4 cursor-pointer hover:bg-muted/20 transition-colors">
                 <CardTitle className="text-sm font-mono flex items-center gap-2">
-                  <Bug size={14} className="text-muted-foreground" />
-                  Debug: Field Comparison Log ({debugLog.length} fields)
+                   <Bug size={14} className="text-muted-foreground" />
+                  {t("mismatch.debugLog")} ({debugLog.length})
                   <ChevronDown size={14} className={cn("ml-auto transition-transform text-muted-foreground", showDebug && "rotate-180")} />
                 </CardTitle>
               </CardHeader>

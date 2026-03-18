@@ -156,9 +156,9 @@ export function DocIntelExportTab() {
 
           {selectedSession && (
             <div className="text-[10px] font-mono text-muted-foreground border rounded p-2 bg-muted/10">
-              <p><strong>Mode:</strong> {selectedSession.shipment_mode} · <strong>Lane:</strong> {selectedSession.origin_country} → {selectedSession.destination_country}</p>
-              <p><strong>Docs:</strong> {Array.isArray(selectedSession.documents) ? selectedSession.documents.length : 0} · 
-                <strong> Mismatches:</strong> {Array.isArray(selectedSession.cross_doc_mismatches) ? selectedSession.cross_doc_mismatches.length : 0}
+              <p><strong>{t("export.mode")}:</strong> {selectedSession.shipment_mode} · <strong>{t("export.lane")}:</strong> {selectedSession.origin_country} → {selectedSession.destination_country}</p>
+              <p><strong>{t("export.docs")}:</strong> {Array.isArray(selectedSession.documents) ? selectedSession.documents.length : 0} · 
+                <strong> {t("export.mismatches")}:</strong> {Array.isArray(selectedSession.cross_doc_mismatches) ? selectedSession.cross_doc_mismatches.length : 0}
               </p>
             </div>
           )}
