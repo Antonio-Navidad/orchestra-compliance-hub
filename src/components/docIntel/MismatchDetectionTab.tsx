@@ -127,7 +127,7 @@ export function MismatchDetectionTab() {
                 className="w-full font-mono text-xs"
               >
                 <GitCompare size={12} className="mr-1.5" />
-                Compare {selectedIds.size} Document{selectedIds.size !== 1 ? "s" : ""}
+                {t("mismatch.compareBtn")} ({selectedIds.size})
               </Button>
             </>
           )}
