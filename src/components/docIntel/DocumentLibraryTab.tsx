@@ -197,13 +197,13 @@ export function DocumentLibraryTab() {
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground font-mono text-sm animate-pulse">Loading library...</div>
+        <div className="text-center py-12 text-muted-foreground font-mono text-sm animate-pulse">{t("library.loadingLibrary")}</div>
       ) : documents.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="py-12 flex flex-col items-center gap-2">
             <FolderOpen size={32} className="text-muted-foreground/40" />
-            <p className="text-sm font-mono text-muted-foreground">No documents yet</p>
-            <p className="text-[10px] font-mono text-muted-foreground/60">Upload documents to start building your intelligence library</p>
+            <p className="text-sm font-mono text-muted-foreground">{t("library.noDocuments")}</p>
+            <p className="text-[10px] font-mono text-muted-foreground/60">{t("library.noDocumentsHint")}</p>
           </CardContent>
         </Card>
       ) : (
