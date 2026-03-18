@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FileText, ExternalLink, ShieldCheck, AlertTriangle, Clock } from "lucide-react";
+import { FileText, ExternalLink, ShieldCheck, AlertTriangle, Clock, RotateCw, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +26,7 @@ interface Props {
   document: LibraryDocument | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onRetryExtraction?: () => void;
 }
 
 const formatDocType = (type: string | null) => {
@@ -40,7 +41,36 @@ const formatSize = (bytes: number | null) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-export function DocumentDetailSheet({ document: doc, open, onOpenChange }: Props) {
+function ExtractionStatusSection({ status, onRetry }: { status: string; onRetry?: () => void }) {
+  const isProcessing = status === "processing";
+  const isFailed = status === "failed";
+  const isComplete = status === "complete";
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
+        {isComplete && <ShieldCheck size={14} className="text-emerald-400" />}
+        {isProcessing && <Loader2 size={14} className="text-blue-400 animate-spin" />}
+        {isFailed && <AlertTriangle size={14} className="text-destructive" />}
+        {!isComplete && !isProcessing && !isFailed && <Clock size={14} className="text-yellow-400 animate-pulse" />}
+        <span className="capitalize">{status || "pending"}</span>
+      </div>
+      {(isFailed || status === "pending") && onRetry && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-6 text-[10px] font-mono gap-1"
+          onClick={onRetry}
+        >
+          <RotateCw size={10} />
+          {isFailed ? "Retry" : "Run"} Extraction
+        </Button>
+      )}
+    </div>
+  );
+}
+
+export function DocumentDetailSheet({ document: doc, open, onOpenChange, onRetryExtraction }: Props) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,10 +91,6 @@ export function DocumentDetailSheet({ document: doc, open, onOpenChange }: Props
   const extractedFields = doc.extracted_fields && typeof doc.extracted_fields === "object"
     ? Object.entries(doc.extracted_fields as Record<string, any>)
     : [];
-
-  const statusIcon = doc.extraction_status === "complete"
-    ? <ShieldCheck size={14} className="text-emerald-400" />
-    : <Clock size={14} className="text-yellow-400 animate-pulse" />;
 
   const isImage = doc.mime_type?.startsWith("image/");
   const isPdf = doc.mime_type === "application/pdf";
@@ -103,10 +129,7 @@ export function DocumentDetailSheet({ document: doc, open, onOpenChange }: Props
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground">
-                {statusIcon}
-                <span>Extraction: {doc.extraction_status || "pending"}</span>
-              </div>
+              <ExtractionStatusSection status={doc.extraction_status} onRetry={onRetryExtraction} />
             </section>
 
             <Separator />
@@ -139,12 +162,6 @@ export function DocumentDetailSheet({ document: doc, open, onOpenChange }: Props
                     <span className="capitalize">{doc.transport_mode}</span>
                   </>
                 )}
-                {doc.packet_id && (
-                  <>
-                    <span className="text-muted-foreground">Packet</span>
-                    <span className="truncate">{doc.packet_id}</span>
-                  </>
-                )}
               </div>
               {doc.tags && doc.tags.length > 0 && (
                 <div className="flex gap-1 flex-wrap pt-1">
@@ -168,6 +185,10 @@ export function DocumentDetailSheet({ document: doc, open, onOpenChange }: Props
                 <p className="text-[10px] font-mono text-muted-foreground/60 py-3 text-center">
                   {doc.extraction_status === "pending"
                     ? "Extraction pending — fields will appear after processing"
+                    : doc.extraction_status === "processing"
+                    ? "Extracting fields…"
+                    : doc.extraction_status === "failed"
+                    ? "Extraction failed — use the retry button above"
                     : "No extracted fields available"}
                 </p>
               ) : (
@@ -185,16 +206,12 @@ export function DocumentDetailSheet({ document: doc, open, onOpenChange }: Props
                         className="flex items-start justify-between gap-2 rounded px-2 py-1.5 bg-muted/10 hover:bg-muted/20 transition-colors"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="text-[10px] font-mono text-muted-foreground">
-                            {key.replace(/_/g, " ")}
-                          </p>
-                          <p className="text-xs font-mono truncate" title={String(value)}>
-                            {String(value)}
-                          </p>
+                          <p className="text-[10px] font-mono text-muted-foreground">{key.replace(/_/g, " ")}</p>
+                          <p className="text-xs font-mono truncate" title={String(value)}>{String(value)}</p>
                           {(source || page != null) && (
                             <p className="text-[9px] font-mono text-muted-foreground/60 mt-0.5">
                               {source && <>Source: {source}</>}
-                              {page != null && <> · Page {page}</>}
+                              {page != null && <> · {page}</>}
                             </p>
                           )}
                         </div>
@@ -218,27 +235,16 @@ export function DocumentDetailSheet({ document: doc, open, onOpenChange }: Props
               {previewUrl ? (
                 <div className="space-y-2">
                   {isImage && (
-                    <img
-                      src={previewUrl}
-                      alt={doc.file_name}
-                      className="w-full rounded border border-border object-contain max-h-[400px] bg-black/20"
-                    />
+                    <img src={previewUrl} alt={doc.file_name} className="w-full rounded border border-border object-contain max-h-[400px] bg-black/20" />
                   )}
                   {isPdf && (
-                    <iframe
-                      src={previewUrl}
-                      title={doc.file_name}
-                      className="w-full h-[400px] rounded border border-border bg-black/20"
-                    />
+                    <iframe src={previewUrl} title={doc.file_name} className="w-full h-[400px] rounded border border-border bg-black/20" />
                   )}
                   {!isImage && !isPdf && (
-                    <p className="text-[10px] font-mono text-muted-foreground/60 text-center py-6">
-                      Preview not available for this file type
-                    </p>
+                    <p className="text-[10px] font-mono text-muted-foreground/60 text-center py-6">Preview not available for this file type</p>
                   )}
                   <Button
-                    variant="outline"
-                    size="sm"
+                    variant="outline" size="sm"
                     className="w-full text-[10px] font-mono gap-1.5"
                     onClick={() => window.open(previewUrl, "_blank")}
                   >
@@ -246,9 +252,7 @@ export function DocumentDetailSheet({ document: doc, open, onOpenChange }: Props
                   </Button>
                 </div>
               ) : (
-                <div className="text-center py-6 text-muted-foreground/40 text-[10px] font-mono animate-pulse">
-                  Loading preview…
-                </div>
+                <div className="text-center py-6 text-muted-foreground/40 text-[10px] font-mono animate-pulse">Loading preview…</div>
               )}
             </section>
           </div>

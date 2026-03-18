@@ -75,6 +75,74 @@ export function useDocumentLibrary() {
     setLoading(false);
   }, []);
 
+  /** Update a single document in local state */
+  const updateDocLocally = useCallback((id: string, updates: Partial<LibraryDocument>) => {
+    setDocuments(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
+  }, []);
+
+  /** Run extraction on a document via the edge function */
+  const extractDocument = useCallback(async (doc: LibraryDocument) => {
+    // Mark as processing locally + in DB
+    updateDocLocally(doc.id, { extraction_status: "processing" });
+    await supabase.from("document_library").update({ extraction_status: "processing" } as any).eq("id", doc.id);
+
+    try {
+      // Download file from storage
+      const { data: fileData, error: dlErr } = await supabase.storage
+        .from("document-library")
+        .download(doc.file_path);
+      if (dlErr || !fileData) throw new Error("Failed to download file for extraction");
+
+      const file = new File([fileData], doc.file_name, { type: doc.mime_type || "application/octet-stream" });
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("documentType", doc.document_type || "unknown");
+      formData.append("shipmentContext", JSON.stringify({
+        originCountry: doc.origin_country,
+        destinationCountry: doc.destination_country,
+        shipmentMode: doc.transport_mode,
+      }));
+
+      const { data: result, error: fnErr } = await supabase.functions.invoke("extract-document", {
+        body: formData,
+      });
+
+      if (fnErr) throw fnErr;
+      if (result?.error) throw new Error(result.error);
+
+      // Build extracted_fields with confidence info
+      const fields: Record<string, any> = {};
+      for (const f of result.fields || []) {
+        fields[f.fieldName] = {
+          value: f.value,
+          confidence: f.confidence,
+          source: f.sourceDocumentType || null,
+          page: f.sourceLocation || null,
+        };
+      }
+
+      const updates: Record<string, any> = {
+        extraction_status: "complete",
+        extracted_fields: fields,
+        document_type: result.detectedDocumentType !== "multi_document_packet"
+          ? result.detectedDocumentType
+          : doc.document_type,
+        classification_confidence: result.detectedDocuments?.[0]?.confidence ?? null,
+      };
+
+      await supabase.from("document_library").update(updates as any).eq("id", doc.id);
+      updateDocLocally(doc.id, updates as Partial<LibraryDocument>);
+      toast.success(`Extraction complete: ${doc.file_name}`);
+    } catch (err: any) {
+      console.error("Extraction failed:", err);
+      const updates = { extraction_status: "failed" };
+      await supabase.from("document_library").update(updates as any).eq("id", doc.id);
+      updateDocLocally(doc.id, updates);
+      toast.error(`Extraction failed: ${err.message || "Unknown error"}`);
+    }
+  }, [updateDocLocally]);
+
   const uploadDocument = useCallback(async (
     file: File,
     meta: {
@@ -91,7 +159,6 @@ export function useDocumentLibrary() {
     setUploading(true);
     const filePath = `${user.id}/${Date.now()}_${file.name}`;
 
-    // Upload to storage
     const { error: storageErr } = await supabase.storage
       .from("document-library")
       .upload(filePath, file);
@@ -103,7 +170,6 @@ export function useDocumentLibrary() {
       return null;
     }
 
-    // Insert metadata
     const { data, error: dbErr } = await supabase
       .from("document_library")
       .insert({
@@ -120,7 +186,7 @@ export function useDocumentLibrary() {
         tags: meta.tags || [],
         extraction_status: "pending",
       } as any)
-      .select("id")
+      .select("*")
       .single();
 
     if (dbErr) {
@@ -130,15 +196,21 @@ export function useDocumentLibrary() {
       return null;
     }
 
-    toast.success(`${file.name} uploaded to library`);
+    toast.success(`${file.name} uploaded — starting extraction...`);
     setUploading(false);
-    return data?.id;
-  }, [user]);
+
+    // Add to local state and auto-trigger extraction
+    const newDoc = data as LibraryDocument;
+    setDocuments(prev => [newDoc, ...prev]);
+
+    // Fire extraction in background (don't await to unblock UI)
+    extractDocument(newDoc);
+
+    return newDoc.id;
+  }, [user, extractDocument]);
 
   const deleteDocument = useCallback(async (doc: LibraryDocument) => {
-    // Delete from storage
     await supabase.storage.from("document-library").remove([doc.file_path]);
-    // Delete metadata
     const { error } = await supabase.from("document_library").delete().eq("id", doc.id);
     if (error) {
       toast.error("Failed to delete document");
@@ -148,5 +220,5 @@ export function useDocumentLibrary() {
     }
   }, []);
 
-  return { documents, loading, uploading, fetchDocuments, uploadDocument, deleteDocument };
+  return { documents, loading, uploading, fetchDocuments, uploadDocument, deleteDocument, extractDocument, updateDocLocally };
 }
