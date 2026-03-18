@@ -274,7 +274,7 @@ export default function AuditTrail() {
                           </div>
                         </div>
                         <div>
-                          <p className="font-mono text-[10px] text-risk-low/70 mb-1">NEW VALUE</p>
+                          <p className="font-mono text-[10px] text-risk-low/70 mb-1">{t("audit.newValue")}</p>
                           <div className="rounded border border-risk-low/20 p-3 bg-risk-low/5 min-h-[60px]">
                             {renderValue(entry.new_value)}
                           </div>
