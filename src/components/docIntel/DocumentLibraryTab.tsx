@@ -144,10 +144,10 @@ export function DocumentLibraryTab() {
         <CardContent className="py-8 flex flex-col items-center gap-2">
           <Upload size={24} className="text-primary/60" />
           <p className="text-sm font-mono text-muted-foreground">
-            {uploading ? "Uploading..." : "Drop files here or click to upload"}
+            {uploading ? t("library.uploading") : t("library.dropHere")}
           </p>
           <p className="text-[10px] font-mono text-muted-foreground/60">
-            PDF, DOCX, JPG, PNG — Auto-extracted after upload
+            {t("library.fileTypes")}
           </p>
           <input
             ref={fileInputRef}
