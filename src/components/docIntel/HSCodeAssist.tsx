@@ -372,7 +372,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                     className="text-[10px] font-mono h-6 gap-1 text-amber-400"
                   >
                     <Flag size={10} />
-                    {flaggedCodes.has(s.code) ? "Flagged" : "Flag for Broker Review"}
+                    {flaggedCodes.has(s.code) ? t("hsAssist.flagged") : t("hsAssist.flagForReview")}
                   </Button>
                 </div>
               </div>
