@@ -127,6 +127,7 @@ export default function DocumentIntelligence() {
         </TabsContent>
 
         <TabsContent value="export" className="mt-0">
+          <TabContextBanner tabId="export" />
           <DocIntelExportTab />
         </TabsContent>
       </Tabs>
