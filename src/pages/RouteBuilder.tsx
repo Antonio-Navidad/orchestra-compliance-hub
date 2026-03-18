@@ -280,7 +280,7 @@ export default function RouteBuilder() {
 
             <Button onClick={handlePlan} disabled={loading} className="w-full font-mono">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2" />}
-              {loading ? "PLANNING ROUTES..." : "AI ROUTE PLAN"}
+              {loading ? t("route.planningRoutes") : t("route.aiRoutePlan")}
             </Button>
           </CardContent>
         </Card>
