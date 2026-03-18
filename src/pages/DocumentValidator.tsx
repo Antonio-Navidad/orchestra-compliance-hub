@@ -838,7 +838,7 @@ export default function DocumentValidator({ embedded }: { embedded?: boolean } =
             <p className="text-2xl font-bold font-mono">{visibleDocs.length}</p>
           </CardContent></Card>
           <Card className="border-border bg-card"><CardContent className="py-3 px-4">
-            <p className="text-[10px] font-mono text-muted-foreground">FIELDS EXTRACTED</p>
+            <p className="text-[10px] font-mono text-muted-foreground">{t("validator.stat.fieldsExtracted")}</p>
             <p className="text-2xl font-bold font-mono">{totalFields}</p>
           </CardContent></Card>
           <Card className="border-border bg-card"><CardContent className="py-3 px-4">
