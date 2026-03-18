@@ -3,8 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export default function LegalKnowledge() {
+  const { t } = useLanguage();
   const { data: laws = [], isLoading } = useQuery({
     queryKey: ["legal-knowledge"],
     queryFn: async () => {
@@ -25,17 +27,17 @@ export default function LegalKnowledge() {
             <ArrowLeft size={18} />
           </Link>
           <BookOpen size={18} className="text-primary" />
-          <h1 className="text-lg font-bold">Legal Knowledge Database</h1>
+          <h1 className="text-lg font-bold">{t("legal.pageTitle")}</h1>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-4">
         {isLoading ? (
-          <p className="text-muted-foreground font-mono text-sm text-center py-12">LOADING...</p>
+          <p className="text-muted-foreground font-mono text-sm text-center py-12">{t("common.loading")}</p>
         ) : laws.length === 0 ? (
           <div className="text-center py-12 space-y-2">
-            <p className="text-muted-foreground">No regulations stored yet.</p>
-            <p className="text-xs text-muted-foreground">Send data via the Make.com webhook to populate this database.</p>
+            <p className="text-muted-foreground">{t("legal.noRegulations")}</p>
+            <p className="text-xs text-muted-foreground">{t("legal.webhookHint")}</p>
           </div>
         ) : (
           laws.map((law) => (

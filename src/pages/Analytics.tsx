@@ -7,6 +7,7 @@ import { Shipment } from "@/types/orchestra";
 import { jurisdictionAdapters } from "@/lib/jurisdictions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useLanguage } from "@/hooks/useLanguage";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend
@@ -23,6 +24,7 @@ const CHART_COLORS = [
 
 export default function Analytics() {
   const [timeRange, setTimeRange] = useState("30d");
+  const { t } = useLanguage();
 
   const { data: shipments = [] } = useQuery({
     queryKey: ["shipments"],
@@ -73,7 +75,6 @@ export default function Analytics() {
     };
   }, [shipments]);
 
-  // Trend data by month
   const trendData = useMemo(() => {
     const months = new Map<string, { month: string; shipments: number; exposure: number; avoided: number; critical: number }>();
     shipments.forEach((s) => {
@@ -94,13 +95,12 @@ export default function Analytics() {
     return Array.from(months.values());
   }, [shipments]);
 
-  // Risk distribution
   const riskDistribution = useMemo(() => {
     const buckets = [
-      { name: "Safe (0-29)", value: 0 },
-      { name: "Low (30-59)", value: 0 },
-      { name: "Medium (60-84)", value: 0 },
-      { name: "Critical (85+)", value: 0 },
+      { name: t("analytics.riskSafe"), value: 0 },
+      { name: t("analytics.riskLow"), value: 0 },
+      { name: t("analytics.riskMedium"), value: 0 },
+      { name: t("analytics.riskCritical"), value: 0 },
     ];
     shipments.forEach((s) => {
       if (s.risk_score < 30) buckets[0].value++;
@@ -109,9 +109,8 @@ export default function Analytics() {
       else buckets[3].value++;
     });
     return buckets;
-  }, [shipments]);
+  }, [shipments, t]);
 
-  // Top error categories from events
   const errorCategories = useMemo(() => {
     const counts = new Map<string, number>();
     events.forEach((e: any) => {
@@ -124,11 +123,10 @@ export default function Analytics() {
       .slice(0, 8);
   }, [events]);
 
-  // Broker leaderboard
   const brokerLeaderboard = useMemo(() => {
     const brokerMap = new Map<string, { broker: string; shipments: number; exposure: number; holds: number; errors: number }>();
     shipments.forEach((s) => {
-      const broker = (s as any).assigned_broker || "Unassigned";
+      const broker = (s as any).assigned_broker || t("analytics.unassigned");
       const existing = brokerMap.get(broker) || { broker, shipments: 0, exposure: 0, holds: 0, errors: 0 };
       existing.shipments++;
       const adapter = jurisdictionAdapters[(s as any).jurisdiction_code || "US"] || jurisdictionAdapters.US;
@@ -138,9 +136,8 @@ export default function Analytics() {
       brokerMap.set(broker, existing);
     });
     return Array.from(brokerMap.values()).sort((a, b) => b.exposure - a.exposure).slice(0, 10);
-  }, [shipments]);
+  }, [shipments, t]);
 
-  // Lane risk
   const laneRisk = useMemo(() => {
     const laneMap = new Map<string, { lane: string; shipments: number; avgRisk: number; totalExposure: number; holds: number }>();
     shipments.forEach((s) => {
@@ -162,12 +159,12 @@ export default function Analytics() {
   }, [shipments]);
 
   const kpiCards = [
-    { label: "TOTAL EXPOSURE", value: `$${Math.round(stats.totalExposure).toLocaleString()}`, icon: AlertTriangle, color: "text-destructive" },
-    { label: "EXPOSURE AVOIDED", value: `$${Math.round(stats.totalAvoided).toLocaleString()}`, icon: Shield, color: "text-risk-safe" },
-    { label: "AVG AVOIDED / SHIPMENT", value: `$${Math.round(stats.avgAvoidedPerShipment).toLocaleString()}`, icon: DollarSign, color: "text-primary" },
-    { label: "HOLDS PREVENTED", value: stats.holdsPrevented, icon: TrendingDown, color: "text-risk-safe" },
-    { label: "FINES PREVENTED", value: stats.finesPrevented, icon: Shield, color: "text-primary" },
-    { label: "CRITICAL SHIPMENTS", value: stats.criticalCount, icon: AlertTriangle, color: "text-destructive" },
+    { label: t("analytics.totalExposure"), value: `$${Math.round(stats.totalExposure).toLocaleString()}`, icon: AlertTriangle, color: "text-destructive" },
+    { label: t("analytics.exposureAvoided"), value: `$${Math.round(stats.totalAvoided).toLocaleString()}`, icon: Shield, color: "text-risk-safe" },
+    { label: t("analytics.avgAvoided"), value: `$${Math.round(stats.avgAvoidedPerShipment).toLocaleString()}`, icon: DollarSign, color: "text-primary" },
+    { label: t("analytics.holdsPrevented"), value: stats.holdsPrevented, icon: TrendingDown, color: "text-risk-safe" },
+    { label: t("analytics.finesPrevented"), value: stats.finesPrevented, icon: Shield, color: "text-primary" },
+    { label: t("analytics.criticalShipments"), value: stats.criticalCount, icon: AlertTriangle, color: "text-destructive" },
   ];
 
   return (
@@ -179,24 +176,23 @@ export default function Analytics() {
               <ArrowLeft size={18} />
             </Link>
             <BarChart3 size={18} className="text-primary" />
-            <h1 className="text-lg font-bold">Executive ROI Dashboard</h1>
+            <h1 className="text-lg font-bold">{t("analytics.pageTitle")}</h1>
           </div>
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-[120px] bg-secondary/50 text-xs font-mono">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="all">All time</SelectItem>
+              <SelectItem value="7d">{t("analytics.last7")}</SelectItem>
+              <SelectItem value="30d">{t("analytics.last30")}</SelectItem>
+              <SelectItem value="90d">{t("analytics.last90")}</SelectItem>
+              <SelectItem value="all">{t("analytics.allTime")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* KPI Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {kpiCards.map((kpi) => (
             <div key={kpi.label} className="rounded-lg border border-border bg-card p-4 glow-blue">
@@ -211,17 +207,16 @@ export default function Analytics() {
 
         <Tabs defaultValue="trends">
           <TabsList className="bg-secondary/50 border border-border flex-wrap h-auto gap-1 p-1">
-            <TabsTrigger value="trends" className="font-mono text-xs">TRENDS</TabsTrigger>
-            <TabsTrigger value="risk" className="font-mono text-xs">RISK DIST</TabsTrigger>
-            <TabsTrigger value="errors" className="font-mono text-xs">ERROR CATEGORIES</TabsTrigger>
-            <TabsTrigger value="brokers" className="font-mono text-xs">BROKER LEADERBOARD</TabsTrigger>
-            <TabsTrigger value="lanes" className="font-mono text-xs">LANE RISK</TabsTrigger>
+            <TabsTrigger value="trends" className="font-mono text-xs">{t("analytics.tabTrends")}</TabsTrigger>
+            <TabsTrigger value="risk" className="font-mono text-xs">{t("analytics.tabRiskDist")}</TabsTrigger>
+            <TabsTrigger value="errors" className="font-mono text-xs">{t("analytics.tabErrors")}</TabsTrigger>
+            <TabsTrigger value="brokers" className="font-mono text-xs">{t("analytics.tabBrokers")}</TabsTrigger>
+            <TabsTrigger value="lanes" className="font-mono text-xs">{t("analytics.tabLanes")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="trends" className="mt-4 space-y-6">
-            {/* Exposure Trend */}
             <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="font-mono text-xs text-muted-foreground mb-4">EXPOSURE vs AVOIDED OVER TIME</h3>
+              <h3 className="font-mono text-xs text-muted-foreground mb-4">{t("analytics.exposureVsAvoided")}</h3>
               <ResponsiveContainer width="100%" height={320}>
                 <AreaChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 25%, 16%)" />
@@ -232,24 +227,23 @@ export default function Analytics() {
                     labelStyle={{ color: "hsl(210, 20%, 90%)" }}
                     formatter={(value: number) => [`$${Math.round(value).toLocaleString()}`, ""]}
                   />
-                  <Area type="monotone" dataKey="exposure" stackId="1" stroke="hsl(0, 72%, 51%)" fill="hsl(0, 72%, 51%, 0.2)" name="Exposure" />
-                  <Area type="monotone" dataKey="avoided" stackId="2" stroke="hsl(142, 71%, 45%)" fill="hsl(142, 71%, 45%, 0.2)" name="Avoided" />
+                  <Area type="monotone" dataKey="exposure" stackId="1" stroke="hsl(0, 72%, 51%)" fill="hsl(0, 72%, 51%, 0.2)" name={t("analytics.exposure")} />
+                  <Area type="monotone" dataKey="avoided" stackId="2" stroke="hsl(142, 71%, 45%)" fill="hsl(142, 71%, 45%, 0.2)" name={t("analytics.avoided")} />
                   <Legend />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
 
-            {/* Shipment Volume */}
             <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="font-mono text-xs text-muted-foreground mb-4">SHIPMENT VOLUME & CRITICAL ALERTS</h3>
+              <h3 className="font-mono text-xs text-muted-foreground mb-4">{t("analytics.volumeAlerts")}</h3>
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(222, 25%, 16%)" />
                   <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(215, 15%, 50%)" }} />
                   <YAxis tick={{ fontSize: 10, fill: "hsl(215, 15%, 50%)" }} />
                   <Tooltip contentStyle={{ background: "hsl(222, 40%, 9%)", border: "1px solid hsl(222, 25%, 16%)", borderRadius: 8 }} />
-                  <Bar dataKey="shipments" fill="hsl(210, 100%, 56%)" name="Shipments" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="critical" fill="hsl(0, 72%, 51%)" name="Critical" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="shipments" fill="hsl(210, 100%, 56%)" name={t("dashboard.shipments")} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="critical" fill="hsl(0, 72%, 51%)" name={t("analytics.criticalShipments")} radius={[4, 4, 0, 0]} />
                   <Legend />
                 </BarChart>
               </ResponsiveContainer>
@@ -258,7 +252,7 @@ export default function Analytics() {
 
           <TabsContent value="risk" className="mt-4">
             <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="font-mono text-xs text-muted-foreground mb-4">RISK SCORE DISTRIBUTION</h3>
+              <h3 className="font-mono text-xs text-muted-foreground mb-4">{t("analytics.riskDistribution")}</h3>
               <ResponsiveContainer width="100%" height={350}>
                 <PieChart>
                   <Pie data={riskDistribution} cx="50%" cy="50%" outerRadius={120} dataKey="value" label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
@@ -274,9 +268,9 @@ export default function Analytics() {
 
           <TabsContent value="errors" className="mt-4">
             <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="font-mono text-xs text-muted-foreground mb-4">TOP RECURRING ERROR CATEGORIES</h3>
+              <h3 className="font-mono text-xs text-muted-foreground mb-4">{t("analytics.topErrors")}</h3>
               {errorCategories.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No events recorded yet.</p>
+                <p className="text-sm text-muted-foreground text-center py-8">{t("analytics.noEvents")}</p>
               ) : (
                 <ResponsiveContainer width="100%" height={320}>
                   <BarChart data={errorCategories} layout="vertical">
@@ -293,18 +287,20 @@ export default function Analytics() {
 
           <TabsContent value="brokers" className="mt-4">
             <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="font-mono text-xs text-muted-foreground mb-4">BROKER EXPOSURE LEADERBOARD</h3>
+              <h3 className="font-mono text-xs text-muted-foreground mb-4">{t("analytics.brokerLeaderboard")}</h3>
               <div className="space-y-2">
                 {brokerLeaderboard.map((b, i) => (
                   <div key={b.broker} className="flex items-center gap-3 p-3 rounded-md bg-secondary/30 border border-border">
                     <span className="font-mono text-xs text-muted-foreground w-6">#{i + 1}</span>
                     <div className="flex-1">
                       <p className="text-sm font-medium">{b.broker}</p>
-                      <p className="text-xs text-muted-foreground">{b.shipments} shipments · {b.holds} holds · {b.errors} flagged</p>
+                      <p className="text-xs text-muted-foreground">
+                        {b.shipments} {t("dashboard.shipments").toLowerCase()} · {b.holds} {t("analytics.holds")} · {b.errors} {t("analytics.flagged")}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="font-mono text-sm text-destructive">${Math.round(b.exposure).toLocaleString()}</p>
-                      <p className="text-[10px] text-muted-foreground">exposure</p>
+                      <p className="text-[10px] text-muted-foreground">{t("analytics.exposure").toLowerCase()}</p>
                     </div>
                     <div className="w-24 h-2 bg-secondary rounded-full overflow-hidden">
                       <div
@@ -315,7 +311,7 @@ export default function Analytics() {
                   </div>
                 ))}
                 {brokerLeaderboard.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-8">No broker data available.</p>
+                  <p className="text-sm text-muted-foreground text-center py-8">{t("analytics.noBrokerData")}</p>
                 )}
               </div>
             </div>
@@ -323,16 +319,16 @@ export default function Analytics() {
 
           <TabsContent value="lanes" className="mt-4">
             <div className="rounded-lg border border-border bg-card p-6">
-              <h3 className="font-mono text-xs text-muted-foreground mb-4">LANE RISK INTELLIGENCE</h3>
+              <h3 className="font-mono text-xs text-muted-foreground mb-4">{t("analytics.laneRiskIntel")}</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="text-left py-2 font-mono text-xs text-muted-foreground">LANE</th>
-                      <th className="text-center py-2 font-mono text-xs text-muted-foreground">SHIPMENTS</th>
-                      <th className="text-center py-2 font-mono text-xs text-muted-foreground">AVG RISK</th>
-                      <th className="text-center py-2 font-mono text-xs text-muted-foreground">HOLDS</th>
-                      <th className="text-right py-2 font-mono text-xs text-muted-foreground">EXPOSURE</th>
+                      <th className="text-left py-2 font-mono text-xs text-muted-foreground">{t("analytics.colLane")}</th>
+                      <th className="text-center py-2 font-mono text-xs text-muted-foreground">{t("dashboard.shipments")}</th>
+                      <th className="text-center py-2 font-mono text-xs text-muted-foreground">{t("analytics.colAvgRisk")}</th>
+                      <th className="text-center py-2 font-mono text-xs text-muted-foreground">{t("analytics.holds")}</th>
+                      <th className="text-right py-2 font-mono text-xs text-muted-foreground">{t("analytics.exposure")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -355,7 +351,7 @@ export default function Analytics() {
                     ))}
                     {laneRisk.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="text-center py-8 text-muted-foreground">No lane data available.</td>
+                        <td colSpan={5} className="text-center py-8 text-muted-foreground">{t("analytics.noLaneData")}</td>
                       </tr>
                     )}
                   </tbody>

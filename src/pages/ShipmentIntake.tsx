@@ -15,6 +15,7 @@ import { PacketScoreCard } from "@/components/PacketScoreCard";
 import { computePacketScore } from "@/lib/packetScore";
 import { ArrowLeft, Upload, X, FileText, Plane, Ship, Truck } from "lucide-react";
 import type { TransportMode } from "@/types/orchestra";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const DOC_TYPES = [
   { value: 'commercial_invoice', label: 'Commercial Invoice' },
@@ -57,6 +58,7 @@ interface UploadedDoc {
 export default function ShipmentIntake() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const [form, setForm] = useState({
     shipment_id: '',
@@ -229,8 +231,8 @@ export default function ShipmentIntake() {
           <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft size={18} />
           </Link>
-          <h1 className="text-lg font-bold font-mono">SHIPMENT INTAKE</h1>
-          <Badge variant="outline" className="font-mono text-[10px]">NEW SHIPMENT</Badge>
+          <h1 className="text-lg font-bold font-mono">{t("intake.pageTitle")}</h1>
+          <Badge variant="outline" className="font-mono text-[10px]">{t("shipment.intake")}</Badge>
         </div>
       </header>
 
@@ -241,25 +243,25 @@ export default function ShipmentIntake() {
             {/* Core Details */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="font-mono text-sm">SHIPMENT DETAILS</CardTitle>
+                <CardTitle className="font-mono text-sm">{t("intake.shipmentDetails")}</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Shipment ID *</Label>
+                  <Label className="text-xs font-mono">{t("intake.shipmentId")} *</Label>
                   <Input value={form.shipment_id} onChange={e => updateField('shipment_id', e.target.value)} placeholder="ORC-XXX" className="font-mono" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Direction *</Label>
+                  <Label className="text-xs font-mono">{t("intake.direction")} *</Label>
                   <Select value={form.direction} onValueChange={v => updateField('direction', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="inbound">↓ Inbound (Import)</SelectItem>
-                      <SelectItem value="outbound">↑ Outbound (Export)</SelectItem>
+                      <SelectItem value="inbound">↓ {t("intake.inbound")}</SelectItem>
+                      <SelectItem value="outbound">↑ {t("intake.outbound")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Mode *</Label>
+                  <Label className="text-xs font-mono">{t("intake.mode")} *</Label>
                   <Select value={form.mode} onValueChange={v => updateField('mode', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -270,27 +272,27 @@ export default function ShipmentIntake() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Origin Country</Label>
+                  <Label className="text-xs font-mono">{t("intake.originCountry")}</Label>
                   <Input value={form.origin_country} onChange={e => updateField('origin_country', e.target.value)} placeholder="CN" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Destination Country *</Label>
+                  <Label className="text-xs font-mono">{t("intake.destCountry")} *</Label>
                   <Input value={form.destination_country} onChange={e => updateField('destination_country', e.target.value)} placeholder="US" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Import Country</Label>
+                  <Label className="text-xs font-mono">{t("intake.importCountry")}</Label>
                   <Input value={form.import_country} onChange={e => updateField('import_country', e.target.value)} placeholder="US" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Export Country</Label>
+                  <Label className="text-xs font-mono">{t("intake.exportCountry")}</Label>
                   <Input value={form.export_country} onChange={e => updateField('export_country', e.target.value)} placeholder="CN" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Port / Airport / Border</Label>
+                  <Label className="text-xs font-mono">{t("intake.portOfEntry")}</Label>
                   <Input value={form.port_of_entry} onChange={e => updateField('port_of_entry', e.target.value)} placeholder="Port of Los Angeles" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Jurisdiction</Label>
+                  <Label className="text-xs font-mono">{t("intake.jurisdiction")}</Label>
                   <Select value={form.jurisdiction_code} onValueChange={v => updateField('jurisdiction_code', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -309,23 +311,23 @@ export default function ShipmentIntake() {
                   </Select>
                 </div>
                 <div className="md:col-span-2 space-y-1.5">
-                  <Label className="text-xs font-mono">Commodity Description *</Label>
-                  <Textarea value={form.description} onChange={e => updateField('description', e.target.value)} placeholder="Detailed product description..." rows={2} />
+                  <Label className="text-xs font-mono">{t("intake.commodityDesc")} *</Label>
+                  <Textarea value={form.description} onChange={e => updateField('description', e.target.value)} placeholder={t("intake.commodityPlaceholder")} rows={2} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">HS Code</Label>
+                  <Label className="text-xs font-mono">{t("intake.hsCode")}</Label>
                   <Input value={form.hs_code} onChange={e => updateField('hs_code', e.target.value)} placeholder="8471.30" className="font-mono" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Quantity</Label>
+                  <Label className="text-xs font-mono">{t("intake.quantity")}</Label>
                   <Input type="number" value={form.quantity} onChange={e => updateField('quantity', e.target.value)} placeholder="100" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Declared Value</Label>
+                  <Label className="text-xs font-mono">{t("intake.declaredValue")}</Label>
                   <Input type="number" value={form.declared_value} onChange={e => updateField('declared_value', e.target.value)} placeholder="50000" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Currency</Label>
+                  <Label className="text-xs font-mono">{t("intake.currency")}</Label>
                   <Select value={form.currency} onValueChange={v => updateField('currency', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -338,7 +340,7 @@ export default function ShipmentIntake() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Incoterm</Label>
+                  <Label className="text-xs font-mono">{t("intake.incoterm")}</Label>
                   <Select value={form.incoterm} onValueChange={v => updateField('incoterm', v)}>
                     <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                     <SelectContent>
@@ -347,11 +349,11 @@ export default function ShipmentIntake() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Consignee</Label>
+                  <Label className="text-xs font-mono">{t("intake.consignee")}</Label>
                   <Input value={form.consignee} onChange={e => updateField('consignee', e.target.value)} placeholder="Company name" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Shipper</Label>
+                  <Label className="text-xs font-mono">{t("intake.shipper")}</Label>
                   <Input value={form.shipper} onChange={e => updateField('shipper', e.target.value)} placeholder="Shipper name" />
                 </div>
               </CardContent>
@@ -360,27 +362,27 @@ export default function ShipmentIntake() {
             {/* Broker & Logistics */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="font-mono text-sm">BROKER & LOGISTICS</CardTitle>
+                <CardTitle className="font-mono text-sm">{t("intake.brokerLogistics")}</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Assigned Broker</Label>
+                  <Label className="text-xs font-mono">{t("intake.assignedBroker")}</Label>
                   <Select value={form.broker_id} onValueChange={v => {
                     const broker = brokers.find(b => b.id === v);
                     setForm(prev => ({ ...prev, broker_id: v, assigned_broker: broker?.canonical_name || '' }));
                   }}>
-                    <SelectTrigger><SelectValue placeholder="Select broker..." /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("intake.selectBroker")} /></SelectTrigger>
                     <SelectContent>
                       {brokers.map(b => <SelectItem key={b.id} value={b.id}>{b.canonical_name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Forwarder</Label>
+                  <Label className="text-xs font-mono">{t("intake.forwarder")}</Label>
                   <Input value={form.forwarder} onChange={e => updateField('forwarder', e.target.value)} placeholder="Forwarder name" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">COO Status</Label>
+                  <Label className="text-xs font-mono">{t("intake.cooStatus")}</Label>
                   <Select value={form.coo_status} onValueChange={v => updateField('coo_status', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -389,7 +391,7 @@ export default function ShipmentIntake() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Priority</Label>
+                  <Label className="text-xs font-mono">{t("intake.priority")}</Label>
                   <Select value={form.priority} onValueChange={v => updateField('priority', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -398,11 +400,11 @@ export default function ShipmentIntake() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Planned Departure</Label>
+                  <Label className="text-xs font-mono">{t("intake.plannedDeparture")}</Label>
                   <Input type="date" value={form.planned_departure} onChange={e => updateField('planned_departure', e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Estimated Arrival</Label>
+                  <Label className="text-xs font-mono">{t("intake.estimatedArrival")}</Label>
                   <Input type="date" value={form.estimated_arrival} onChange={e => updateField('estimated_arrival', e.target.value)} />
                 </div>
               </CardContent>
@@ -411,7 +413,7 @@ export default function ShipmentIntake() {
             {/* Document Upload */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="font-mono text-sm">DOCUMENT UPLOAD</CardTitle>
+                <CardTitle className="font-mono text-sm">{t("intake.docUpload")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex gap-2">
@@ -438,7 +440,7 @@ export default function ShipmentIntake() {
                   onDrop={handleDrop}
                 >
                   <Upload className="mx-auto mb-2 text-muted-foreground" size={24} />
-                  <p className="text-sm text-muted-foreground">Drag & drop files here</p>
+                  <p className="text-sm text-muted-foreground">{t("intake.dragDrop")}</p>
                   <p className="text-[10px] text-muted-foreground mt-1">
                     Type: {DOC_TYPES.find(d => d.value === selectedDocType)?.label}
                   </p>
@@ -472,9 +474,9 @@ export default function ShipmentIntake() {
                 disabled={submitMutation.isPending || !form.shipment_id || !form.destination_country || !form.description}
                 className="font-mono"
               >
-                {submitMutation.isPending ? 'CREATING...' : 'CREATE SHIPMENT'}
+                {submitMutation.isPending ? t("intake.creating") : t("intake.createShipment")}
               </Button>
-              <Button variant="outline" onClick={() => navigate('/')} className="font-mono">CANCEL</Button>
+              <Button variant="outline" onClick={() => navigate('/')} className="font-mono">{t("common.cancel").toUpperCase()}</Button>
             </div>
           </div>
 
@@ -486,15 +488,15 @@ export default function ShipmentIntake() {
             <Card>
               <CardContent className="pt-4 space-y-3">
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground font-mono">Documents</span>
+                  <span className="text-muted-foreground font-mono">{t("intake.documents")}</span>
                   <span className="font-mono font-bold">{docs.length}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground font-mono">Doc Types</span>
+                  <span className="text-muted-foreground font-mono">{t("intake.docTypes")}</span>
                   <span className="font-mono font-bold">{new Set(uploadedDocTypes).size}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground font-mono">Filing</span>
+                  <span className="text-muted-foreground font-mono">{t("intake.filing")}</span>
                   <span className="font-mono font-bold uppercase">{packetScore.filingReadiness.replace('_', ' ')}</span>
                 </div>
               </CardContent>

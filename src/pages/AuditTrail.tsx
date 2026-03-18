@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useRole } from "@/hooks/useRole";
+import { useLanguage } from "@/hooks/useLanguage";
 import { format } from "date-fns";
 
 interface AuditEntry {
@@ -63,6 +64,7 @@ export default function AuditTrail() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { isAdmin } = useRole();
+  const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [moduleFilter, setModuleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -166,9 +168,9 @@ export default function AuditTrail() {
             <ArrowLeft size={18} />
           </Link>
           <History size={18} className="text-primary" />
-          <h1 className="text-lg font-bold">Logic Change Audit Trail</h1>
+          <h1 className="text-lg font-bold">{t("audit.pageTitle")}</h1>
           <Badge variant="outline" className="ml-auto font-mono text-[10px]">
-            {filtered.length} ENTRIES
+            {filtered.length} {t("audit.entries")}
           </Badge>
         </div>
       </header>
@@ -181,7 +183,7 @@ export default function AuditTrail() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by field, module, user, reason..."
+              placeholder={t("audit.searchPlaceholder")}
               className="pl-8 h-9 text-xs bg-secondary/50"
             />
           </div>
@@ -191,7 +193,7 @@ export default function AuditTrail() {
               <SelectValue placeholder="Module" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Modules</SelectItem>
+              <SelectItem value="all">{t("audit.allModules")}</SelectItem>
               {MODULE_OPTIONS.map((m) => (
                 <SelectItem key={m} value={m}>{m.replace(/_/g, " ")}</SelectItem>
               ))}
@@ -202,11 +204,11 @@ export default function AuditTrail() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="reverted">Reverted</SelectItem>
-              <SelectItem value="pending_approval">Pending</SelectItem>
+              <SelectItem value="all">{t("audit.allStatuses")}</SelectItem>
+              <SelectItem value="active">{t("status.approved")}</SelectItem>
+              <SelectItem value="draft">{t("status.draft")}</SelectItem>
+              <SelectItem value="reverted">{t("audit.reverted")}</SelectItem>
+              <SelectItem value="pending_approval">{t("status.pending")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -214,13 +216,13 @@ export default function AuditTrail() {
         {/* Log Table */}
         {isLoading ? (
           <div className="text-center py-16 text-muted-foreground font-mono text-sm animate-pulse">
-            LOADING AUDIT TRAIL...
+            {t("audit.loading")}
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             <History size={32} className="mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No audit entries found</p>
-            <p className="text-xs mt-1">Logic changes will appear here when rules, thresholds, or jurisdiction settings are modified.</p>
+             <p className="text-sm">{t("audit.noEntries")}</p>
+             <p className="text-xs mt-1">{t("audit.noEntriesHint")}</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -266,13 +268,13 @@ export default function AuditTrail() {
                       {/* Side-by-side diff */}
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="font-mono text-[10px] text-destructive/70 mb-1">OLD VALUE</p>
+                          <p className="font-mono text-[10px] text-destructive/70 mb-1">{t("audit.oldValue")}</p>
                           <div className="rounded border border-destructive/20 p-3 bg-destructive/5 min-h-[60px]">
                             {renderValue(entry.old_value)}
                           </div>
                         </div>
                         <div>
-                          <p className="font-mono text-[10px] text-risk-low/70 mb-1">NEW VALUE</p>
+                          <p className="font-mono text-[10px] text-risk-low/70 mb-1">{t("audit.newValue")}</p>
                           <div className="rounded border border-risk-low/20 p-3 bg-risk-low/5 min-h-[60px]">
                             {renderValue(entry.new_value)}
                           </div>
@@ -282,15 +284,15 @@ export default function AuditTrail() {
                       {/* Metadata */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                         <div>
-                          <p className="text-muted-foreground/70 mb-0.5">Action</p>
+                          <p className="text-muted-foreground/70 mb-0.5">{t("audit.action")}</p>
                           <p className="font-mono">{entry.action_type}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground/70 mb-0.5">Rule Set</p>
+                          <p className="text-muted-foreground/70 mb-0.5">{t("audit.ruleSet")}</p>
                           <p className="font-mono">{entry.rule_set || "—"}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground/70 mb-0.5">Jurisdiction</p>
+                          <p className="text-muted-foreground/70 mb-0.5">{t("intake.jurisdiction")}</p>
                           <p className="font-mono">{entry.jurisdiction || "Global"}</p>
                         </div>
                         <div>
@@ -302,7 +304,7 @@ export default function AuditTrail() {
                       {/* Reason */}
                       {entry.reason && (
                         <div className="text-xs">
-                          <p className="text-muted-foreground/70 mb-0.5">Reason</p>
+                          <p className="text-muted-foreground/70 mb-0.5">{t("audit.reason")}</p>
                           <p className="bg-secondary/50 rounded p-2 border border-border">{entry.reason}</p>
                         </div>
                       )}
@@ -318,7 +320,7 @@ export default function AuditTrail() {
                       {/* Actions */}
                       <div className="flex gap-2 flex-wrap">
                         <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setDetailEntry(entry)}>
-                          <Eye size={12} className="mr-1" /> Full Details
+                          <Eye size={12} className="mr-1" /> {t("audit.fullDetails")}
                         </Button>
                         {isAdmin && entry.requires_approval && entry.approval_status === "pending" && (
                           <>
@@ -326,13 +328,13 @@ export default function AuditTrail() {
                               size="sm" className="text-xs h-7 gap-1"
                               onClick={() => approveMutation.mutate({ id: entry.id, approved: true })}
                             >
-                              <CheckCircle2 size={12} /> Approve
+                              <CheckCircle2 size={12} /> {t("audit.approve")}
                             </Button>
                             <Button
                               variant="destructive" size="sm" className="text-xs h-7 gap-1"
                               onClick={() => approveMutation.mutate({ id: entry.id, approved: false })}
                             >
-                              <XCircle size={12} /> Reject
+                              <XCircle size={12} /> {t("audit.reject")}
                             </Button>
                           </>
                         )}
@@ -341,7 +343,7 @@ export default function AuditTrail() {
                             variant="outline" size="sm" className="text-xs h-7 gap-1 text-destructive"
                             onClick={() => setRollbackTarget(entry)}
                           >
-                            <RotateCcw size={12} /> Rollback
+                            <RotateCcw size={12} /> {t("audit.rollback")}
                           </Button>
                         )}
                       </div>
@@ -413,7 +415,7 @@ export default function AuditTrail() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
-              <RotateCcw size={16} /> Confirm Rollback
+              <RotateCcw size={16} /> {t("audit.confirmRollback")}
             </DialogTitle>
           </DialogHeader>
           {rollbackTarget && (
@@ -425,18 +427,18 @@ export default function AuditTrail() {
               <Textarea
                 value={rollbackReason}
                 onChange={(e) => setRollbackReason(e.target.value)}
-                placeholder="Reason for rollback (required for audit)..."
+                placeholder={t("audit.rollbackReason")}
                 rows={3}
                 className="bg-secondary/50"
               />
               <div className="flex gap-2 justify-end">
-                <Button variant="ghost" onClick={() => setRollbackTarget(null)}>Cancel</Button>
+                <Button variant="ghost" onClick={() => setRollbackTarget(null)}>{t("common.cancel")}</Button>
                 <Button
                   variant="destructive"
                   onClick={() => rollbackMutation.mutate(rollbackTarget)}
                   disabled={rollbackMutation.isPending}
                 >
-                  <RotateCcw size={14} className="mr-1" /> Rollback
+                  <RotateCcw size={14} className="mr-1" /> {t("audit.rollback")}
                 </Button>
               </div>
             </div>

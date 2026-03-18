@@ -14,21 +14,16 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Filter, Search, Activity } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const REVIEW_STATUSES = ["all", "new", "in_review", "waiting_docs", "flagged", "customs_hold", "escalated", "sent_to_broker"];
 const MODES = ["all", "air", "sea", "land"];
-const RISK_FILTERS = [
-  { value: "all", label: "All Risk" },
-  { value: "critical", label: "Critical (85+)" },
-  { value: "high", label: "High (60-84)" },
-  { value: "medium", label: "Medium (40-59)" },
-  { value: "low", label: "Low (<40)" },
-];
 
 type SortOption = "risk_desc" | "risk_asc" | "value_desc" | "value_asc" | "az" | "za" | "newest" | "oldest";
 
 export default function ReviewQueue() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [statusFilter, setStatusFilter] = useState("all");
   const [modeFilter, setModeFilter] = useState("all");
   const [riskFilter, setRiskFilter] = useState("all");
@@ -67,7 +62,6 @@ export default function ReviewQueue() {
       );
     }
 
-    // Sort
     result = [...result].sort((a, b) => {
       switch (sortBy) {
         case "risk_desc": return b.risk_score - a.risk_score;
@@ -92,16 +86,15 @@ export default function ReviewQueue() {
           <Link to="/" className="text-muted-foreground hover:text-foreground"><ArrowLeft size={18} /></Link>
           <div className="flex items-center gap-2">
             <Activity size={18} className="text-primary" />
-            <h1 className="text-lg font-bold font-mono">REVIEW QUEUE</h1>
+            <h1 className="text-lg font-bold font-mono">{t("review.title").toUpperCase()}</h1>
           </div>
           <Badge variant="outline" className="font-mono text-[10px] ml-auto">
-            {filtered.length} SHIPMENTS
+            {filtered.length} {t("dashboard.shipments")}
           </Badge>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-4">
-        {/* Filters */}
         <div className="flex flex-wrap gap-2 items-center">
           <Filter size={14} className="text-muted-foreground" />
           <div className="relative">
@@ -109,18 +102,18 @@ export default function ReviewQueue() {
             <Input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search..."
+              placeholder={t("search.placeholder")}
               className="pl-7 h-8 w-48 text-xs font-mono bg-secondary/30 border-border"
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[140px] h-8 text-xs font-mono bg-secondary/30 border-border">
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder={t("common.status")} />
             </SelectTrigger>
             <SelectContent>
               {REVIEW_STATUSES.map(s => (
                 <SelectItem key={s} value={s} className="text-xs font-mono">
-                  {s === "all" ? "All Status" : s.replace(/_/g, " ").toUpperCase()}
+                  {s === "all" ? t("review.allStatus") : t(`status.${s}`, { })}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -132,7 +125,7 @@ export default function ReviewQueue() {
             <SelectContent>
               {MODES.map(m => (
                 <SelectItem key={m} value={m} className="text-xs font-mono">
-                  {m === "all" ? "All Modes" : m.toUpperCase()}
+                  {m === "all" ? t("review.allModes") : t(`dashboard.${m}`)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -142,9 +135,11 @@ export default function ReviewQueue() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {RISK_FILTERS.map(r => (
-                <SelectItem key={r.value} value={r.value} className="text-xs font-mono">{r.label}</SelectItem>
-              ))}
+              <SelectItem value="all" className="text-xs font-mono">{t("review.allRisk")}</SelectItem>
+              <SelectItem value="critical" className="text-xs font-mono">{t("review.critical")}</SelectItem>
+              <SelectItem value="high" className="text-xs font-mono">{t("review.high")}</SelectItem>
+              <SelectItem value="medium" className="text-xs font-mono">{t("review.medium")}</SelectItem>
+              <SelectItem value="low" className="text-xs font-mono">{t("review.low")}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
@@ -152,37 +147,36 @@ export default function ReviewQueue() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="risk_desc" className="text-xs font-mono">Highest Risk</SelectItem>
-              <SelectItem value="risk_asc" className="text-xs font-mono">Lowest Risk</SelectItem>
-              <SelectItem value="value_desc" className="text-xs font-mono">Highest Value</SelectItem>
-              <SelectItem value="value_asc" className="text-xs font-mono">Lowest Value</SelectItem>
+              <SelectItem value="risk_desc" className="text-xs font-mono">{t("review.sortHighRisk")}</SelectItem>
+              <SelectItem value="risk_asc" className="text-xs font-mono">{t("review.sortLowRisk")}</SelectItem>
+              <SelectItem value="value_desc" className="text-xs font-mono">{t("review.sortHighValue")}</SelectItem>
+              <SelectItem value="value_asc" className="text-xs font-mono">{t("review.sortLowValue")}</SelectItem>
               <SelectItem value="az" className="text-xs font-mono">A → Z</SelectItem>
               <SelectItem value="za" className="text-xs font-mono">Z → A</SelectItem>
-              <SelectItem value="newest" className="text-xs font-mono">Newest First</SelectItem>
-              <SelectItem value="oldest" className="text-xs font-mono">Oldest First</SelectItem>
+              <SelectItem value="newest" className="text-xs font-mono">{t("review.sortNewest")}</SelectItem>
+              <SelectItem value="oldest" className="text-xs font-mono">{t("review.sortOldest")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Table */}
         <div className="rounded-lg border border-border overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-secondary/50 hover:bg-secondary/50">
                 <TableHead className="font-mono text-xs text-muted-foreground">ID</TableHead>
-                <TableHead className="font-mono text-xs text-muted-foreground">MODE</TableHead>
-                <TableHead className="font-mono text-xs text-muted-foreground">CONSIGNEE</TableHead>
-                <TableHead className="font-mono text-xs text-muted-foreground">HS CODE</TableHead>
-                <TableHead className="font-mono text-xs text-muted-foreground text-right">VALUE</TableHead>
-                <TableHead className="font-mono text-xs text-muted-foreground text-center">RISK</TableHead>
-                <TableHead className="font-mono text-xs text-muted-foreground">STATUS</TableHead>
+                <TableHead className="font-mono text-xs text-muted-foreground">{t("review.colMode")}</TableHead>
+                <TableHead className="font-mono text-xs text-muted-foreground">{t("review.colConsignee")}</TableHead>
+                <TableHead className="font-mono text-xs text-muted-foreground">{t("review.colHsCode")}</TableHead>
+                <TableHead className="font-mono text-xs text-muted-foreground text-right">{t("review.colValue")}</TableHead>
+                <TableHead className="font-mono text-xs text-muted-foreground text-center">{t("review.colRisk")}</TableHead>
+                <TableHead className="font-mono text-xs text-muted-foreground">{t("common.status")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">{t("common.loading")}</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">No shipments match filters.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">{t("review.noMatch")}</TableCell></TableRow>
               ) : (
                 filtered.map(s => (
                   <TableRow key={s.id} className="cursor-pointer hover:bg-accent/50" onClick={() => navigate(`/shipment/${s.shipment_id}`)}>
