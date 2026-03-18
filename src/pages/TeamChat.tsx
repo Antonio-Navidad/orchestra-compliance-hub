@@ -208,7 +208,7 @@ export default function TeamChat() {
             <div className="flex items-center gap-2">
               {activeChannelData && channelIcon(activeChannelData.channel_type)}
               <CardTitle className="text-sm font-mono">
-                {activeChannelData?.name || "Select a channel"}
+                {activeChannelData?.name || t("chat.selectChannel")}
               </CardTitle>
               {activeChannelData?.channel_type === "shipment" && activeChannelData.shipment_id && (
                 <Badge variant="outline" className="text-[10px]">{activeChannelData.shipment_id}</Badge>
