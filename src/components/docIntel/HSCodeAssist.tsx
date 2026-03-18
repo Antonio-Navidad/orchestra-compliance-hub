@@ -284,7 +284,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
             />
             <Button onClick={lookupHS} disabled={loading || !query.trim()} size="sm" className="text-xs font-mono gap-1">
               {loading ? <Loader2 size={12} className="animate-spin" /> : isReverseMode ? <RotateCcw size={12} /> : <Search size={12} />}
-              {isReverseMode ? "Reverse Lookup" : "Lookup"}
+              {isReverseMode ? t("hsAssist.reverseLookup") : t("hsAssist.lookup")}
             </Button>
           </div>
 
