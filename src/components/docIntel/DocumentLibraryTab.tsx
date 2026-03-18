@@ -164,14 +164,14 @@ export function DocumentLibraryTab() {
         <div className="relative flex-1 min-w-[200px]">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search documents..."
+            placeholder={t("library.searchDocs")}
             value={filters.search || ""}
             onChange={e => handleFilterChange("search", e.target.value)}
             className="pl-9 h-8 text-xs font-mono"
           />
         </div>
         <Button variant="outline" size="sm" onClick={() => setShowFilters(!showFilters)} className="text-[10px] font-mono gap-1">
-          <Filter size={12} /> Filters
+          <Filter size={12} /> {t("library.filters")}
         </Button>
       </div>
 
