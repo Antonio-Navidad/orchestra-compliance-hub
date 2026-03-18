@@ -136,6 +136,7 @@ function RouteCard({ route, recommended }: { route: RouteScenario; recommended?:
 }
 
 export default function RouteBuilder() {
+  const { t } = useLanguage();
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [mode, setMode] = useState("sea");
