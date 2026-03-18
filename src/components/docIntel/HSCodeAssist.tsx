@@ -323,7 +323,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                     <span className="text-sm font-mono font-bold text-primary">{s.code}</span>
                     {i === 0 && (
                       <Badge variant="outline" className="text-[9px] font-mono bg-primary/10 text-primary border-primary/30">
-                        Best Match
+                        {t("hsAssist.bestMatch")}
                       </Badge>
                     )}
                     <Badge variant="outline" className="text-[9px] font-mono">
