@@ -284,7 +284,7 @@ export default function AuditTrail() {
                       {/* Metadata */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                         <div>
-                          <p className="text-muted-foreground/70 mb-0.5">Action</p>
+                          <p className="text-muted-foreground/70 mb-0.5">{t("audit.action")}</p>
                           <p className="font-mono">{entry.action_type}</p>
                         </div>
                         <div>
