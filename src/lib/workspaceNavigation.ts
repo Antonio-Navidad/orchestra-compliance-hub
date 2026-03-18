@@ -111,7 +111,7 @@ const ROUTE_PLANNING_NAV: NavGroup[] = [
     items: [
       { title: "Watch Mode", url: "/watch-mode", icon: Radio },
       { title: "Classify Product", url: "/classify", icon: Search },
-      { title: "Document Validation", url: "/validate-docs", icon: FileText },
+      { title: "Doc Intelligence", url: "/doc-intel", icon: FileSearch },
       { title: "Legal Knowledge", url: "/legal", icon: BookOpen },
     ],
   },
