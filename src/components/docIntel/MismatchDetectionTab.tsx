@@ -140,7 +140,7 @@ export function MismatchDetectionTab() {
           <CardHeader className="py-3 px-4">
             <CardTitle className="text-sm font-mono flex items-center gap-2">
               <AlertTriangle size={14} className="text-amber-400" />
-              Comparison Results
+              {t("mismatch.results")}
               {comparedMismatches.length > 0 && (
                 <Badge variant="outline" className="ml-auto text-[9px] bg-destructive/10 text-destructive border-destructive/30">
                   {comparedMismatches.filter((m) => m.severity === "high").length} high ·{" "}
