@@ -177,6 +177,7 @@ export function MismatchDetectionTab() {
                         <Badge variant="outline" className={cn("text-[9px] font-mono uppercase", severityColor(m.severity))}>
                           {m.severity}
                         </Badge>
+                        <HelpInfoIcon helpKey={`severity_${m.severity}`} size={12} />
                       </div>
                     </div>
                     <div className="grid grid-cols-[1fr,auto,1fr] items-center gap-2">
