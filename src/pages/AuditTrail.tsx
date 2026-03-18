@@ -183,7 +183,7 @@ export default function AuditTrail() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by field, module, user, reason..."
+              placeholder={t("audit.searchPlaceholder")}
               className="pl-8 h-9 text-xs bg-secondary/50"
             />
           </div>
