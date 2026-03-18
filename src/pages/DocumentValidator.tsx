@@ -863,10 +863,10 @@ export default function DocumentValidator({ embedded }: { embedded?: boolean } =
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="font-mono">
-          <TabsTrigger value="upload" className="text-xs"><Upload size={12} className="mr-1.5" /> UPLOAD</TabsTrigger>
-          <TabsTrigger value="fields" className="text-xs" disabled={totalFields === 0}><Eye size={12} className="mr-1.5" /> FIELDS ({totalFields})</TabsTrigger>
+          <TabsTrigger value="upload" className="text-xs"><Upload size={12} className="mr-1.5" /> {t("validator.tab.upload")}</TabsTrigger>
+          <TabsTrigger value="fields" className="text-xs" disabled={totalFields === 0}><Eye size={12} className="mr-1.5" /> {t("validator.tab.fields")} ({totalFields})</TabsTrigger>
           <TabsTrigger value="mismatches" className="text-xs" disabled={crossDocMismatches.length === 0}>
-            <GitCompare size={12} className="mr-1.5" /> MISMATCHES ({crossDocMismatches.length})
+            <GitCompare size={12} className="mr-1.5" /> {t("validator.tab.mismatches")} ({crossDocMismatches.length})
           </TabsTrigger>
           <TabsTrigger value="results" className="text-xs" disabled={!ruleResult}><CheckCircle size={12} className="mr-1.5" /> RESULTS</TabsTrigger>
         </TabsList>
