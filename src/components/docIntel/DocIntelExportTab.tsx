@@ -9,6 +9,7 @@ import * as XLSX from "xlsx";
 
 export function DocIntelExportTab() {
   const { sessions, loading, fetchSessions } = useValidationHistory();
+  const { t } = useLanguage();
   const [selectedSessionId, setSelectedSessionId] = useState("");
 
   useEffect(() => { fetchSessions(); }, [fetchSessions]);
