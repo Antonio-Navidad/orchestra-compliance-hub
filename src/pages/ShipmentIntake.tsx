@@ -488,7 +488,7 @@ export default function ShipmentIntake() {
             <Card>
               <CardContent className="pt-4 space-y-3">
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground font-mono">Documents</span>
+                  <span className="text-muted-foreground font-mono">{t("intake.documents")}</span>
                   <span className="font-mono font-bold">{docs.length}</span>
                 </div>
                 <div className="flex justify-between text-xs">
