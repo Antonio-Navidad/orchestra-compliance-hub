@@ -668,7 +668,7 @@ export default function DocumentValidator({ embedded }: { embedded?: boolean } =
             <LayoutTemplate size={12} /> {t("validator.templates")}
           </Button>
           <Button variant="outline" size="sm" className="font-mono text-[10px] gap-1.5" onClick={() => { setShowHistory(true); fetchSessions(); }}>
-            <History size={12} /> History
+            <History size={12} /> {t("validator.history")}
           </Button>
           <Button variant="outline" size="sm" className="font-mono text-[10px] gap-1.5" onClick={handleResetAll}>
             <RotateCcw size={12} /> Reset
