@@ -26,7 +26,7 @@ export function DocInfoDrawer({ open, onOpenChange, docKey, lane }: DocInfoDrawe
     docKey,
     lane.originLabel,
     lane.destinationLabel,
-    lane.modeOverlay.id,
+    lane.modeOverlay.mode,
   );
 
   if (!info) {
