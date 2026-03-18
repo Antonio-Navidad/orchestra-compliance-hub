@@ -152,7 +152,7 @@ const OPERATIONS_NAV: NavGroup[] = [
   {
     label: "COMPLIANCE",
     items: [
-      { title: "Document Validation", url: "/validate-docs", icon: FileText },
+      { title: "Doc Intelligence", url: "/doc-intel", icon: FileSearch },
       { title: "DIAN / Colombia", url: "/dian-compliance", icon: Fingerprint },
       { title: "Audit Trail", url: "/audit-trail", icon: Scale },
     ],
