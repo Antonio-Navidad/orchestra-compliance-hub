@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useRole } from "@/hooks/useRole";
+import { useLanguage } from "@/hooks/useLanguage";
 import { format } from "date-fns";
 
 interface AuditEntry {
