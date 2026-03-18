@@ -78,7 +78,7 @@ function canonicalFieldName(raw: string): string {
 const HIGH_SEVERITY_FIELDS = [
   "declared_value", "total_price", "unit_price", "subtotal",
   "hs_code", "consignee_name", "exporter_name", "origin_country",
-  "destination_country", "quantity", "package_count",
+  "destination_country", "total_quantity", "quantity", "package_count",
   "gross_weight_kg", "net_weight_kg",
   "container_number",
 ];
