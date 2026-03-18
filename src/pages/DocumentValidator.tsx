@@ -881,18 +881,18 @@ export default function DocumentValidator({ embedded }: { embedded?: boolean } =
                 onClick={() => fileInputRef.current?.click()}>
                 <input ref={fileInputRef} type="file" multiple accept="image/*,application/pdf" className="hidden" onChange={(e) => handleFiles(e.target.files)} />
                 <Upload size={36} className="mx-auto text-muted-foreground/40 mb-3" />
-                <p className="text-sm font-medium">Drop documents here or click to browse</p>
+                <p className="text-sm font-medium">{t("validator.dropZone")}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  PDF, JPG, PNG — invoices, packing lists, BOL, AWB, COO, labels, product photos
+                  {t("validator.dropZoneHint")}
                 </p>
                 <div className="flex items-center justify-center gap-3 mt-4">
                   <Button variant="outline" size="sm" className="font-mono text-[10px]"
                     onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>
-                    <FileText size={12} className="mr-1.5" /> Browse Files
+                    <FileText size={12} className="mr-1.5" /> {t("validator.browseFiles")}
                   </Button>
                   <Button variant="outline" size="sm" className="font-mono text-[10px]"
                     onClick={(e) => { e.stopPropagation(); cameraInputRef.current?.click(); }}>
-                    <Camera size={12} className="mr-1.5" /> Capture Photo
+                    <Camera size={12} className="mr-1.5" /> {t("validator.capturePhoto")}
                   </Button>
                   <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleFiles(e.target.files)} />
                 </div>
