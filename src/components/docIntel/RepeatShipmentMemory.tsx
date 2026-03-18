@@ -166,7 +166,7 @@ export function RepeatShipmentMemory({
           <>
             <div className="border rounded p-2.5 space-y-1.5">
               <p className="text-[10px] font-mono font-medium text-muted-foreground mb-1">
-                Field Comparison: Previous vs Current
+                {t("memory.fieldComparison")}
               </p>
               {buildDiffs(selectedPrior).map(d => (
                 <div key={d.field} className="flex items-center gap-2 text-[10px] font-mono">
