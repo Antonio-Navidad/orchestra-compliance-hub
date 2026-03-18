@@ -96,13 +96,13 @@
     --glow-blue: 218 100% 65%;
     --glow-amber: 40 90% 40%;
 
-    --sidebar-background: 213 48% 91%;
-    --sidebar-foreground: 215 30% 25%;
+    --sidebar-background: 215 42% 82%;
+    --sidebar-foreground: 215 35% 20%;
     --sidebar-primary: 218 100% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 213 55% 93%;
+    --sidebar-accent: 215 50% 86%;
     --sidebar-accent-foreground: 215 39% 20%;
-    --sidebar-border: 213 38% 85%;
+    --sidebar-border: 215 35% 76%;
     --sidebar-ring: 217 100% 68%;
   }
 }
