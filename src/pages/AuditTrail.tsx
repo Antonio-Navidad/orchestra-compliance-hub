@@ -320,7 +320,7 @@ export default function AuditTrail() {
                       {/* Actions */}
                       <div className="flex gap-2 flex-wrap">
                         <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setDetailEntry(entry)}>
-                          <Eye size={12} className="mr-1" /> Full Details
+                          <Eye size={12} className="mr-1" /> {t("audit.fullDetails")}
                         </Button>
                         {isAdmin && entry.requires_approval && entry.approval_status === "pending" && (
                           <>
