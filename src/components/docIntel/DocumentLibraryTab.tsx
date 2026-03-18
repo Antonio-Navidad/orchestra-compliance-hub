@@ -238,6 +238,7 @@ export function DocumentLibraryTab() {
                   <ExtractionStatusBadge
                     status={doc.extraction_status}
                     onRetry={() => extractDocument(doc)}
+                    t={t}
                   />
                 </div>
 
