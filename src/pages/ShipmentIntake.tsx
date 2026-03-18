@@ -382,7 +382,7 @@ export default function ShipmentIntake() {
                   <Input value={form.forwarder} onChange={e => updateField('forwarder', e.target.value)} placeholder="Forwarder name" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">COO Status</Label>
+                  <Label className="text-xs font-mono">{t("intake.cooStatus")}</Label>
                   <Select value={form.coo_status} onValueChange={v => updateField('coo_status', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
