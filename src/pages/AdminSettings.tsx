@@ -450,7 +450,7 @@ function LanguageResetPanel() {
       <div className="space-y-2">
         <h4 className="text-xs font-mono text-muted-foreground">ALL LANGUAGES</h4>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {LANGUAGES.map((lang: any) => (
+          {langList.map((lang) => (
             <button
               key={lang.code}
               onClick={() => setLanguage(lang.code)}
