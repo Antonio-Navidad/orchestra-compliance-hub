@@ -658,9 +658,9 @@ export default function DocumentValidator({ embedded }: { embedded?: boolean } =
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-bold font-mono">DOCUMENT PACKET VALIDATOR</h1>
+          <h1 className="text-xl font-bold font-mono">{t("validator.pageTitle")}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Deterministic · Versioned · Auditable — v{RULES_VERSION}
+            {t("validator.pageSubtitle", { version: RULES_VERSION })}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
