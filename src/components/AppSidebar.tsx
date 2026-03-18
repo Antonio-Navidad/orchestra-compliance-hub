@@ -7,6 +7,7 @@ import { getNavigationForPurpose } from "@/lib/workspaceNavigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NAV_TOOLTIPS } from "@/lib/helpContent";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
@@ -21,6 +22,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { signOut } = useAuth();
   const { purpose, clearPurpose } = useWorkspacePurpose();
+  const { t } = useLanguage();
 
   const navGroups = getNavigationForPurpose(purpose);
   const currentPurpose = WORKSPACE_PURPOSES.find(p => p.id === purpose);
@@ -36,7 +38,7 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <h1 className="text-sm font-bold tracking-tight">ORCHESTRA</h1>
+              <h1 className="text-sm font-bold tracking-tight">{t("app.title")}</h1>
               {currentPurpose && (
                 <p className="text-[9px] font-mono text-primary/70 tracking-wider truncate">
                   {currentPurpose.icon} {currentPurpose.label.toUpperCase()}
@@ -49,14 +51,14 @@ export function AppSidebar() {
 
       <SidebarContent className="px-1">
         {navGroups.map((group) => (
-          <SidebarGroup key={group.label}>
+          <SidebarGroup key={group.labelKey}>
             <SidebarGroupLabel className="text-[10px] tracking-widest font-mono text-muted-foreground/60">
-              {group.label}
+              {t(group.labelKey)}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => (
-                  <SidebarMenuItem key={item.url + item.title}>
+                  <SidebarMenuItem key={item.url + item.titleKey}>
                     <SidebarMenuButton asChild isActive={isActive(item.url)}>
                       <NavLink
                         to={item.url}
@@ -66,7 +68,7 @@ export function AppSidebar() {
                       >
                         <item.icon className="h-4 w-4" />
                         {!collapsed && (
-                          <span className="text-xs font-mono flex-1">{item.title}</span>
+                          <span className="text-xs font-mono flex-1">{t(item.titleKey)}</span>
                         )}
                         {!collapsed && NAV_TOOLTIPS[item.url] && (
                           <TooltipProvider delayDuration={200}>
@@ -104,7 +106,7 @@ export function AppSidebar() {
               onClick={clearPurpose}
               className="text-[10px] font-mono text-muted-foreground hover:text-foreground h-auto p-1 justify-start"
             >
-              <Repeat size={10} className="mr-1" /> Switch Workspace
+              <Repeat size={10} className="mr-1" /> {t("nav.switchWorkspace")}
             </Button>
           )}
           <LanguageSwitcher collapsed={collapsed} />
@@ -117,7 +119,7 @@ export function AppSidebar() {
                 onClick={signOut}
                 className="text-xs font-mono text-muted-foreground hover:text-foreground h-auto p-1 ml-auto"
               >
-                <LogOut size={12} className="mr-1" /> Sign Out
+                <LogOut size={12} className="mr-1" /> {t("nav.signOut")}
               </Button>
             )}
           </div>

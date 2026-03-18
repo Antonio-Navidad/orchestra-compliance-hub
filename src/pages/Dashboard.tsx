@@ -7,6 +7,7 @@ import { Plane, Ship, Truck, AlertTriangle, ShieldCheck, Package, Layers, FileWa
 import { Shipment, TransportMode } from "@/types/orchestra";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -25,6 +26,7 @@ export default function Dashboard() {
   const [activeMode, setActiveMode] = useState<string>("all");
   const [dashboardView, setDashboardView] = useState<DashboardView>("combined");
   const { signOut } = useAuth();
+  const { t } = useLanguage();
 
   const { data: shipments = [], isLoading } = useQuery({
     queryKey: ["shipments"],
@@ -67,6 +69,35 @@ export default function Dashboard() {
     totalExposure: directionShipments.filter(s => s.risk_score >= 60).reduce((sum, s) => sum + Math.round(s.declared_value * 0.15), 0),
   };
 
+  const viewLabels = {
+    inbound: {
+      title: t("dashboard.importerTitle"),
+      subtitle: t("dashboard.importerSubtitle"),
+      kpiPrefix: t("dashboard.inbound"),
+      holdLabel: t("dashboard.holdRisk"),
+      readyLabel: t("dashboard.notBrokerReady"),
+      exposureLabel: t("dashboard.avoidableImportExposure"),
+    },
+    outbound: {
+      title: t("dashboard.exporterTitle"),
+      subtitle: t("dashboard.exporterSubtitle"),
+      kpiPrefix: t("dashboard.outbound"),
+      holdLabel: t("dashboard.blockedFromRelease"),
+      readyLabel: t("dashboard.missingExportDocs"),
+      exposureLabel: t("dashboard.avoidableExportExposure"),
+    },
+    combined: {
+      title: t("dashboard.unifiedTitle"),
+      subtitle: t("dashboard.unifiedSubtitle"),
+      kpiPrefix: t("dashboard.combined"),
+      holdLabel: t("dashboard.atRisk"),
+      readyLabel: t("dashboard.notReady"),
+      exposureLabel: t("dashboard.totalAvoidableExposure"),
+    },
+  };
+
+  const labels = viewLabels[dashboardView];
+
   const issueContext: DirectionContext = dashboardView === 'combined' ? 'combined' : dashboardView;
   const shipmentIssues = directionShipments
     .filter(s => s.risk_score >= 40 || (s as any).filing_readiness === 'not_ready')
@@ -86,39 +117,9 @@ export default function Dashboard() {
     }))
     .filter(si => si.issues.length > 0);
 
-  const viewLabels = {
-    inbound: {
-      title: 'IMPORTER DASHBOARD',
-      subtitle: 'Inbound customs readiness & import-side exposure',
-      kpiPrefix: 'INBOUND',
-      holdLabel: 'HOLD RISK',
-      readyLabel: 'NOT BROKER-READY',
-      exposureLabel: 'AVOIDABLE IMPORT EXPOSURE',
-    },
-    outbound: {
-      title: 'EXPORTER DASHBOARD',
-      subtitle: 'Pre-departure readiness & export-side risk',
-      kpiPrefix: 'OUTBOUND',
-      holdLabel: 'BLOCKED FROM RELEASE',
-      readyLabel: 'MISSING EXPORT DOCS',
-      exposureLabel: 'AVOIDABLE EXPORT EXPOSURE',
-    },
-    combined: {
-      title: 'UNIFIED DASHBOARD',
-      subtitle: 'Cross-border compliance oversight',
-      kpiPrefix: 'ALL',
-      holdLabel: 'AT RISK',
-      readyLabel: 'NOT READY',
-      exposureLabel: 'TOTAL AVOIDABLE EXPOSURE',
-    },
-  };
-
-  const labels = viewLabels[dashboardView];
-
   return (
     <div className="bg-background">
       <div className="container mx-auto px-4 py-6 space-y-6">
-        {/* Start New Workflow Strip */}
         <StartNewWorkflow
           filter={["New Shipment", "New Route", "New Compliance Review", "New Watchlist", "Decision Twin"]}
           variant="strip"
@@ -135,7 +136,7 @@ export default function Dashboard() {
                 dashboardView === 'inbound' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <ArrowDownToLine size={12} /> INBOUND
+              <ArrowDownToLine size={12} /> {t("dashboard.inbound")}
             </button>
             <button
               onClick={() => setDashboardView('outbound')}
@@ -143,7 +144,7 @@ export default function Dashboard() {
                 dashboardView === 'outbound' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <ArrowUpFromLine size={12} /> OUTBOUND
+              <ArrowUpFromLine size={12} /> {t("dashboard.outbound")}
             </button>
             <button
               onClick={() => setDashboardView('combined')}
@@ -151,32 +152,29 @@ export default function Dashboard() {
                 dashboardView === 'combined' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Layers size={12} /> COMBINED
+              <Layers size={12} /> {t("dashboard.combined")}
             </button>
           </div>
         </div>
 
-        {/* ═══ KPI Stats with Bold Risk Colors ═══ */}
+        {/* KPI Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {/* Total Shipments — primary blue */}
           <div className="rounded-lg border border-primary/30 bg-card p-4 shadow-[0_0_15px_-3px_hsl(var(--primary)/0.15)]">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-mono text-[10px] text-muted-foreground tracking-wider">{labels.kpiPrefix} SHIPMENTS</span>
+              <span className="font-mono text-[10px] text-muted-foreground tracking-wider">{labels.kpiPrefix} {t("dashboard.shipments")}</span>
               <Package size={14} className="text-primary" />
             </div>
             <p className="text-2xl font-bold font-mono text-primary">{isLoading ? '—' : stats.total}</p>
           </div>
 
-          {/* Under Review — yellow/orange */}
           <div className="rounded-lg border border-risk-medium/40 bg-risk-medium/5 p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-mono text-[10px] text-muted-foreground tracking-wider">UNDER REVIEW</span>
+              <span className="font-mono text-[10px] text-muted-foreground tracking-wider">{t("dashboard.underReview")}</span>
               <ClipboardList size={14} className="text-risk-medium" />
             </div>
             <p className="text-2xl font-bold font-mono text-risk-medium">{isLoading ? '—' : stats.underReview}</p>
           </div>
 
-          {/* Hold Risk — red/critical */}
           <div className="rounded-lg border border-risk-critical/40 bg-risk-critical/5 p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="font-mono text-[10px] text-muted-foreground tracking-wider">{labels.holdLabel}</span>
@@ -185,7 +183,6 @@ export default function Dashboard() {
             <p className="text-2xl font-bold font-mono text-risk-critical">{isLoading ? '—' : stats.holdRisk}</p>
           </div>
 
-          {/* Not Ready — orange/high */}
           <div className="rounded-lg border border-risk-high/40 bg-risk-high/5 p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="font-mono text-[10px] text-muted-foreground tracking-wider">{labels.readyLabel}</span>
@@ -194,10 +191,9 @@ export default function Dashboard() {
             <p className="text-2xl font-bold font-mono text-risk-high">{isLoading ? '—' : stats.notBrokerReady}</p>
           </div>
 
-          {/* Cleared — green/safe */}
           <div className="rounded-lg border border-risk-safe/40 bg-risk-safe/5 p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-mono text-[10px] text-muted-foreground tracking-wider">CLEARED</span>
+              <span className="font-mono text-[10px] text-muted-foreground tracking-wider">{t("dashboard.cleared")}</span>
               <ShieldCheck size={14} className="text-risk-safe" />
             </div>
             <p className="text-2xl font-bold font-mono text-risk-safe">{isLoading ? '—' : stats.cleared}</p>
@@ -209,7 +205,7 @@ export default function Dashboard() {
           <Card>
             <CardContent className="pt-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="font-mono text-[10px] text-muted-foreground tracking-wider">AVG PACKET SCORE</span>
+                <span className="font-mono text-[10px] text-muted-foreground tracking-wider">{t("dashboard.avgPacketScore")}</span>
                 <ClipboardCheck size={14} className="text-primary" />
               </div>
               <div className="flex items-center gap-3">
@@ -238,17 +234,17 @@ export default function Dashboard() {
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-mono text-[10px] text-muted-foreground tracking-wider">DIRECTION SPLIT</span>
+                  <span className="font-mono text-[10px] text-muted-foreground tracking-wider">{t("dashboard.directionSplit")}</span>
                   <Layers size={14} className="text-primary" />
                 </div>
                 <div className="flex items-center gap-4 text-xs font-mono">
                   <div className="flex items-center gap-1">
                     <ArrowDownToLine size={10} className="text-primary" />
-                    <span>{inboundShipments.length} inbound</span>
+                    <span>{inboundShipments.length} {t("dashboard.inboundCount")}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <ArrowUpFromLine size={10} className="text-risk-medium" />
-                    <span>{outboundShipments.length} outbound</span>
+                    <span>{outboundShipments.length} {t("dashboard.outboundCount")}</span>
                   </div>
                 </div>
               </CardContent>
@@ -256,11 +252,11 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* ═══ Active Issues — Bold Andon Cards ═══ */}
+        {/* Active Issues */}
         {shipmentIssues.length > 0 && (
           <div className="space-y-3">
             <h3 className="font-mono text-xs text-muted-foreground tracking-wider flex items-center gap-2">
-              <AlertTriangle size={14} className="text-risk-critical" /> ACTIVE ISSUES
+              <AlertTriangle size={14} className="text-risk-critical" /> {t("dashboard.activeIssues")}
               <Badge variant="destructive" className="font-mono text-[10px] px-1.5 py-0">
                 {shipmentIssues.reduce((c, si) => c + si.issues.length, 0)}
               </Badge>
@@ -297,7 +293,7 @@ export default function Dashboard() {
                         );
                       })}
                       {issues.length > 2 && (
-                        <p className="text-[10px] text-muted-foreground">+{issues.length - 2} more issues</p>
+                        <p className="text-[10px] text-muted-foreground">{t("dashboard.moreIssues", { count: String(issues.length - 2) })}</p>
                       )}
                     </div>
                   </Link>
@@ -307,30 +303,30 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ═══ Shipment Table with Mode Tabs ═══ */}
+        {/* Shipment Table */}
         <div className="flex items-center justify-between">
-          <h3 className="font-mono text-xs text-muted-foreground tracking-wider">ORDERS & SHIPMENTS</h3>
+          <h3 className="font-mono text-xs text-muted-foreground tracking-wider">{t("dashboard.ordersShipments")}</h3>
           <ExportButton
             data={filteredShipments as any[]}
             columns={SHIPMENT_COLUMNS}
             filename={`orchestra-shipments-${new Date().toISOString().slice(0, 10)}`}
             sheetName="Shipments"
-            label="Export Shipments"
+            label={t("dashboard.exportShipments")}
           />
         </div>
         <Tabs value={activeMode} onValueChange={setActiveMode}>
           <TabsList className="bg-secondary/50 border border-border">
             <TabsTrigger value="all" className="font-mono text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              ALL
+              {t("dashboard.all")}
             </TabsTrigger>
             <TabsTrigger value="air" className="font-mono text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Plane size={12} className="mr-1" /> AIR
+              <Plane size={12} className="mr-1" /> {t("dashboard.air")}
             </TabsTrigger>
             <TabsTrigger value="sea" className="font-mono text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Ship size={12} className="mr-1" /> SEA
+              <Ship size={12} className="mr-1" /> {t("dashboard.sea")}
             </TabsTrigger>
             <TabsTrigger value="land" className="font-mono text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Truck size={12} className="mr-1" /> LAND
+              <Truck size={12} className="mr-1" /> {t("dashboard.land")}
             </TabsTrigger>
           </TabsList>
 

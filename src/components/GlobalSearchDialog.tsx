@@ -4,18 +4,19 @@ import { CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, C
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { HELP_KNOWLEDGE_BASE, type HelpEntry } from "@/lib/helpContent";
+import { useLanguage } from "@/hooks/useLanguage";
 import { BookOpen, FileText, Package, Search } from "lucide-react";
 
 export function GlobalSearchDialog() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [query, setQuery] = useState("");
   const [helpResults, setHelpResults] = useState<HelpEntry[]>([]);
   const [shipmentResults, setShipmentResults] = useState<any[]>([]);
   const [docResults, setDocResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
 
-  // Cmd+K / Ctrl+K
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -79,17 +80,17 @@ export function GlobalSearchDialog() {
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput
-        placeholder="Search help, shipments, documents… (⌘K)"
+        placeholder={t("search.cmdK")}
         value={query}
         onValueChange={setQuery}
       />
       <CommandList>
         {!searching && query.length >= 2 && !hasResults && (
-          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandEmpty>{t("search.noResults")}</CommandEmpty>
         )}
 
         {helpResults.length > 0 && (
-          <CommandGroup heading="Help & Features">
+          <CommandGroup heading={t("search.helpFeatures")}>
             {helpResults.map((entry) => (
               <CommandItem
                 key={entry.route + (entry.tab || "")}
@@ -111,7 +112,7 @@ export function GlobalSearchDialog() {
         )}
 
         {shipmentResults.length > 0 && (
-          <CommandGroup heading="Shipments">
+          <CommandGroup heading={t("search.shipmentsGroup")}>
             {shipmentResults.map((s) => (
               <CommandItem
                 key={s.shipment_id}
@@ -139,7 +140,7 @@ export function GlobalSearchDialog() {
         )}
 
         {docResults.length > 0 && (
-          <CommandGroup heading="Documents">
+          <CommandGroup heading={t("search.documentsGroup")}>
             {docResults.map((d) => (
               <CommandItem
                 key={d.id}

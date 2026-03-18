@@ -9,6 +9,7 @@ import { HSCodeAssist } from "@/components/docIntel/HSCodeAssist";
 import { RepeatShipmentMemory } from "@/components/docIntel/RepeatShipmentMemory";
 import { TabContextBanner } from "@/components/TabContextBanner";
 import { toast } from "sonner";
+import { useLanguage } from "@/hooks/useLanguage";
 
 import DocumentValidator from "./DocumentValidator";
 
@@ -16,8 +17,8 @@ export default function DocumentIntelligence() {
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") || "library";
   const [activeTab, setActiveTab] = useState(initialTab);
+  const { t } = useLanguage();
 
-  // Shared lane context for HS Code Assist
   const [laneContext, setLaneContext] = useState({
     origin: "",
     destination: "",
@@ -50,9 +51,9 @@ export default function DocumentIntelligence() {
           <FileSearch size={16} className="text-primary" />
         </div>
         <div>
-          <h1 className="text-lg font-bold tracking-tight">Document Intelligence</h1>
+          <h1 className="text-lg font-bold tracking-tight">{t("docIntel.title")}</h1>
           <p className="text-[10px] font-mono text-muted-foreground tracking-wider">
-            INTAKE · EXTRACT · VALIDATE · CLASSIFY · EXPORT
+            {t("docIntel.subtitle")}
           </p>
         </div>
       </div>
@@ -60,22 +61,22 @@ export default function DocumentIntelligence() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="bg-muted/30 border border-border flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="library" className="text-xs font-mono gap-1.5">
-            <Library size={12} /> Library
+            <Library size={12} /> {t("docIntel.tab.library")}
           </TabsTrigger>
           <TabsTrigger value="validator" className="text-xs font-mono gap-1.5">
-            <FileSearch size={12} /> Validator
+            <FileSearch size={12} /> {t("docIntel.tab.validator")}
           </TabsTrigger>
           <TabsTrigger value="mismatches" className="text-xs font-mono gap-1.5">
-            <GitCompare size={12} /> Mismatches
+            <GitCompare size={12} /> {t("docIntel.tab.mismatches")}
           </TabsTrigger>
           <TabsTrigger value="hs-assist" className="text-xs font-mono gap-1.5">
-            <Search size={12} /> HS Assist
+            <Search size={12} /> {t("docIntel.tab.hsAssist")}
           </TabsTrigger>
           <TabsTrigger value="memory" className="text-xs font-mono gap-1.5">
-            <History size={12} /> Memory
+            <History size={12} /> {t("docIntel.tab.memory")}
           </TabsTrigger>
           <TabsTrigger value="export" className="text-xs font-mono gap-1.5">
-            <Download size={12} /> Export
+            <Download size={12} /> {t("docIntel.tab.export")}
           </TabsTrigger>
         </TabsList>
 
@@ -119,9 +120,9 @@ export default function DocumentIntelligence() {
           />
           {!laneContext.origin && !laneContext.destination && (
             <div className="text-center py-12 text-muted-foreground font-mono text-sm">
-              Set an origin and destination lane context to check for prior shipments.
+              {t("docIntel.memoryEmpty")}
               <br />
-              <span className="text-[10px]">Use the Validator tab to set your lane, then return here.</span>
+              <span className="text-[10px]">{t("docIntel.memoryHint")}</span>
             </div>
           )}
         </TabsContent>

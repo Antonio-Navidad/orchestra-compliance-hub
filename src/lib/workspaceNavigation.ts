@@ -9,209 +9,209 @@ import {
 import type { WorkspacePurpose } from "@/hooks/useWorkspacePurpose";
 
 export interface NavItem {
-  title: string;
+  titleKey: string; // i18n translation key
   url: string;
   icon: any;
 }
 
 export interface NavGroup {
-  label: string;
+  labelKey: string; // i18n translation key
   items: NavItem[];
 }
 
 const MARKETPLACE_NAV: NavGroup[] = [
   {
-    label: "QUICK ACTIONS",
+    labelKey: "navGroup.quickActions",
     items: [
-      { title: "New Shipment", url: "/intake", icon: Plus },
-      { title: "New Route", url: "/creator-mode", icon: Route },
+      { titleKey: "nav.newShipment", url: "/intake", icon: Plus },
+      { titleKey: "nav.newRoute", url: "/creator-mode", icon: Route },
     ],
   },
   {
-    label: "ORDERS & SHIPMENTS",
+    labelKey: "navGroup.ordersShipments",
     items: [
-      { title: "Dashboard", url: "/", icon: Activity },
-      { title: "Shipment Tracker", url: "/review", icon: Package },
-      { title: "Seller Mode", url: "/seller-mode", icon: ShoppingCart },
+      { titleKey: "nav.dashboard", url: "/", icon: Activity },
+      { titleKey: "nav.shipmentTracker", url: "/review", icon: Package },
+      { titleKey: "nav.sellerMode", url: "/seller-mode", icon: ShoppingCart },
     ],
   },
   {
-    label: "LOGISTICS",
+    labelKey: "navGroup.logistics",
     items: [
-      { title: "Route Builder", url: "/route-builder", icon: Map },
-      { title: "Hand-off Chain", url: "/watch-mode", icon: Radio },
-      { title: "Classify Product", url: "/classify", icon: Search },
-      { title: "Doc Intelligence", url: "/doc-intel", icon: FileSearch },
+      { titleKey: "nav.routeBuilder", url: "/route-builder", icon: Map },
+      { titleKey: "nav.handoffChain", url: "/watch-mode", icon: Radio },
+      { titleKey: "nav.classifyProduct", url: "/classify", icon: Search },
+      { titleKey: "nav.docIntel", url: "/doc-intel", icon: FileSearch },
     ],
   },
   {
-    label: "INSIGHTS",
+    labelKey: "navGroup.insights",
     items: [
-      { title: "Analytics", url: "/analytics", icon: BarChart3 },
-      { title: "Pricing", url: "/pricing", icon: CreditCard },
-      { title: "Guide", url: "/guide", icon: HelpCircle },
+      { titleKey: "nav.analytics", url: "/analytics", icon: BarChart3 },
+      { titleKey: "nav.pricing", url: "/pricing", icon: CreditCard },
+      { titleKey: "nav.guide", url: "/guide", icon: HelpCircle },
     ],
   },
 ];
 
 const COMPLIANCE_NAV: NavGroup[] = [
   {
-    label: "QUICK ACTIONS",
+    labelKey: "navGroup.quickActions",
     items: [
-      { title: "New Review", url: "/validate-docs", icon: Plus },
-      { title: "New Shipment", url: "/intake", icon: Package },
+      { titleKey: "nav.newReview", url: "/validate-docs", icon: Plus },
+      { titleKey: "nav.newShipment", url: "/intake", icon: Package },
     ],
   },
   {
-    label: "COMPLIANCE",
+    labelKey: "navGroup.compliance",
     items: [
-      { title: "Dashboard", url: "/", icon: Activity },
-      { title: "Doc Intelligence", url: "/doc-intel", icon: FileSearch },
-      { title: "DIAN / Colombia", url: "/dian-compliance", icon: Fingerprint },
-      { title: "Classify Product", url: "/classify", icon: Search },
+      { titleKey: "nav.dashboard", url: "/", icon: Activity },
+      { titleKey: "nav.docIntel", url: "/doc-intel", icon: FileSearch },
+      { titleKey: "nav.dianColombia", url: "/dian-compliance", icon: Fingerprint },
+      { titleKey: "nav.classifyProduct", url: "/classify", icon: Search },
     ],
   },
   {
-    label: "RISK & REVIEW",
+    labelKey: "navGroup.riskReview",
     items: [
-      { title: "Review Queue", url: "/review", icon: ClipboardList },
-      { title: "Decision Twin", url: "/decision-twin", icon: Zap },
-      { title: "Legal Knowledge", url: "/legal", icon: BookOpen },
-      { title: "Audit Trail", url: "/audit-trail", icon: Scale },
+      { titleKey: "nav.reviewQueue", url: "/review", icon: ClipboardList },
+      { titleKey: "nav.decisionTwin", url: "/decision-twin", icon: Zap },
+      { titleKey: "nav.legalKnowledge", url: "/legal", icon: BookOpen },
+      { titleKey: "nav.auditTrail", url: "/audit-trail", icon: Scale },
     ],
   },
   {
-    label: "SETTINGS",
+    labelKey: "navGroup.settings",
     items: [
-      { title: "Jurisdictions", url: "/jurisdiction-settings", icon: ShieldCheck },
-      { title: "Admin", url: "/admin", icon: Settings },
-      { title: "Guide", url: "/guide", icon: HelpCircle },
+      { titleKey: "nav.jurisdictions", url: "/jurisdiction-settings", icon: ShieldCheck },
+      { titleKey: "nav.admin", url: "/admin", icon: Settings },
+      { titleKey: "nav.guide", url: "/guide", icon: HelpCircle },
     ],
   },
 ];
 
 const ROUTE_PLANNING_NAV: NavGroup[] = [
   {
-    label: "QUICK ACTIONS",
+    labelKey: "navGroup.quickActions",
     items: [
-      { title: "New Route", url: "/creator-mode", icon: Plus },
-      { title: "New Shipment", url: "/intake", icon: Package },
+      { titleKey: "nav.newRoute", url: "/creator-mode", icon: Plus },
+      { titleKey: "nav.newShipment", url: "/intake", icon: Package },
     ],
   },
   {
-    label: "PLANNING",
+    labelKey: "navGroup.planning",
     items: [
-      { title: "Dashboard", url: "/", icon: Activity },
-      { title: "Creator Mode", url: "/creator-mode", icon: Eye },
-      { title: "Route Builder", url: "/route-builder", icon: Map },
-      { title: "Decision Twin", url: "/decision-twin", icon: Zap },
+      { titleKey: "nav.dashboard", url: "/", icon: Activity },
+      { titleKey: "nav.creatorMode", url: "/creator-mode", icon: Eye },
+      { titleKey: "nav.routeBuilder", url: "/route-builder", icon: Map },
+      { titleKey: "nav.decisionTwin", url: "/decision-twin", icon: Zap },
     ],
   },
   {
-    label: "INTELLIGENCE",
+    labelKey: "navGroup.intelligence",
     items: [
-      { title: "Watch Mode", url: "/watch-mode", icon: Radio },
-      { title: "Classify Product", url: "/classify", icon: Search },
-      { title: "Doc Intelligence", url: "/doc-intel", icon: FileSearch },
-      { title: "Legal Knowledge", url: "/legal", icon: BookOpen },
+      { titleKey: "nav.watchMode", url: "/watch-mode", icon: Radio },
+      { titleKey: "nav.classifyProduct", url: "/classify", icon: Search },
+      { titleKey: "nav.docIntel", url: "/doc-intel", icon: FileSearch },
+      { titleKey: "nav.legalKnowledge", url: "/legal", icon: BookOpen },
     ],
   },
   {
-    label: "INSIGHTS",
+    labelKey: "navGroup.insights",
     items: [
-      { title: "Analytics", url: "/analytics", icon: BarChart3 },
-      { title: "Broker Scorecard", url: "/brokers", icon: Users },
-      { title: "Guide", url: "/guide", icon: HelpCircle },
+      { titleKey: "nav.analytics", url: "/analytics", icon: BarChart3 },
+      { titleKey: "nav.brokerScorecard", url: "/brokers", icon: Users },
+      { titleKey: "nav.guide", url: "/guide", icon: HelpCircle },
     ],
   },
 ];
 
 const OPERATIONS_NAV: NavGroup[] = [
   {
-    label: "QUICK ACTIONS",
+    labelKey: "navGroup.quickActions",
     items: [
-      { title: "New Shipment", url: "/intake", icon: Plus },
-      { title: "New Watchlist", url: "/watch-mode", icon: Radio },
+      { titleKey: "nav.newShipment", url: "/intake", icon: Plus },
+      { titleKey: "nav.newWatchlist", url: "/watch-mode", icon: Radio },
     ],
   },
   {
-    label: "CONTROL TOWER",
+    labelKey: "navGroup.controlTower",
     items: [
-      { title: "Dashboard", url: "/", icon: Activity },
-      { title: "Watch Mode", url: "/watch-mode", icon: Radio },
-      { title: "Review Queue", url: "/review", icon: ClipboardList },
+      { titleKey: "nav.dashboard", url: "/", icon: Activity },
+      { titleKey: "nav.watchMode", url: "/watch-mode", icon: Radio },
+      { titleKey: "nav.reviewQueue", url: "/review", icon: ClipboardList },
     ],
   },
   {
-    label: "SHIPMENTS",
+    labelKey: "navGroup.shipments",
     items: [
-      { title: "Route Builder", url: "/route-builder", icon: Map },
-      { title: "Decision Twin", url: "/decision-twin", icon: Zap },
-      { title: "Creator Mode", url: "/creator-mode", icon: Eye },
+      { titleKey: "nav.routeBuilder", url: "/route-builder", icon: Map },
+      { titleKey: "nav.decisionTwin", url: "/decision-twin", icon: Zap },
+      { titleKey: "nav.creatorMode", url: "/creator-mode", icon: Eye },
     ],
   },
   {
-    label: "COMPLIANCE",
+    labelKey: "navGroup.compliance",
     items: [
-      { title: "Doc Intelligence", url: "/doc-intel", icon: FileSearch },
-      { title: "DIAN / Colombia", url: "/dian-compliance", icon: Fingerprint },
-      { title: "Audit Trail", url: "/audit-trail", icon: Scale },
+      { titleKey: "nav.docIntel", url: "/doc-intel", icon: FileSearch },
+      { titleKey: "nav.dianColombia", url: "/dian-compliance", icon: Fingerprint },
+      { titleKey: "nav.auditTrail", url: "/audit-trail", icon: Scale },
     ],
   },
   {
-    label: "TEAM",
+    labelKey: "navGroup.team",
     items: [
-      { title: "Team Chat", url: "/team-chat", icon: Users },
-      { title: "Analytics", url: "/analytics", icon: BarChart3 },
-      { title: "Admin", url: "/admin", icon: Settings },
-      { title: "Guide", url: "/guide", icon: HelpCircle },
+      { titleKey: "nav.teamChat", url: "/team-chat", icon: Users },
+      { titleKey: "nav.analytics", url: "/analytics", icon: BarChart3 },
+      { titleKey: "nav.admin", url: "/admin", icon: Settings },
+      { titleKey: "nav.guide", url: "/guide", icon: HelpCircle },
     ],
   },
 ];
 
 const ENTERPRISE_NAV: NavGroup[] = [
   {
-    label: "QUICK ACTIONS",
+    labelKey: "navGroup.quickActions",
     items: [
-      { title: "New Shipment", url: "/intake", icon: Plus },
-      { title: "New Route", url: "/creator-mode", icon: Route },
+      { titleKey: "nav.newShipment", url: "/intake", icon: Plus },
+      { titleKey: "nav.newRoute", url: "/creator-mode", icon: Route },
     ],
   },
   {
-    label: "MANAGEMENT",
+    labelKey: "navGroup.management",
     items: [
-      { title: "Dashboard", url: "/", icon: Activity },
-      { title: "Teams", url: "/teams", icon: Users },
-      { title: "Team Chat", url: "/team-chat", icon: Users },
-      { title: "Broker Scorecard", url: "/brokers", icon: Users },
+      { titleKey: "nav.dashboard", url: "/", icon: Activity },
+      { titleKey: "nav.teams", url: "/teams", icon: Users },
+      { titleKey: "nav.teamChat", url: "/team-chat", icon: Users },
+      { titleKey: "nav.brokerScorecard", url: "/brokers", icon: Users },
     ],
   },
   {
-    label: "OPERATIONS",
+    labelKey: "navGroup.operations",
     items: [
-      { title: "Watch Mode", url: "/watch-mode", icon: Radio },
-      { title: "Review Queue", url: "/review", icon: ClipboardList },
-      { title: "Route Builder", url: "/route-builder", icon: Map },
-      { title: "Creator Mode", url: "/creator-mode", icon: Eye },
+      { titleKey: "nav.watchMode", url: "/watch-mode", icon: Radio },
+      { titleKey: "nav.reviewQueue", url: "/review", icon: ClipboardList },
+      { titleKey: "nav.routeBuilder", url: "/route-builder", icon: Map },
+      { titleKey: "nav.creatorMode", url: "/creator-mode", icon: Eye },
     ],
   },
   {
-    label: "ANALYTICS & COMPLIANCE",
+    labelKey: "navGroup.analyticsCompliance",
     items: [
-      { title: "Analytics / ROI", url: "/analytics", icon: BarChart3 },
-      { title: "Audit Trail", url: "/audit-trail", icon: Scale },
-      { title: "Legal Knowledge", url: "/legal", icon: BookOpen },
-      { title: "Classify Product", url: "/classify", icon: Search },
-      { title: "Doc Intelligence", url: "/doc-intel", icon: FileSearch },
+      { titleKey: "nav.analyticsRoi", url: "/analytics", icon: BarChart3 },
+      { titleKey: "nav.auditTrail", url: "/audit-trail", icon: Scale },
+      { titleKey: "nav.legalKnowledge", url: "/legal", icon: BookOpen },
+      { titleKey: "nav.classifyProduct", url: "/classify", icon: Search },
+      { titleKey: "nav.docIntel", url: "/doc-intel", icon: FileSearch },
     ],
   },
   {
-    label: "ADMIN",
+    labelKey: "navGroup.admin",
     items: [
-      { title: "Admin Settings", url: "/admin", icon: Settings },
-      { title: "Jurisdictions", url: "/jurisdiction-settings", icon: ShieldCheck },
-      { title: "Pricing", url: "/pricing", icon: CreditCard },
-      { title: "Guide", url: "/guide", icon: HelpCircle },
+      { titleKey: "nav.adminSettings", url: "/admin", icon: Settings },
+      { titleKey: "nav.jurisdictions", url: "/jurisdiction-settings", icon: ShieldCheck },
+      { titleKey: "nav.pricing", url: "/pricing", icon: CreditCard },
+      { titleKey: "nav.guide", url: "/guide", icon: HelpCircle },
     ],
   },
 ];
