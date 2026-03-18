@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveLane, type LaneResolverResult, type ResolvedLaneContext } from "@/lib/laneResolver";
+import { LaneGuidancePanel } from "@/components/LaneGuidancePanel";
 import { RULE_PACKS_VERSION } from "@/lib/jurisdictionRulePacks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
