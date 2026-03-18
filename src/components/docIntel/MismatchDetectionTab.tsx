@@ -3,15 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AlertTriangle, CheckCircle, GitCompare, ArrowRight, ShieldAlert } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { AlertTriangle, CheckCircle, GitCompare, ArrowRight, ShieldAlert, Bug, ChevronDown } from "lucide-react";
 import { useDocumentLibrary, type LibraryDocument } from "@/hooks/useDocumentLibrary";
-import { detectLibraryDocMismatches, type CrossDocMismatch } from "@/lib/crossDocMatching";
+import { detectLibraryDocMismatches, type CrossDocMismatch, type FieldComparisonLog, type ComparisonResult } from "@/lib/crossDocMatching";
 import { cn } from "@/lib/utils";
 
 export function MismatchDetectionTab() {
   const { documents, loading, fetchDocuments } = useDocumentLibrary();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [comparedMismatches, setComparedMismatches] = useState<CrossDocMismatch[] | null>(null);
+  const [comparisonResult, setComparisonResult] = useState<ComparisonResult | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
 
   useEffect(() => { fetchDocuments(); }, [fetchDocuments]);
 
@@ -26,15 +28,18 @@ export function MismatchDetectionTab() {
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
-    setComparedMismatches(null);
+    setComparisonResult(null);
   };
 
   const runComparison = () => {
     const selected = extractedDocs.filter((d) => selectedIds.has(d.id));
     if (selected.length < 2) return;
-    const results = detectLibraryDocMismatches(selected);
-    setComparedMismatches(results);
+    const result = detectLibraryDocMismatches(selected);
+    setComparisonResult(result);
   };
+
+  const comparedMismatches = comparisonResult?.mismatches ?? null;
+  const debugLog = comparisonResult?.debugLog ?? [];
 
   const severityColor = (s: string) => {
     switch (s) {
@@ -47,6 +52,15 @@ export function MismatchDetectionTab() {
   const severityIcon = (s: string) => {
     if (s === "high") return <ShieldAlert size={12} className="text-destructive" />;
     return null;
+  };
+
+  const debugResultColor = (r: string) => {
+    switch (r) {
+      case "match": return "text-emerald-400";
+      case "mismatch": return "text-destructive";
+      case "skipped": return "text-muted-foreground";
+      default: return "text-muted-foreground";
+    }
   };
 
   return (
@@ -96,7 +110,7 @@ export function MismatchDetectionTab() {
                         {doc.origin_country && doc.destination_country && ` · ${doc.origin_country} → ${doc.destination_country}`}
                       </span>
                     </div>
-                    <Badge variant="outline" className="text-[9px] bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shrink-0">
+                    <Badge variant="outline" className="text-[9px] shrink-0 bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
                       Extracted
                     </Badge>
                   </label>
@@ -188,6 +202,53 @@ export function MismatchDetectionTab() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Debug Panel */}
+      {comparisonResult !== null && debugLog.length > 0 && (
+        <Collapsible open={showDebug} onOpenChange={setShowDebug}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="py-3 px-4 cursor-pointer hover:bg-muted/20 transition-colors">
+                <CardTitle className="text-sm font-mono flex items-center gap-2">
+                  <Bug size={14} className="text-muted-foreground" />
+                  Debug: Field Comparison Log ({debugLog.length} fields)
+                  <ChevronDown size={14} className={cn("ml-auto transition-transform text-muted-foreground", showDebug && "rotate-180")} />
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="px-4 pb-4">
+                <div className="max-h-[400px] overflow-y-auto space-y-1">
+                  {debugLog.map((log, i) => (
+                    <div key={i} className="border border-border/50 rounded p-2 text-[10px] font-mono">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-medium text-foreground">{log.canonicalField}</span>
+                        <span className={cn("uppercase font-bold", debugResultColor(log.result))}>
+                          {log.result}
+                        </span>
+                      </div>
+                      {log.entries.map((e, j) => (
+                        <div key={j} className="flex gap-2 text-muted-foreground ml-2">
+                          <span className="shrink-0 text-foreground/60">{e.docName}:</span>
+                          <span className="text-foreground/80 truncate" title={e.value}>
+                            {e.originalKey !== log.canonicalField && (
+                              <span className="text-primary/60">[{e.originalKey}] </span>
+                            )}
+                            "{e.value}"
+                          </span>
+                        </div>
+                      ))}
+                      {log.note && (
+                        <p className="text-muted-foreground/70 mt-0.5 ml-2 italic">{log.note}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
     </div>
   );

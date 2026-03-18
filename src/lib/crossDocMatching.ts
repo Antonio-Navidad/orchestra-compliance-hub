@@ -12,45 +12,100 @@ export interface CrossDocMismatch {
   valueDifference?: string;
 }
 
+export interface FieldComparisonLog {
+  canonicalField: string;
+  entries: { docName: string; originalKey: string; value: string }[];
+  result: "match" | "mismatch" | "skipped" | "single_doc";
+  note?: string;
+}
+
+// ── Semantic field aliases ────────────────────────────────────────────
+// Maps variant field names to a single canonical name for comparison
+
+const FIELD_ALIAS_MAP: Record<string, string> = {
+  // Value fields
+  total_invoice_value: "declared_value",
+  total_value: "declared_value",
+  invoice_total: "declared_value",
+  fob_value: "declared_value",
+  cif_value: "declared_value",
+  invoice_value: "declared_value",
+  total_amount: "declared_value",
+  // Party names
+  shipper_name: "exporter_name",
+  seller_name: "exporter_name",
+  supplier_name: "exporter_name",
+  manufacturer_name: "exporter_name",
+  buyer_name: "consignee_name",
+  importer_name: "consignee_name",
+  // Descriptions
+  product_description: "item_description",
+  goods_description: "item_description",
+  commodity_description: "item_description",
+  description: "item_description",
+  // Ports
+  loading_port: "port_of_loading",
+  pol: "port_of_loading",
+  origin_port: "port_of_loading",
+  pod: "port_of_discharge",
+  discharge_port: "port_of_discharge",
+  destination_port: "port_of_discharge",
+  arrival_port: "port_of_discharge",
+  // Quantities
+  total_pieces: "quantity",
+  total_qty: "quantity",
+  pieces: "quantity",
+  number_of_pieces: "quantity",
+  total_quantity: "quantity",
+  // Weights
+  total_gross_weight_kg: "gross_weight_kg",
+  total_net_weight_kg: "net_weight_kg",
+  weight_kg: "gross_weight_kg",
+  // Other
+  country_of_origin: "origin_country",
+  bl_number: "bill_of_lading_number",
+  container_no: "container_number",
+};
+
+function canonicalFieldName(raw: string): string {
+  const key = raw.toLowerCase().trim();
+  return FIELD_ALIAS_MAP[key] ?? key;
+}
+
 // ── Field classification ──────────────────────────────────────────────
 
 const HIGH_SEVERITY_FIELDS = [
-  "declared_value", "total_value", "invoice_value", "fob_value",
-  "cif_value", "total_invoice_value", "unit_price", "total_price",
-  "hs_code", "consignee_name", "shipper_name", "origin_country",
+  "declared_value", "total_price", "unit_price", "subtotal",
+  "hs_code", "consignee_name", "exporter_name", "origin_country",
   "destination_country", "quantity", "package_count",
-  "gross_weight_kg", "net_weight_kg", "weight_kg",
-  "container_number", "container_no",
+  "gross_weight_kg", "net_weight_kg",
+  "container_number",
 ];
 
 const MEDIUM_SEVERITY_FIELDS = [
   "invoice_number", "bill_of_lading_number",
   "incoterms", "currency", "transport_mode",
   "port_of_loading", "port_of_discharge",
-  "destination_port", "origin_port",
 ];
 
-// Fields where cross-document differences are EXPECTED
 const EXPECTED_DIFFERENT_FIELDS = new Set([
   "issue_date", "document_date", "date", "invoice_date",
   "bl_date", "packing_date", "coo_date", "certificate_date",
-  "page_range", "document_number",
+  "page_range", "document_number", "packing_list_number",
+  "prepared_by", "verified_by", "prepared_by_title", "verified_by_title",
+  "authorized_signature_name", "authorized_signature_title", "authorized_signature_date",
 ]);
 
 // ── Customs impact notes ─────────────────────────────────────────────
 
 const CUSTOMS_IMPACT: Record<string, string> = {
   declared_value: "Declared value discrepancy may trigger customs hold or additional duties assessment.",
-  total_value: "Total value mismatch across documents can result in undervaluation investigation.",
-  invoice_value: "Invoice value inconsistency may delay customs clearance and trigger audit.",
-  fob_value: "FOB value mismatch affects duty calculation and may trigger valuation review.",
-  cif_value: "CIF value discrepancy directly impacts duty assessment at destination.",
-  total_invoice_value: "Invoice total mismatch may result in customs hold pending reconciliation.",
-  unit_price: "Unit price discrepancy across documents may indicate valuation fraud risk.",
   total_price: "Total price mismatch can trigger additional duties or penalties.",
+  unit_price: "Unit price discrepancy across documents may indicate valuation fraud risk.",
+  subtotal: "Subtotal mismatch affects duty calculation.",
   hs_code: "HS code mismatch may result in wrong duty rate, seizure, or classification dispute.",
   consignee_name: "Consignee name mismatch may trigger sanctions screening or shipment hold.",
-  shipper_name: "Shipper name inconsistency may flag sanctions or denied-party concerns.",
+  exporter_name: "Shipper/exporter name inconsistency may flag sanctions or denied-party concerns.",
   origin_country: "Origin country mismatch affects preferential duty rates and trade agreement eligibility.",
   destination_country: "Destination mismatch can result in wrong regulatory requirements being applied.",
   quantity: "Quantity discrepancy may trigger physical inspection or cargo examination.",
@@ -63,7 +118,7 @@ const CUSTOMS_IMPACT: Record<string, string> = {
 // ── Port gateway clusters ────────────────────────────────────────────
 
 const PORT_GATEWAY_CLUSTERS: string[][] = [
-  ["los angeles", "long beach", "la/lb", "la", "lb", "san pedro bay"],
+  ["los angeles", "long beach", "la/lb", "la", "lb", "san pedro bay", "uslax"],
   ["new york", "newark", "elizabeth", "ny/nj", "port newark"],
   ["seattle", "tacoma", "northwest seaport alliance"],
   ["shanghai", "yangshan", "waigaoqiao"],
@@ -73,12 +128,13 @@ const PORT_GATEWAY_CLUSTERS: string[][] = [
   ["antwerp", "zeebrugge"],
   ["singapore", "pasir panjang", "tanjong pagar"],
   ["busan", "pusan"],
-  ["tokyo", "yokohama"],
+  ["cartagena", "coctg"],
 ];
 
 function normalizePortName(port: string): string {
   return port.trim().toLowerCase()
     .replace(/^port\s+of\s+/i, "")
+    .replace(/\([^)]*\)/g, " ")  // strip parenthesized codes like (USLAX)
     .replace(/[,.\-\/\\()'"]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -118,40 +174,6 @@ function formatMoney(n: number): string {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// ── Quantity / unit normalisation ─────────────────────────────────────
-
-const UNIT_PATTERNS: { pattern: RegExp; extract: (m: RegExpMatchArray) => { value: number; unit: string } }[] = [
-  { pattern: /^([\d,]+(?:\.\d+)?)\s*(pcs?|pieces?|units?|items?|ea(?:ch)?)?$/i, extract: (m) => ({ value: parseNum(m[1]), unit: "unit" }) },
-  { pattern: /^([\d,]+(?:\.\d+)?)\s*(cartons?|ctns?|cases?|boxes?|pkgs?|packages?)$/i, extract: (m) => ({ value: parseNum(m[1]), unit: "carton" }) },
-  { pattern: /^([\d,]+(?:\.\d+)?)\s*(pallets?)$/i, extract: (m) => ({ value: parseNum(m[1]), unit: "pallet" }) },
-];
-
-interface ParsedQty { value: number; unit: string; raw: string }
-
-function parseQuantity(raw: string): ParsedQty | null {
-  const trimmed = raw.trim();
-  for (const { pattern, extract } of UNIT_PATTERNS) {
-    const m = trimmed.match(pattern);
-    if (m) return { ...extract(m), raw: trimmed };
-  }
-  const n = parseNum(trimmed);
-  if (!isNaN(n)) return { value: n, unit: "unit", raw: trimmed };
-  return null;
-}
-
-function quantitiesReconcile(entries: { value: string }[]): boolean {
-  const parsed = entries.map((e) => parseQuantity(e.value)).filter(Boolean) as ParsedQty[];
-  if (parsed.length < 2) return false;
-  const units = new Set(parsed.map((p) => p.unit));
-  if (units.size === 1) return false;
-  const sorted = [...parsed].sort((a, b) => a.value - b.value);
-  const smallest = sorted[0];
-  const largest = sorted[sorted.length - 1];
-  if (smallest.value === 0) return false;
-  const ratio = largest.value / smallest.value;
-  return Number.isInteger(ratio) && ratio >= 2 && ratio <= 500;
-}
-
 // ── Text similarity ──────────────────────────────────────────────────
 
 function normalizeText(v: string): string {
@@ -161,51 +183,36 @@ function normalizeText(v: string): string {
     .trim();
 }
 
-function tokenize(s: string): Set<string> {
-  const stopWords = new Set(["the", "a", "an", "of", "for", "and", "or", "in", "on", "to", "with", "is", "are", "as", "at", "by"]);
-  return new Set(
-    normalizeText(s).split(" ").filter((w) => w.length > 1 && !stopWords.has(w))
-  );
-}
-
-function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
-  if (a.size === 0 && b.size === 0) return 1;
-  const intersection = new Set([...a].filter((x) => b.has(x)));
-  const union = new Set([...a, ...b]);
-  return union.size === 0 ? 1 : intersection.size / union.size;
-}
-
-function descriptionsMatch(values: string[]): boolean {
-  if (values.length < 2) return true;
-  const tokenSets = values.map(tokenize);
-  for (let i = 0; i < tokenSets.length; i++) {
-    for (let j = i + 1; j < tokenSets.length; j++) {
-      if (jaccardSimilarity(tokenSets[i], tokenSets[j]) < 0.35) return false;
-    }
-  }
-  return true;
+function textsAreFuzzyEqual(a: string, b: string): boolean {
+  const na = normalizeText(a);
+  const nb = normalizeText(b);
+  if (na === nb) return true;
+  // Check if one contains the other (handles "S.A.S." vs "S.A.S" etc.)
+  if (na.includes(nb) || nb.includes(na)) return true;
+  // Jaccard similarity for longer texts
+  const tokA = new Set(na.split(" ").filter((w) => w.length > 1));
+  const tokB = new Set(nb.split(" ").filter((w) => w.length > 1));
+  if (tokA.size === 0 && tokB.size === 0) return true;
+  const intersection = new Set([...tokA].filter((x) => tokB.has(x)));
+  const union = new Set([...tokA, ...tokB]);
+  return union.size > 0 && intersection.size / union.size >= 0.7;
 }
 
 // ── Field type detection ─────────────────────────────────────────────
 
 function isMonetaryField(fieldName: string): boolean {
   const fn = fieldName.toLowerCase();
-  return ["value", "price", "amount", "cost", "total", "fob", "cif", "invoice_value"].some((k) => fn.includes(k));
+  return ["value", "price", "amount", "cost", "total", "fob", "cif", "subtotal", "declared_value"].some((k) => fn.includes(k));
 }
 
-function isNumericField(fieldName: string): boolean {
+function isNameField(fieldName: string): boolean {
   const fn = fieldName.toLowerCase();
-  return ["value", "weight", "quantity", "count", "amount", "price", "total"].some((k) => fn.includes(k));
+  return ["name", "consignee", "exporter", "shipper", "seller", "buyer"].some((k) => fn.includes(k));
 }
 
 function isDescriptionField(fieldName: string): boolean {
   const fn = fieldName.toLowerCase();
   return ["description", "product_name", "item_name", "goods_description", "commodity"].some((k) => fn.includes(k));
-}
-
-function isQuantityField(fieldName: string): boolean {
-  const fn = fieldName.toLowerCase();
-  return ["quantity", "qty", "package_count", "packages", "cartons", "units", "pieces"].some((k) => fn.includes(k));
 }
 
 function isDateField(fieldName: string): boolean {
@@ -230,66 +237,91 @@ function getCustomsImpact(fieldName: string): string | undefined {
   return undefined;
 }
 
+// ── Entry type for field map ─────────────────────────────────────────
+
+interface FieldEntry {
+  docName: string;
+  docType: string;
+  value: string;
+  confidence: number;
+  originalKey: string;
+}
+
 // ── Main comparison engine (from UploadedDocument[]) ─────────────────
 
 export function detectCrossDocMismatches(documents: UploadedDocument[]): CrossDocMismatch[] {
   const extracted = documents.filter((d) => d.status === "extracted" && d.extractedFields.length > 0);
   if (extracted.length < 2) return [];
 
-  const fieldMap = new Map<string, { docName: string; docType: string; value: string; confidence: number }[]>();
+  const fieldMap = new Map<string, FieldEntry[]>();
 
   for (const doc of extracted) {
     for (const field of doc.extractedFields) {
-      const key = field.fieldName.toLowerCase();
-      if (!fieldMap.has(key)) fieldMap.set(key, []);
-      fieldMap.get(key)!.push({
+      const canonical = canonicalFieldName(field.fieldName);
+      if (!fieldMap.has(canonical)) fieldMap.set(canonical, []);
+      fieldMap.get(canonical)!.push({
         docName: doc.name || doc.file.name,
         docType: doc.detectedType || doc.type,
         value: field.value,
         confidence: field.confidence,
+        originalKey: field.fieldName,
       });
     }
   }
 
-  return runComparison(fieldMap);
+  return runComparison(fieldMap).mismatches;
 }
 
 // ── Comparison from LibraryDocument[] ────────────────────────────────
 
-export function detectLibraryDocMismatches(documents: LibraryDocument[]): CrossDocMismatch[] {
-  const extracted = documents.filter((d) => d.extraction_status === "complete" && d.extracted_fields && Object.keys(d.extracted_fields).length > 0);
-  if (extracted.length < 2) return [];
+export interface ComparisonResult {
+  mismatches: CrossDocMismatch[];
+  debugLog: FieldComparisonLog[];
+}
 
-  const fieldMap = new Map<string, { docName: string; docType: string; value: string; confidence: number }[]>();
+export function detectLibraryDocMismatches(documents: LibraryDocument[]): ComparisonResult {
+  const extracted = documents.filter((d) => d.extraction_status === "complete" && d.extracted_fields && Object.keys(d.extracted_fields).length > 0);
+  if (extracted.length < 2) return { mismatches: [], debugLog: [] };
+
+  const fieldMap = new Map<string, FieldEntry[]>();
 
   for (const doc of extracted) {
     const fields = doc.extracted_fields;
-    // extracted_fields can be { fieldName: value } or an array
     if (Array.isArray(fields)) {
       for (const f of fields) {
-        const key = (f.fieldName || f.field_name || f.name || "").toLowerCase();
-        if (!key) continue;
+        const rawKey = (f.fieldName || f.field_name || f.name || "").toLowerCase();
+        if (!rawKey) continue;
         const val = String(f.value ?? f.extractedValue ?? "");
         if (!val) continue;
-        if (!fieldMap.has(key)) fieldMap.set(key, []);
-        fieldMap.get(key)!.push({
+        const canonical = canonicalFieldName(rawKey);
+        if (!fieldMap.has(canonical)) fieldMap.set(canonical, []);
+        fieldMap.get(canonical)!.push({
           docName: doc.file_name,
           docType: doc.document_type || "unknown",
           value: val,
           confidence: f.confidence ?? 0.8,
+          originalKey: rawKey,
         });
       }
     } else if (typeof fields === "object") {
-      for (const [key, val] of Object.entries(fields)) {
-        const k = key.toLowerCase();
-        const v = String(val ?? "");
-        if (!v) continue;
-        if (!fieldMap.has(k)) fieldMap.set(k, []);
-        fieldMap.get(k)!.push({
+      for (const [rawKey, rawVal] of Object.entries(fields)) {
+        const k = rawKey.toLowerCase();
+        // extracted_fields values can be { value, confidence, ... } or plain strings
+        let val: string;
+        if (rawVal && typeof rawVal === "object" && "value" in (rawVal as any)) {
+          val = String((rawVal as any).value ?? "");
+        } else {
+          val = String(rawVal ?? "");
+        }
+        if (!val) continue;
+        const canonical = canonicalFieldName(k);
+        if (!fieldMap.has(canonical)) fieldMap.set(canonical, []);
+        fieldMap.get(canonical)!.push({
           docName: doc.file_name,
           docType: doc.document_type || "unknown",
-          value: v,
-          confidence: 0.8,
+          value: val,
+          confidence: (rawVal && typeof rawVal === "object" && "confidence" in (rawVal as any)) ? Number((rawVal as any).confidence) : 0.8,
+          originalKey: k,
         });
       }
     }
@@ -300,115 +332,159 @@ export function detectLibraryDocMismatches(documents: LibraryDocument[]): CrossD
 
 // ── Shared comparison logic ──────────────────────────────────────────
 
-function runComparison(fieldMap: Map<string, { docName: string; docType: string; value: string; confidence: number }[]>): CrossDocMismatch[] {
+function runComparison(fieldMap: Map<string, FieldEntry[]>): ComparisonResult {
   const mismatches: CrossDocMismatch[] = [];
+  const debugLog: FieldComparisonLog[] = [];
 
   for (const [fieldName, entries] of fieldMap) {
-    if (entries.length < 2) continue;
+    const logEntry: FieldComparisonLog = {
+      canonicalField: fieldName,
+      entries: entries.map((e) => ({ docName: e.docName, originalKey: e.originalKey, value: e.value })),
+      result: "single_doc",
+    };
 
-    // Skip expected-different fields
-    if (EXPECTED_DIFFERENT_FIELDS.has(fieldName)) continue;
-    if (isDateField(fieldName)) {
-      const docTypes = new Set(entries.map((e) => e.docType));
-      if (docTypes.size > 1) continue;
+    // Need entries from at least 2 different documents
+    const uniqueDocs = new Set(entries.map((e) => e.docName));
+    if (uniqueDocs.size < 2) {
+      logEntry.result = "single_doc";
+      logEntry.note = "Field only found in one document";
+      debugLog.push(logEntry);
+      continue;
     }
 
-    // Check if values actually differ
-    const normalized = entries.map((e) => normalizeText(e.value));
-    const unique = new Set(normalized);
-    if (unique.size <= 1) continue;
+    // Skip expected-different fields
+    if (EXPECTED_DIFFERENT_FIELDS.has(fieldName)) {
+      logEntry.result = "skipped";
+      logEntry.note = "Expected to differ across documents";
+      debugLog.push(logEntry);
+      continue;
+    }
+    if (isDateField(fieldName)) {
+      const docTypes = new Set(entries.map((e) => e.docType));
+      if (docTypes.size > 1) {
+        logEntry.result = "skipped";
+        logEntry.note = "Date field from different doc types — expected to differ";
+        debugLog.push(logEntry);
+        continue;
+      }
+    }
+
+    // ── Monetary field comparison (exact numeric) ──
+    if (isMonetaryField(fieldName)) {
+      const nums = entries.map((e) => ({ ...e, numVal: extractMonetaryValue(e.value) }));
+      const validNums = nums.filter((n) => n.numVal !== null);
+      if (validNums.length >= 2) {
+        const values = validNums.map((n) => n.numVal!);
+        const max = Math.max(...values);
+        const min = Math.min(...values);
+        const diff = max - min;
+
+        if (diff <= 1.0) {
+          logEntry.result = "match";
+          logEntry.note = `Monetary values match (diff: $${diff.toFixed(2)})`;
+          debugLog.push(logEntry);
+          continue;
+        }
+
+        // It's a mismatch
+        const severity: CrossDocMismatch["severity"] = diff > 500 ? "high" : "medium";
+        const customsImpact = severity === "high" ? getCustomsImpact(fieldName) : undefined;
+
+        mismatches.push({
+          fieldName,
+          severity,
+          mismatchType: "true_conflict",
+          documents: entries.map((e) => ({ docName: e.docName, docType: e.docType, value: e.value, confidence: e.confidence })),
+          description: `"${fieldName.replace(/_/g, " ")}" has conflicting monetary values across documents`,
+          reason: `Difference of $${formatMoney(diff)} detected between documents.`,
+          customsImpact,
+          valueDifference: `$${formatMoney(diff)}`,
+        });
+
+        logEntry.result = "mismatch";
+        logEntry.note = `Monetary diff: $${formatMoney(diff)} → ${severity} severity`;
+        debugLog.push(logEntry);
+        continue;
+      }
+    }
+
+    // ── Name / party field comparison (fuzzy) ──
+    if (isNameField(fieldName)) {
+      const values = entries.map((e) => e.value);
+      const allMatch = values.every((v) => textsAreFuzzyEqual(v, values[0]));
+      if (allMatch) {
+        logEntry.result = "match";
+        logEntry.note = "Name fields match (fuzzy)";
+        debugLog.push(logEntry);
+        continue;
+      }
+    }
+
+    // ── Description field comparison (fuzzy) ──
+    if (isDescriptionField(fieldName)) {
+      const values = entries.map((e) => e.value);
+      const allMatch = values.every((v) => textsAreFuzzyEqual(v, values[0]));
+      if (allMatch) {
+        logEntry.result = "match";
+        logEntry.note = "Descriptions match (fuzzy)";
+        debugLog.push(logEntry);
+        continue;
+      }
+    }
 
     // ── Port gateway reconciliation ──
     if (isPortField(fieldName)) {
       const values = entries.map((e) => e.value);
-      const allSameGateway = values.every((v, _, arr) => portsInSameGateway(v, arr[0]));
+      const allSameGateway = values.every((v) => portsInSameGateway(v, values[0]));
       if (allSameGateway) {
         mismatches.push({
           fieldName,
           severity: "low",
           mismatchType: "port_gateway",
-          documents: entries,
-          description: `"${fieldName.replace(/_/g, " ")}" references different ports within the same gateway complex`,
+          documents: entries.map((e) => ({ docName: e.docName, docType: e.docType, value: e.value, confidence: e.confidence })),
+          description: `"${fieldName.replace(/_/g, " ")}" references ports within the same gateway complex`,
           reason: `These ports are part of the same port complex and are operationally interchangeable.`,
         });
+        logEntry.result = "mismatch";
+        logEntry.note = "Port gateway variant (low severity)";
+        debugLog.push(logEntry);
         continue;
       }
     }
 
-    // ── Quantity reconciliation ──
-    if (isQuantityField(fieldName)) {
-      if (quantitiesReconcile(entries)) {
-        mismatches.push({
-          fieldName,
-          severity: "low",
-          mismatchType: "unit_conversion",
-          documents: entries,
-          description: `"${fieldName.replace(/_/g, " ")}" values use different units but reconcile mathematically`,
-          reason: `Values represent the same quantity in different packaging units.`,
-        });
-        continue;
-      }
+    // ── General text comparison ──
+    const normalized = entries.map((e) => normalizeText(e.value));
+    const unique = new Set(normalized);
+    if (unique.size <= 1) {
+      logEntry.result = "match";
+      logEntry.note = "Exact match after normalization";
+      debugLog.push(logEntry);
+      continue;
     }
 
-    // ── Description semantic matching ──
-    if (isDescriptionField(fieldName)) {
-      const rawValues = entries.map((e) => e.value);
-      if (descriptionsMatch(rawValues)) {
-        mismatches.push({
-          fieldName,
-          severity: "low",
-          mismatchType: "semantic_variant",
-          documents: entries,
-          description: `"${fieldName.replace(/_/g, " ")}" wording differs but descriptions are semantically equivalent`,
-          reason: `Documents use different phrasing for the same product. Normal across trade documents.`,
-        });
-        continue;
-      }
-    }
-
-    // ── Numeric tolerance (1% for non-monetary) ──
-    if (isNumericField(fieldName) && !isMonetaryField(fieldName)) {
-      const nums = entries.map((e) => extractMonetaryValue(e.value)).filter((n) => n !== null) as number[];
-      if (nums.length >= 2) {
-        const base = nums[0];
-        const allClose = nums.every((n) => Math.abs(n - base) / Math.max(Math.abs(base), 1) < 0.01);
-        if (allClose) continue;
-      }
-    }
-
-    // ── True conflict ──
+    // True conflict
     const baseSeverity = getBaseSeverity(fieldName);
-    const customsImpact = getCustomsImpact(fieldName);
-
-    // Build value difference string for monetary fields
-    let valueDifference: string | undefined;
-    if (isMonetaryField(fieldName) && entries.length >= 2) {
-      const nums = entries.map((e) => extractMonetaryValue(e.value)).filter((n) => n !== null) as number[];
-      if (nums.length >= 2) {
-        const sorted = [...nums].sort((a, b) => b - a);
-        const diff = sorted[0] - sorted[sorted.length - 1];
-        if (diff > 0) {
-          valueDifference = `$${formatMoney(diff)}`;
-        }
-      }
-    }
+    const customsImpact = baseSeverity === "high" ? getCustomsImpact(fieldName) : undefined;
 
     mismatches.push({
       fieldName,
       severity: baseSeverity,
       mismatchType: "true_conflict",
-      documents: entries,
+      documents: entries.map((e) => ({ docName: e.docName, docType: e.docType, value: e.value, confidence: e.confidence })),
       description: `"${fieldName.replace(/_/g, " ")}" has ${unique.size} conflicting values across ${entries.length} documents`,
       reason: `Material discrepancy detected. Review recommended.`,
-      customsImpact: baseSeverity === "high" ? customsImpact : undefined,
-      valueDifference,
+      customsImpact,
     });
+
+    logEntry.result = "mismatch";
+    logEntry.note = `True conflict — ${baseSeverity} severity`;
+    debugLog.push(logEntry);
   }
 
-  // Sort: high first, then medium, then low; true conflicts before variants
+  // Sort: high first, then medium, then low
   const sevOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
   const typeOrder: Record<string, number> = { true_conflict: 0, unit_conversion: 1, port_gateway: 2, semantic_variant: 3, expected_difference: 4 };
   mismatches.sort((a, b) => sevOrder[a.severity] - sevOrder[b.severity] || (typeOrder[a.mismatchType] ?? 5) - (typeOrder[b.mismatchType] ?? 5));
 
-  return mismatches;
+  return { mismatches, debugLog };
 }
