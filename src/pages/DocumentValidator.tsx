@@ -675,7 +675,7 @@ export default function DocumentValidator({ embedded }: { embedded?: boolean } =
           </Button>
           {ruleResult && !savedSessionId && (
             <Button variant="default" size="sm" className="font-mono text-[10px] gap-1.5" onClick={handleSaveSession}>
-              <Save size={12} /> Save Session
+              <Save size={12} /> {t("validator.saveSession")}
             </Button>
           )}
           {savedSessionId && (
