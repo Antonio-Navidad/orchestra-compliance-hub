@@ -334,7 +334,7 @@ export default function AuditTrail() {
                               variant="destructive" size="sm" className="text-xs h-7 gap-1"
                               onClick={() => approveMutation.mutate({ id: entry.id, approved: false })}
                             >
-                              <XCircle size={12} /> Reject
+                              <XCircle size={12} /> {t("audit.reject")}
                             </Button>
                           </>
                         )}
