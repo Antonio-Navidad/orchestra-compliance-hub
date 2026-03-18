@@ -405,7 +405,19 @@ export default function AdminSettings() {
 
 function LanguageResetPanel() {
   const { language, setLanguage } = useLanguage();
-  const { LANGUAGES } = require("@/lib/i18n/translations");
+  const langList = [
+    { code: "en", nativeLabel: "English", englishLabel: "English" },
+    { code: "es", nativeLabel: "Español", englishLabel: "Spanish" },
+    { code: "pt", nativeLabel: "Português", englishLabel: "Portuguese" },
+    { code: "de", nativeLabel: "Deutsch", englishLabel: "German" },
+    { code: "zh", nativeLabel: "中文", englishLabel: "Chinese" },
+    { code: "ja", nativeLabel: "日本語", englishLabel: "Japanese" },
+    { code: "ko", nativeLabel: "한국어", englishLabel: "Korean" },
+    { code: "nl", nativeLabel: "Nederlands", englishLabel: "Dutch" },
+    { code: "hi", nativeLabel: "हिन्दी", englishLabel: "Hindi" },
+    { code: "fr", nativeLabel: "Français", englishLabel: "French" },
+    { code: "it", nativeLabel: "Italiano", englishLabel: "Italian" },
+  ];
 
   return (
     <div className="rounded-lg border border-border bg-card p-6 space-y-6">
