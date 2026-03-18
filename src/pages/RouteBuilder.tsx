@@ -188,8 +188,8 @@ export default function RouteBuilder() {
           <Map className="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h1 className="text-xl font-bold tracking-tight">Route Builder</h1>
-          <p className="text-xs text-muted-foreground font-mono">AI-POWERED ORIGIN-TO-DESTINATION ROUTE PLANNER</p>
+          <h1 className="text-xl font-bold tracking-tight">{t("route.title")}</h1>
+          <p className="text-xs text-muted-foreground font-mono">{t("route.subtitle")}</p>
         </div>
       </div>
 
