@@ -73,7 +73,7 @@ export function MismatchDetectionTab() {
         <CardHeader className="py-3 px-4">
           <CardTitle className="text-sm font-mono flex items-center gap-2">
             <GitCompare size={14} className="text-primary" />
-            Compare Documents
+            {t("mismatch.compareDocuments")}
             <HelpInfoIcon helpKey="compare_documents" size={13} />
           </CardTitle>
         </CardHeader>
