@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertTriangle, CheckCircle, GitCompare, ArrowRight, ShieldAlert, Bug, ChevronDown } from "lucide-react";
+import { HelpInfoIcon } from "@/components/HelpInfoIcon";
 import { useDocumentLibrary, type LibraryDocument } from "@/hooks/useDocumentLibrary";
 import { detectLibraryDocMismatches, type CrossDocMismatch, type FieldComparisonLog, type ComparisonResult } from "@/lib/crossDocMatching";
 import { cn } from "@/lib/utils";
