@@ -9,6 +9,7 @@ import { HelpInfoIcon } from "@/components/HelpInfoIcon";
 import { useDocumentLibrary, type LibraryDocument } from "@/hooks/useDocumentLibrary";
 import { detectLibraryDocMismatches, type CrossDocMismatch, type FieldComparisonLog, type ComparisonResult } from "@/lib/crossDocMatching";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export function MismatchDetectionTab() {
   const { documents, loading, fetchDocuments } = useDocumentLibrary();
