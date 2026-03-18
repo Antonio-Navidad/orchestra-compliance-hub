@@ -414,7 +414,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
                 {reverseResult.notCoveredProducts.length > 0 && (
                   <div className="bg-destructive/5 border border-destructive/20 rounded p-2">
                     <p className="text-[10px] font-mono text-destructive mb-1 flex items-center gap-1">
-                      <AlertTriangle size={10} /> Common Misclassifications / Warnings
+                      <AlertTriangle size={10} /> {t("hsAssist.misclassifications")}
                     </p>
                     <ul className="text-[10px] font-mono space-y-0.5">
                       {reverseResult.notCoveredProducts.map((p, i) => (
