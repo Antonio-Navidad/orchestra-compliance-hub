@@ -413,7 +413,7 @@ export default function ShipmentIntake() {
             {/* Document Upload */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="font-mono text-sm">DOCUMENT UPLOAD</CardTitle>
+                <CardTitle className="font-mono text-sm">{t("intake.docUpload")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex gap-2">
