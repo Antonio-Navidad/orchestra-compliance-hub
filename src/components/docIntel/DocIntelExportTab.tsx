@@ -122,8 +122,7 @@ export function DocIntelExportTab() {
         </CardHeader>
         <CardContent className="px-4 pb-4 space-y-3">
           <p className="text-[10px] font-mono text-muted-foreground">
-            Export a validation session as a multi-sheet Excel workbook: Document Inventory, Extracted Fields, 
-            Mismatch Flags, Workflow Values, and Audit Log.
+            {t("export.exportHint")}
           </p>
 
           <div className="flex items-end gap-3">
