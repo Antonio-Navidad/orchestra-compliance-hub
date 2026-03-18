@@ -255,8 +255,8 @@ export default function ShipmentIntake() {
                   <Select value={form.direction} onValueChange={v => updateField('direction', v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="inbound">↓ Inbound (Import)</SelectItem>
-                      <SelectItem value="outbound">↑ Outbound (Export)</SelectItem>
+                      <SelectItem value="inbound">↓ {t("intake.inbound")}</SelectItem>
+                      <SelectItem value="outbound">↑ {t("intake.outbound")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
