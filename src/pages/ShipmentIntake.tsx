@@ -496,7 +496,7 @@ export default function ShipmentIntake() {
                   <span className="font-mono font-bold">{new Set(uploadedDocTypes).size}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground font-mono">Filing</span>
+                  <span className="text-muted-foreground font-mono">{t("intake.filing")}</span>
                   <span className="font-mono font-bold uppercase">{packetScore.filingReadiness.replace('_', ' ')}</span>
                 </div>
               </CardContent>
