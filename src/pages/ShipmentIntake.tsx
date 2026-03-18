@@ -319,7 +319,7 @@ export default function ShipmentIntake() {
                   <Input value={form.hs_code} onChange={e => updateField('hs_code', e.target.value)} placeholder="8471.30" className="font-mono" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Quantity</Label>
+                  <Label className="text-xs font-mono">{t("intake.quantity")}</Label>
                   <Input type="number" value={form.quantity} onChange={e => updateField('quantity', e.target.value)} placeholder="100" />
                 </div>
                 <div className="space-y-1.5">
