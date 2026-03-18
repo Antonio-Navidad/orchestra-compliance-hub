@@ -394,7 +394,7 @@ export function HSCodeAssist({ destinationCountry, originCountry, transportMode,
 
               <div className="space-y-2">
                 <div className="bg-muted/20 rounded p-2">
-                  <p className="text-[10px] font-mono text-muted-foreground mb-1">Official Description</p>
+                  <p className="text-[10px] font-mono text-muted-foreground mb-1">{t("hsAssist.officialDesc")}</p>
                   <p className="text-xs font-mono font-medium">{reverseResult.officialDescription}</p>
                 </div>
 
