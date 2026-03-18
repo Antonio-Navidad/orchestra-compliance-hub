@@ -201,6 +201,7 @@ const ENTERPRISE_NAV: NavGroup[] = [
       { title: "Audit Trail", url: "/audit-trail", icon: Scale },
       { title: "Legal Knowledge", url: "/legal", icon: BookOpen },
       { title: "Classify Product", url: "/classify", icon: Search },
+      { title: "Doc Intelligence", url: "/doc-intel", icon: FileSearch },
     ],
   },
   {

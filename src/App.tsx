@@ -103,6 +103,7 @@ function WorkspacePurposeWrapper() {
           <Route path="/hints" element={<PurposeGate><Hints /></PurposeGate>} />
           <Route path="/classify" element={<PurposeGate><ProductClassification /></PurposeGate>} />
           <Route path="/validate-docs" element={<PurposeGate><DocumentValidator /></PurposeGate>} />
+          <Route path="/doc-intel" element={<PurposeGate><DocumentIntelligence /></PurposeGate>} />
           <Route path="/route-builder" element={<PurposeGate><RouteBuilder /></PurposeGate>} />
           <Route path="/team-chat" element={<PurposeGate><TeamChat /></PurposeGate>} />
           <Route path="/dian-compliance" element={<PurposeGate><DianCompliance /></PurposeGate>} />
