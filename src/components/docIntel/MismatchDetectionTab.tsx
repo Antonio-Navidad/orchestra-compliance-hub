@@ -13,6 +13,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 
 export function MismatchDetectionTab() {
   const { documents, loading, fetchDocuments } = useDocumentLibrary();
+  const { t } = useLanguage();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [comparisonResult, setComparisonResult] = useState<ComparisonResult | null>(null);
   const [showDebug, setShowDebug] = useState(false);
