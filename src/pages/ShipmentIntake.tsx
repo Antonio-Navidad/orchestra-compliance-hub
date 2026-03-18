@@ -349,7 +349,7 @@ export default function ShipmentIntake() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">Consignee</Label>
+                  <Label className="text-xs font-mono">{t("intake.consignee")}</Label>
                   <Input value={form.consignee} onChange={e => updateField('consignee', e.target.value)} placeholder="Company name" />
                 </div>
                 <div className="space-y-1.5">
