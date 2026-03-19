@@ -14,11 +14,14 @@ import { ComplianceRestrictedSection } from "@/components/compliance/ComplianceR
 import { ComplianceViolationsSection } from "@/components/compliance/ComplianceViolationsSection";
 import { ComplianceChangesSection } from "@/components/compliance/ComplianceChangesSection";
 import { ComplianceReadinessIndicator } from "@/components/compliance/ComplianceReadinessIndicator";
+import { ComplianceReadinessPanel } from "@/components/compliance/ComplianceReadinessPanel";
+import { QuickComplianceCheck } from "@/components/compliance/QuickComplianceCheck";
 
 export default function ComplianceEngine() {
   const [selectedCountry, setSelectedCountry] = useState("US");
   const [mode, setMode] = useState<TransportMode | "all">("all");
   const [direction, setDirection] = useState<Direction | "all">("all");
+  const [readinessPanelOpen, setReadinessPanelOpen] = useState(false);
 
   const profile = useMemo(() => getCountryProfile(selectedCountry), [selectedCountry]);
   const filteredDocs = useMemo(() => profile ? getFilteredDocuments(profile, mode, direction) : [], [profile, mode, direction]);
@@ -43,7 +46,6 @@ export default function ComplianceEngine() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Country Selector */}
           <Select value={selectedCountry} onValueChange={setSelectedCountry}>
             <SelectTrigger className="w-52 text-xs h-8">
               <SelectValue />
@@ -57,7 +59,6 @@ export default function ComplianceEngine() {
             </SelectContent>
           </Select>
 
-          {/* Mode Selector */}
           <Select value={mode} onValueChange={(v) => setMode(v as TransportMode | "all")}>
             <SelectTrigger className="w-28 text-xs h-8">
               <SelectValue />
@@ -70,7 +71,6 @@ export default function ComplianceEngine() {
             </SelectContent>
           </Select>
 
-          {/* Direction Selector */}
           <Select value={direction} onValueChange={(v) => setDirection(v as Direction | "all")}>
             <SelectTrigger className="w-32 text-xs h-8">
               <SelectValue />
@@ -102,8 +102,20 @@ export default function ComplianceEngine() {
         </CardContent>
       </Card>
 
-      {/* Compliance Readiness */}
-      <ComplianceReadinessIndicator countryCode={profile.code} />
+      {/* Quick Compliance Check */}
+      <QuickComplianceCheck profile={profile} />
+
+      {/* Compliance Readiness - clickable */}
+      <div className="cursor-pointer" onClick={() => setReadinessPanelOpen(true)}>
+        <ComplianceReadinessIndicator countryCode={profile.code} />
+      </div>
+
+      <ComplianceReadinessPanel
+        open={readinessPanelOpen}
+        onOpenChange={setReadinessPanelOpen}
+        countryCode={profile.code}
+        countryName={profile.name}
+      />
 
       {/* Main content tabs */}
       <Tabs defaultValue="authority" className="space-y-4">
@@ -131,10 +143,10 @@ export default function ComplianceEngine() {
           <ComplianceAuthoritySection profile={profile} />
         </TabsContent>
         <TabsContent value="documents">
-          <ComplianceDocumentsSection documents={filteredDocs} mode={mode} direction={direction} />
+          <ComplianceDocumentsSection documents={filteredDocs} mode={mode} direction={direction} countryName={profile.name} />
         </TabsContent>
         <TabsContent value="filing">
-          <ComplianceFilingSection requirements={filteredFiling} />
+          <ComplianceFilingSection requirements={filteredFiling} countryName={profile.name} />
         </TabsContent>
         <TabsContent value="duties">
           <ComplianceDutiesSection profile={profile} />
