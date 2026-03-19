@@ -17,9 +17,23 @@ interface LanguageContextValue {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
+const fallbackT = (key: string) => key;
+const noopLang: LanguageContextValue = {
+  language: "en",
+  previousLanguage: null,
+  setLanguage: () => {},
+  undoLanguageChange: () => {},
+  t: fallbackT,
+  isMissing: () => false,
+  showBanner: false,
+  dismissBanner: () => {},
+  bannerNewLang: null,
+  bannerPrevLang: null,
+};
+
 export function useLanguage() {
   const ctx = useContext(LanguageContext);
-  if (!ctx) throw new Error("useLanguage must be used within LanguageProvider");
+  if (!ctx) return noopLang;
   return ctx;
 }
 
