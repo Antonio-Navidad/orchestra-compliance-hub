@@ -59,7 +59,7 @@ Provide your classification analysis. For the destination country "${destination
         messages: [
           {
             role: "system",
-            content: `You are an expert customs classifier and trade compliance specialist. When given product information, you must return a classification using the tool provided. Always provide at least 2 alternate codes. For duty estimates, use realistic ranges. Be thorough in your reasoning.`
+            content: `You are an expert customs classifier and trade compliance specialist. When given product information, you must return a classification using the tool provided. Always provide at least 2 alternate codes. For duty estimates, use realistic ranges based on the specific destination country's tariff schedule. Provide country-specific general/MFN rates, preferential trade agreement rates, additional duties, and de minimis thresholds. Be thorough in your reasoning.`
           },
           { role: "user", content: userPrompt },
         ],
