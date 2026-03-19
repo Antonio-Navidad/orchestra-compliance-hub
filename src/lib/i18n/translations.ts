@@ -109,7 +109,7 @@ const en = {
   // Sidebar tooltips
   "tooltip.dashboard": "Overview of all active shipments, compliance status, and pending actions",
   "tooltip.docIntel": "Upload, extract, and compare shipping documents to catch errors before customs",
-  "tooltip.dianCompliance": "Colombia-specific customs requirements, DIAN export declarations, and filing guidance",
+  "tooltip.complianceEngine": "Multi-country customs compliance intelligence — requirements, documents, tariffs, and risk flags for 17 countries",
   "tooltip.classify": "Identify the correct HS code for your product using AI-assisted classification",
   "tooltip.review": "Shipments flagged for manual review due to compliance issues or missing documents",
   "tooltip.decisionTwin": "AI-generated compliance recommendations based on your shipment context",
