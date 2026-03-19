@@ -29,7 +29,7 @@ import DocumentIntelligence from "./pages/DocumentIntelligence";
 import DecisionTwin from "./pages/DecisionTwin";
 import RouteBuilder from "./pages/RouteBuilder";
 import TeamChat from "./pages/TeamChat";
-import DianCompliance from "./pages/DianCompliance";
+import ComplianceEngine from "./pages/ComplianceEngine";
 import CreatorMode from "./pages/CreatorMode";
 import MicroSellerMode from "./pages/MicroSellerMode";
 import TeamsBlackTier from "./pages/TeamsBlackTier";
