@@ -91,6 +91,22 @@ Provide your classification analysis. For the destination country "${destination
                   },
                   estimatedDutyRange: { type: "string", description: "Estimated duty rate range e.g. '2.5% - 5.0%'" },
                   estimatedTaxes: { type: "string", description: "Estimated taxes/fees if applicable" },
+                  generalDutyRate: { type: "string", description: "The general/MFN duty rate for the destination country, e.g. '12.0%'" },
+                  preferentialRates: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        agreement: { type: "string", description: "Trade agreement name" },
+                        rate: { type: "string", description: "Preferential duty rate" },
+                        originCountries: { type: "array", items: { type: "string" } },
+                        requiredDocument: { type: "string", description: "Document needed to claim this rate" }
+                      },
+                      required: ["agreement", "rate", "originCountries", "requiredDocument"]
+                    }
+                  },
+                  additionalDuties: { type: "array", items: { type: "string" }, description: "Anti-dumping, countervailing, Section 301, safeguard duties" },
+                  deMinimisThreshold: { type: "string", description: "De minimis threshold for the destination country" },
                   requiredDocuments: {
                     type: "array",
                     items: { type: "string" },
