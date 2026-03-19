@@ -3,7 +3,7 @@
 export const NAV_TOOLTIP_KEYS: Record<string, string> = {
   "/": "tooltip.dashboard",
   "/doc-intel": "tooltip.docIntel",
-  "/dian-compliance": "tooltip.dianCompliance",
+  "/compliance-engine": "tooltip.complianceEngine",
   "/classify": "tooltip.classify",
   "/review": "tooltip.review",
   "/decision-twin": "tooltip.decisionTwin",

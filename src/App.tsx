@@ -111,7 +111,7 @@ function WorkspacePurposeWrapper() {
           <Route path="/doc-intel" element={<PurposeGate><DocumentIntelligence /></PurposeGate>} />
           <Route path="/route-builder" element={<PurposeGate><RouteBuilder /></PurposeGate>} />
           <Route path="/team-chat" element={<PurposeGate><TeamChat /></PurposeGate>} />
-          <Route path="/dian-compliance" element={<PurposeGate><DianCompliance /></PurposeGate>} />
+          <Route path="/compliance-engine" element={<PurposeGate><ComplianceEngine /></PurposeGate>} />
           <Route path="/decision-twin" element={<PurposeGate><DecisionTwin /></PurposeGate>} />
           <Route path="/decision-twin/:id" element={<PurposeGate><DecisionTwin /></PurposeGate>} />
           <Route path="/creator-mode" element={<PurposeGate><CreatorMode /></PurposeGate>} />

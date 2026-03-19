@@ -154,7 +154,7 @@ const OPERATIONS_NAV: NavGroup[] = [
     labelKey: "navGroup.compliance",
     items: [
       { titleKey: "nav.docIntel", url: "/doc-intel", icon: FileSearch },
-      { titleKey: "nav.dianColombia", url: "/dian-compliance", icon: Fingerprint },
+      { titleKey: "nav.complianceEngine", url: "/compliance-engine", icon: ShieldCheck },
       { titleKey: "nav.auditTrail", url: "/audit-trail", icon: Scale },
     ],
   },
