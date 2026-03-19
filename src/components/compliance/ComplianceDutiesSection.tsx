@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import type { CountryComplianceProfile, TradeAgreement } from "@/lib/complianceEngineData";
 import { COMPLIANCE_COUNTRIES } from "@/lib/complianceEngineData";
 import { ComplianceAgreementDrawer } from "./ComplianceAgreementDrawer";
+import { DutyCalculatorResults } from "./DutyCalculatorResults";
 
 export function ComplianceDutiesSection({ profile }: { profile: CountryComplianceProfile }) {
   const navigate = useNavigate();
@@ -40,23 +41,32 @@ export function ComplianceDutiesSection({ profile }: { profile: CountryComplianc
 
       {/* Product duty calculator */}
       <Card className="border-primary/20">
-        <CardContent className="py-3">
-          <div className="flex items-center gap-2 mb-2">
+        <CardContent className="py-3 space-y-2">
+          <div className="flex items-center gap-2 mb-1">
             <Search className="h-4 w-4 text-primary" />
             <span className="text-xs font-medium">Product Duty Calculator</span>
           </div>
-          <p className="text-[10px] text-muted-foreground mb-2">Enter a product description or HS code to look up applicable duty rates for {profile.name}</p>
-          <div className="flex gap-2">
-            <Input
-              placeholder="e.g., cotton t-shirts or 6109.10"
-              value={productQuery}
-              onChange={(e) => setProductQuery(e.target.value)}
-              className="text-xs h-8 flex-1"
-            />
-            <Button size="sm" className="text-xs h-8" onClick={() => navigate("/doc-intel")}>
-              Look Up
-            </Button>
-          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Enter a product description or HS code to look up applicable duty rates for {profile.name}
+          </p>
+          <Input
+            placeholder={`e.g., cotton t-shirts or 6109.10 — rates for ${profile.name}`}
+            value={productQuery}
+            onChange={(e) => setProductQuery(e.target.value)}
+            className="text-xs h-8"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                // The DutyCalculatorResults button handles the actual lookup
+                const btn = document.querySelector<HTMLButtonElement>("[data-duty-lookup]");
+                btn?.click();
+              }
+            }}
+          />
+          <DutyCalculatorResults
+            query={productQuery}
+            countryCode={profile.code}
+            countryName={profile.name}
+          />
         </CardContent>
       </Card>
 
