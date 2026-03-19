@@ -71,7 +71,7 @@ const en = {
   "nav.pricing": "Pricing",
   "nav.guide": "Guide",
   "nav.newReview": "New Review",
-  "nav.dianColombia": "DIAN / Colombia",
+  "nav.complianceEngine": "Compliance Engine",
   "nav.reviewQueue": "Review Queue",
   "nav.decisionTwin": "Decision Twin",
   "nav.legalKnowledge": "Legal Knowledge",
