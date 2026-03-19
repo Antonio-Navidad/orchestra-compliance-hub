@@ -2,7 +2,7 @@ import {
   Activity, Package, FileText, BarChart3, Users, Plus,
   ClipboardList, Settings, Scale, BookOpen, Map,
   Search, Eye, ShoppingCart, Radio, Zap, ShieldCheck,
-  CreditCard, Lightbulb, Fingerprint, Truck, Plane, Ship,
+  CreditCard, Lightbulb, Truck, Plane, Ship,
   AlertTriangle, Bell, GitBranch, Box, Route, Layers,
   HelpCircle, FileSearch,
 } from "lucide-react";
@@ -67,7 +67,7 @@ const COMPLIANCE_NAV: NavGroup[] = [
     items: [
       { titleKey: "nav.dashboard", url: "/", icon: Activity },
       { titleKey: "nav.docIntel", url: "/doc-intel", icon: FileSearch },
-      { titleKey: "nav.dianColombia", url: "/dian-compliance", icon: Fingerprint },
+      { titleKey: "nav.complianceEngine", url: "/compliance-engine", icon: ShieldCheck },
       { titleKey: "nav.classifyProduct", url: "/classify", icon: Search },
     ],
   },
@@ -154,7 +154,7 @@ const OPERATIONS_NAV: NavGroup[] = [
     labelKey: "navGroup.compliance",
     items: [
       { titleKey: "nav.docIntel", url: "/doc-intel", icon: FileSearch },
-      { titleKey: "nav.dianColombia", url: "/dian-compliance", icon: Fingerprint },
+      { titleKey: "nav.complianceEngine", url: "/compliance-engine", icon: ShieldCheck },
       { titleKey: "nav.auditTrail", url: "/audit-trail", icon: Scale },
     ],
   },
