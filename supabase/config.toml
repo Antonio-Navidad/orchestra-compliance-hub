@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.extract-document]
 verify_jwt = false
+
+[functions.intake-validate]
+verify_jwt = false
