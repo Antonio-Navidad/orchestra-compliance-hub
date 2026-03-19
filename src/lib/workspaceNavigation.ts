@@ -67,7 +67,7 @@ const COMPLIANCE_NAV: NavGroup[] = [
     items: [
       { titleKey: "nav.dashboard", url: "/", icon: Activity },
       { titleKey: "nav.docIntel", url: "/doc-intel", icon: FileSearch },
-      { titleKey: "nav.dianColombia", url: "/dian-compliance", icon: Fingerprint },
+      { titleKey: "nav.complianceEngine", url: "/compliance-engine", icon: ShieldCheck },
       { titleKey: "nav.classifyProduct", url: "/classify", icon: Search },
     ],
   },
