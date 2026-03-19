@@ -717,7 +717,7 @@ const es: Record<string, string> = {
   // Tooltips
   "tooltip.dashboard": "Vista general de envíos activos, estado de cumplimiento y acciones pendientes",
   "tooltip.docIntel": "Sube, extrae y compara documentos de envío para detectar errores antes de aduanas",
-  "tooltip.dianCompliance": "Requisitos aduaneros específicos de Colombia, declaraciones de exportación DIAN y guía de archivo",
+  "tooltip.complianceEngine": "Inteligencia de cumplimiento aduanero multi-país — requisitos, documentos, aranceles y alertas de riesgo para 17 países",
   "tooltip.classify": "Identifica el código HS correcto para tu producto usando clasificación asistida por IA",
   "tooltip.review": "Envíos marcados para revisión manual por problemas de cumplimiento o documentos faltantes",
   "tooltip.decisionTwin": "Recomendaciones de cumplimiento generadas por IA basadas en el contexto de tu envío",
