@@ -2,7 +2,7 @@ import {
   Activity, Package, FileText, BarChart3, Users, Plus,
   ClipboardList, Settings, Scale, BookOpen, Map,
   Search, Eye, ShoppingCart, Radio, Zap, ShieldCheck,
-  CreditCard, Lightbulb, Fingerprint, Truck, Plane, Ship,
+  CreditCard, Lightbulb, Truck, Plane, Ship,
   AlertTriangle, Bell, GitBranch, Box, Route, Layers,
   HelpCircle, FileSearch,
 } from "lucide-react";
