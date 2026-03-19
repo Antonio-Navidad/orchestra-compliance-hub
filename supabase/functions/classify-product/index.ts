@@ -41,7 +41,12 @@ Destination Country: ${destinationCountry || "N/A"}
 Product URL: ${productUrl || "N/A"}
 Image URL: ${imageUrl || "N/A"}
 
-Provide your classification analysis.`;
+Provide your classification analysis. For the destination country "${destinationCountry || 'US'}", you MUST also provide:
+- The general/MFN duty rate specific to that country
+- Any preferential trade agreement rates (with the agreement name, preferential rate, list of origin countries eligible, and the specific document required to claim it)
+- Any additional active duties (anti-dumping, countervailing, safeguard, Section 301 for US, etc.)
+- The de minimis threshold for that country (the value below which goods are duty-free)
+- What documents/certifications are needed to claim each preferential rate`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
