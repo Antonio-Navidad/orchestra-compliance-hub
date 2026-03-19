@@ -41,7 +41,12 @@ Destination Country: ${destinationCountry || "N/A"}
 Product URL: ${productUrl || "N/A"}
 Image URL: ${imageUrl || "N/A"}
 
-Provide your classification analysis.`;
+Provide your classification analysis. For the destination country "${destinationCountry || 'US'}", you MUST also provide:
+- The general/MFN duty rate specific to that country
+- Any preferential trade agreement rates (with the agreement name, preferential rate, list of origin countries eligible, and the specific document required to claim it)
+- Any additional active duties (anti-dumping, countervailing, safeguard, Section 301 for US, etc.)
+- The de minimis threshold for that country (the value below which goods are duty-free)
+- What documents/certifications are needed to claim each preferential rate`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -54,7 +59,7 @@ Provide your classification analysis.`;
         messages: [
           {
             role: "system",
-            content: `You are an expert customs classifier and trade compliance specialist. When given product information, you must return a classification using the tool provided. Always provide at least 2 alternate codes. For duty estimates, use realistic ranges. Be thorough in your reasoning.`
+            content: `You are an expert customs classifier and trade compliance specialist. When given product information, you must return a classification using the tool provided. Always provide at least 2 alternate codes. For duty estimates, use realistic ranges based on the specific destination country's tariff schedule. Provide country-specific general/MFN rates, preferential trade agreement rates, additional duties, and de minimis thresholds. Be thorough in your reasoning.`
           },
           { role: "user", content: userPrompt },
         ],
@@ -86,6 +91,22 @@ Provide your classification analysis.`;
                   },
                   estimatedDutyRange: { type: "string", description: "Estimated duty rate range e.g. '2.5% - 5.0%'" },
                   estimatedTaxes: { type: "string", description: "Estimated taxes/fees if applicable" },
+                  generalDutyRate: { type: "string", description: "The general/MFN duty rate for the destination country, e.g. '12.0%'" },
+                  preferentialRates: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        agreement: { type: "string", description: "Trade agreement name" },
+                        rate: { type: "string", description: "Preferential duty rate" },
+                        originCountries: { type: "array", items: { type: "string" } },
+                        requiredDocument: { type: "string", description: "Document needed to claim this rate" }
+                      },
+                      required: ["agreement", "rate", "originCountries", "requiredDocument"]
+                    }
+                  },
+                  additionalDuties: { type: "array", items: { type: "string" }, description: "Anti-dumping, countervailing, Section 301, safeguard duties" },
+                  deMinimisThreshold: { type: "string", description: "De minimis threshold for the destination country" },
                   requiredDocuments: {
                     type: "array",
                     items: { type: "string" },
