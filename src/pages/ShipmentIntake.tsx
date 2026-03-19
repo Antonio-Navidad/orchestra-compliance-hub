@@ -11,11 +11,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { PacketScoreCard } from "@/components/PacketScoreCard";
-import { computePacketScore } from "@/lib/packetScore";
-import { ArrowLeft, Upload, X, FileText, Plane, Ship, Truck } from "lucide-react";
+import { computePacketScore, type DocItem } from "@/lib/packetScore";
+import { ArrowLeft, Upload, X, FileText, Plane, Ship, Truck, Sparkles, CheckCircle2 } from "lucide-react";
 import type { TransportMode } from "@/types/orchestra";
 import { useLanguage } from "@/hooks/useLanguage";
+
+// Intake sub-components
+import { OnboardingBanner } from "@/components/intake/OnboardingBanner";
+import { ResetDialog } from "@/components/intake/ResetDialog";
+import { SmartPreFillModal } from "@/components/intake/SmartPreFillModal";
+import { HSCodeValidation, COOWarning, IncotermHint, DescriptionQualityHint } from "@/components/intake/FieldValidation";
+import { FilingDeadlineTimeline } from "@/components/intake/FilingDeadlineTimeline";
+import { PacketScoreGauge } from "@/components/intake/PacketScoreGauge";
+import { ComplianceCoach } from "@/components/intake/ComplianceCoach";
+import { RepeatShipmentSelector } from "@/components/intake/RepeatShipmentSelector";
+import { PreSubmissionGate } from "@/components/intake/PreSubmissionGate";
+import { PacketItemDrawer } from "@/components/intake/PacketItemDrawer";
+import { PacketScoreCard } from "@/components/PacketScoreCard";
+
+// Collapsible for packet layers
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Progress } from "@/components/ui/progress";
+import { CheckCircle2 as CheckIcon, XCircle, AlertTriangle, MinusCircle, HelpCircle } from "lucide-react";
 
 const DOC_TYPES = [
   { value: 'commercial_invoice', label: 'Commercial Invoice' },
@@ -49,6 +66,38 @@ const PRIORITY_OPTIONS = [
 
 const INCOTERMS = ['EXW','FCA','FAS','FOB','CFR','CIF','CPT','CIP','DAP','DPU','DDP'];
 
+function generateShipmentId() {
+  return `ORC-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+}
+
+const INITIAL_FORM = {
+  shipment_id: generateShipmentId(),
+  direction: 'inbound' as 'inbound' | 'outbound',
+  origin_country: '',
+  destination_country: '',
+  import_country: '',
+  export_country: '',
+  mode: 'sea' as TransportMode,
+  port_of_entry: '',
+  description: '',
+  quantity: '',
+  declared_value: '',
+  currency: 'USD',
+  incoterm: '',
+  consignee: '',
+  shipper: '',
+  hs_code: '',
+  broker_id: '',
+  assigned_broker: '',
+  forwarder: '',
+  coo_status: 'unknown',
+  filing_status: 'not_filed',
+  priority: 'normal',
+  planned_departure: '',
+  estimated_arrival: '',
+  jurisdiction_code: 'US',
+};
+
 interface UploadedDoc {
   file: File;
   docType: string;
@@ -60,37 +109,16 @@ export default function ShipmentIntake() {
   const { user } = useAuth();
   const { t } = useLanguage();
 
-  const [form, setForm] = useState({
-    shipment_id: '',
-    direction: 'inbound' as 'inbound' | 'outbound',
-    origin_country: '',
-    destination_country: '',
-    import_country: '',
-    export_country: '',
-    mode: 'sea' as TransportMode,
-    port_of_entry: '',
-    description: '',
-    quantity: '',
-    declared_value: '',
-    currency: 'USD',
-    incoterm: '',
-    consignee: '',
-    shipper: '',
-    hs_code: '',
-    broker_id: '',
-    assigned_broker: '',
-    forwarder: '',
-    coo_status: 'unknown',
-    filing_status: 'not_filed',
-    priority: 'normal',
-    planned_departure: '',
-    estimated_arrival: '',
-    jurisdiction_code: 'US',
-  });
-
+  const [form, setForm] = useState({ ...INITIAL_FORM });
   const [docs, setDocs] = useState<UploadedDoc[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedDocType, setSelectedDocType] = useState('commercial_invoice');
+  const [showPreFill, setShowPreFill] = useState(false);
+  const [showGate, setShowGate] = useState(false);
+  const [selectedPacketItem, setSelectedPacketItem] = useState<DocItem | null>(null);
+  const [packetDrawerOpen, setPacketDrawerOpen] = useState(false);
+  const [expandedLayers, setExpandedLayers] = useState<Set<number>>(new Set());
+  const [hsValidationResult, setHsValidationResult] = useState<any>(null);
 
   const { data: brokers = [] } = useQuery({
     queryKey: ["brokers"],
@@ -103,6 +131,16 @@ export default function ShipmentIntake() {
 
   const updateField = (key: string, value: string) => {
     setForm(prev => ({ ...prev, [key]: value }));
+  };
+
+  const applyPreFill = (fields: Record<string, string>) => {
+    setForm(prev => ({ ...prev, ...fields }));
+  };
+
+  const resetForm = () => {
+    setForm({ ...INITIAL_FORM, shipment_id: generateShipmentId() });
+    setDocs([]);
+    setExpandedLayers(new Set());
   };
 
   const uploadedDocTypes = docs.map(d => d.docType);
@@ -145,13 +183,24 @@ export default function ShipmentIntake() {
     setDocs(prev => prev.filter(d => d.id !== id));
   };
 
-  const submitMutation = useMutation({
-    mutationFn: async () => {
-      if (!form.shipment_id || !form.destination_country || !form.description) {
-        throw new Error("Shipment ID, destination country, and description are required");
-      }
+  const toggleLayer = (idx: number) => {
+    const next = new Set(expandedLayers);
+    if (next.has(idx)) next.delete(idx); else next.add(idx);
+    setExpandedLayers(next);
+  };
 
-      // Create shipment
+  const handleItemClick = (item: DocItem) => {
+    setSelectedPacketItem(item);
+    setPacketDrawerOpen(true);
+  };
+
+  const doCreate = async () => {
+    if (!form.shipment_id || !form.destination_country || !form.description) {
+      toast({ title: "Error", description: "Shipment ID, destination country, and description are required", variant: "destructive" });
+      return;
+    }
+
+    try {
       const { error: shipErr } = await supabase.from("shipments").insert({
         shipment_id: form.shipment_id,
         mode: form.mode,
@@ -184,15 +233,11 @@ export default function ShipmentIntake() {
       } as any);
       if (shipErr) throw shipErr;
 
-      // Upload documents
       for (const doc of docs) {
         const filePath = `${form.shipment_id}/${doc.docType}/${doc.file.name}`;
-        const { error: uploadErr } = await supabase.storage
-          .from('shipment-documents')
-          .upload(filePath, doc.file);
+        const { error: uploadErr } = await supabase.storage.from('shipment-documents').upload(filePath, doc.file);
         if (uploadErr) throw uploadErr;
-
-        const { error: docErr } = await supabase.from("shipment_documents" as any).insert({
+        await supabase.from("shipment_documents" as any).insert({
           shipment_id: form.shipment_id,
           document_type: doc.docType,
           file_name: doc.file.name,
@@ -200,29 +245,53 @@ export default function ShipmentIntake() {
           file_size: doc.file.size,
           uploaded_by: user?.id,
         } as any);
-        if (docErr) throw docErr;
       }
 
-      // Log creation event
       await supabase.from("shipment_events").insert({
         shipment_id: form.shipment_id,
         event_type: 'shipment_created',
-        description: `Shipment created via intake. Packet score: ${packetScore.overallScore}. Filing readiness: ${packetScore.filingReadiness}.`,
+        description: `Shipment created via AI intake. Packet score: ${packetScore.overallScore}%. Filing readiness: ${packetScore.filingReadiness}. ${packetScore.topMissing.length} missing items.`,
         user_id: user?.id,
         confidence_level: 100,
         evidence_quality: 'confirmed',
       });
 
-      return form.shipment_id;
-    },
-    onSuccess: (id) => {
-      toast({ title: "Shipment created", description: `${id} has been submitted.` });
-      navigate(`/shipment/${id}`);
-    },
-    onError: (err: any) => {
+      toast({
+        title: `Shipment ${form.shipment_id} created`,
+        description: (
+          <div className="space-y-1 text-xs">
+            <p>Compliance readiness: {packetScore.overallScore}%</p>
+            {packetScore.topMissing.length > 0 && (
+              <p className="text-risk-high">Next: Upload {packetScore.topMissing[0]}</p>
+            )}
+          </div>
+        ),
+      });
+      navigate(`/shipment/${form.shipment_id}`);
+    } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
-    },
-  });
+    }
+  };
+
+  const handleCreateClick = () => {
+    if (!form.shipment_id || !form.destination_country || !form.description) {
+      toast({ title: "Error", description: "Shipment ID, destination country, and description are required", variant: "destructive" });
+      return;
+    }
+    setShowGate(true);
+  };
+
+  function statusIcon(status: string) {
+    switch (status) {
+      case 'present': return <CheckIcon size={13} className="text-risk-safe" />;
+      case 'missing': return <XCircle size={13} className="text-risk-critical" />;
+      case 'inconsistent': return <AlertTriangle size={13} className="text-risk-medium" />;
+      case 'low_confidence': return <HelpCircle size={13} className="text-risk-high" />;
+      case 'not_applicable': return <MinusCircle size={13} className="text-muted-foreground" />;
+      case 'optional_present': return <CheckIcon size={13} className="text-muted-foreground" />;
+      default: return null;
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -233,20 +302,33 @@ export default function ShipmentIntake() {
           </Link>
           <h1 className="text-lg font-bold font-mono">{t("intake.pageTitle")}</h1>
           <Badge variant="outline" className="font-mono text-[10px]">{t("shipment.intake")}</Badge>
+          <div className="ml-auto flex items-center gap-2">
+            <ResetDialog onReset={resetForm} />
+          </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-6">
+        <OnboardingBanner />
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left: Form */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Pre-fill buttons */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button onClick={() => setShowPreFill(true)} variant="outline" className="font-mono text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10">
+                <Sparkles size={12} /> Smart Pre-fill from Documents
+              </Button>
+              <RepeatShipmentSelector onSelect={applyPreFill} />
+            </div>
+
             {/* Core Details */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="font-mono text-sm">{t("intake.shipmentDetails")}</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
+                <div className="space-y-1.5" data-field="shipment_id">
                   <Label className="text-xs font-mono">{t("intake.shipmentId")} *</Label>
                   <Input value={form.shipment_id} onChange={e => updateField('shipment_id', e.target.value)} placeholder="ORC-XXX" className="font-mono" />
                 </div>
@@ -310,19 +392,27 @@ export default function ShipmentIntake() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="md:col-span-2 space-y-1.5">
+                <div className="md:col-span-2 space-y-1.5" data-field="description">
                   <Label className="text-xs font-mono">{t("intake.commodityDesc")} *</Label>
                   <Textarea value={form.description} onChange={e => updateField('description', e.target.value)} placeholder={t("intake.commodityPlaceholder")} rows={2} />
+                  <DescriptionQualityHint description={form.description} />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5" data-field="hs_code">
                   <Label className="text-xs font-mono">{t("intake.hsCode")}</Label>
                   <Input value={form.hs_code} onChange={e => updateField('hs_code', e.target.value)} placeholder="8471.30" className="font-mono" />
+                  <HSCodeValidation
+                    hsCode={form.hs_code}
+                    description={form.description}
+                    destinationCountry={form.destination_country || form.jurisdiction_code}
+                    declaredValue={form.declared_value}
+                    currency={form.currency}
+                  />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5" data-field="quantity">
                   <Label className="text-xs font-mono">{t("intake.quantity")}</Label>
                   <Input type="number" value={form.quantity} onChange={e => updateField('quantity', e.target.value)} placeholder="100" />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5" data-field="declared_value">
                   <Label className="text-xs font-mono">{t("intake.declaredValue")}</Label>
                   <Input type="number" value={form.declared_value} onChange={e => updateField('declared_value', e.target.value)} placeholder="50000" />
                 </div>
@@ -344,9 +434,10 @@ export default function ShipmentIntake() {
                   <Select value={form.incoterm} onValueChange={v => updateField('incoterm', v)}>
                     <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                     <SelectContent>
-                      {INCOTERMS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      {INCOTERMS.map(ic => <SelectItem key={ic} value={ic}>{ic}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  <IncotermHint incoterm={form.incoterm} />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-mono">{t("intake.consignee")}</Label>
@@ -389,6 +480,7 @@ export default function ShipmentIntake() {
                       {COO_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  <COOWarning cooStatus={form.coo_status} destinationCountry={form.destination_country || form.jurisdiction_code} />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-mono">{t("intake.priority")}</Label>
@@ -402,6 +494,14 @@ export default function ShipmentIntake() {
                 <div className="space-y-1.5">
                   <Label className="text-xs font-mono">{t("intake.plannedDeparture")}</Label>
                   <Input type="date" value={form.planned_departure} onChange={e => updateField('planned_departure', e.target.value)} />
+                  {form.planned_departure && form.mode && form.destination_country && (
+                    <FilingDeadlineTimeline
+                      mode={form.mode}
+                      originCountry={form.origin_country}
+                      destinationCountry={form.destination_country}
+                      plannedDeparture={form.planned_departure}
+                    />
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-mono">{t("intake.estimatedArrival")}</Label>
@@ -430,22 +530,16 @@ export default function ShipmentIntake() {
                     </Button>
                   </label>
                 </div>
-
                 <div
-                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                    isDragging ? 'border-primary bg-primary/5' : 'border-border'
-                  }`}
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragging ? 'border-primary bg-primary/5' : 'border-border'}`}
                   onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
                   onDragLeave={() => setIsDragging(false)}
                   onDrop={handleDrop}
                 >
                   <Upload className="mx-auto mb-2 text-muted-foreground" size={24} />
                   <p className="text-sm text-muted-foreground">{t("intake.dragDrop")}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    Type: {DOC_TYPES.find(d => d.value === selectedDocType)?.label}
-                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Type: {DOC_TYPES.find(d => d.value === selectedDocType)?.label}</p>
                 </div>
-
                 {docs.length > 0 && (
                   <div className="space-y-2">
                     {docs.map(doc => (
@@ -467,22 +561,84 @@ export default function ShipmentIntake() {
               </CardContent>
             </Card>
 
+            {/* AI Compliance Coach */}
+            <ComplianceCoach shipmentContext={{
+              originCountry: form.origin_country,
+              destinationCountry: form.destination_country,
+              mode: form.mode,
+              hsCode: form.hs_code,
+              description: form.description,
+              declaredValue: form.declared_value,
+              currency: form.currency,
+              incoterm: form.incoterm,
+              cooStatus: form.coo_status,
+            }} />
+
             {/* Submit */}
             <div className="flex gap-3">
               <Button
-                onClick={() => submitMutation.mutate()}
-                disabled={submitMutation.isPending || !form.shipment_id || !form.destination_country || !form.description}
+                onClick={handleCreateClick}
+                disabled={!form.shipment_id || !form.destination_country || !form.description}
                 className="font-mono"
               >
-                {submitMutation.isPending ? t("intake.creating") : t("intake.createShipment")}
+                {t("intake.createShipment")}
               </Button>
               <Button variant="outline" onClick={() => navigate('/')} className="font-mono">{t("common.cancel").toUpperCase()}</Button>
             </div>
           </div>
 
-          {/* Right: Packet Score */}
+          {/* Right: Compliance Readiness Panel */}
           <div className="space-y-4">
-            <PacketScoreCard result={packetScore} />
+            <PacketScoreGauge
+              result={packetScore}
+              onResolveIssues={() => {
+                // Expand all layers to show issues
+                setExpandedLayers(new Set(packetScore.layers.map((_, i) => i)));
+              }}
+            />
+
+            {/* Interactive packet breakdown */}
+            <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+              <h4 className="font-mono text-[10px] text-muted-foreground tracking-wider">DOCUMENT PACKET BREAKDOWN</h4>
+              <div className="space-y-2">
+                {packetScore.layers.map((layer, idx) => (
+                  <Collapsible key={idx} open={expandedLayers.has(idx)} onOpenChange={() => toggleLayer(idx)}>
+                    <CollapsibleTrigger className="w-full">
+                      <div className="flex items-center gap-3 p-2 rounded hover:bg-secondary/50 transition-colors cursor-pointer">
+                        <div className="flex-1 text-left">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-mono">{layer.label}</span>
+                            <span className={`text-xs font-mono font-bold ${layer.score >= 80 ? 'text-risk-safe' : layer.score >= 50 ? 'text-risk-medium' : 'text-risk-critical'}`}>{layer.score}%</span>
+                          </div>
+                          <Progress value={layer.score} className={`h-1 mt-1 ${layer.score >= 80 ? '[&>div]:bg-risk-safe' : layer.score >= 50 ? '[&>div]:bg-risk-medium' : '[&>div]:bg-risk-critical'}`} />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground font-mono">{Math.round(layer.weight * 100)}%</span>
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="pl-2 pb-2 space-y-0.5">
+                        {layer.items.map((item, i) => (
+                          <button
+                            key={i}
+                            onClick={() => handleItemClick(item)}
+                            className="w-full flex items-center gap-2 text-xs py-1.5 px-1 rounded hover:bg-secondary/50 transition-colors text-left"
+                          >
+                            {statusIcon(item.status)}
+                            <span className={item.status === 'missing' && item.required ? 'text-risk-critical' : 'text-foreground'}>
+                              {item.name}
+                            </span>
+                            <span className="text-muted-foreground text-[10px] ml-auto">
+                              {item.status === 'present' ? 'Present' : item.status === 'missing' ? 'Missing' : item.status === 'low_confidence' ? 'Low Confidence' : item.status === 'not_applicable' ? 'N/A' : item.status}
+                            </span>
+                            {item.required && <Badge variant="outline" className="text-[9px] px-1 py-0">REQ</Badge>}
+                          </button>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
+            </div>
 
             {/* Quick stats */}
             <Card>
@@ -504,6 +660,38 @@ export default function ShipmentIntake() {
           </div>
         </div>
       </main>
+
+      {/* Modals */}
+      <SmartPreFillModal open={showPreFill} onOpenChange={setShowPreFill} onApply={applyPreFill} />
+      <PreSubmissionGate
+        open={showGate}
+        onOpenChange={setShowGate}
+        shipmentData={{
+          shipmentId: form.shipment_id,
+          originCountry: form.origin_country,
+          destinationCountry: form.destination_country,
+          mode: form.mode,
+          hsCode: form.hs_code,
+          description: form.description,
+          declaredValue: form.declared_value,
+          currency: form.currency,
+          consignee: form.consignee,
+          shipper: form.shipper,
+          cooStatus: form.coo_status,
+          incoterm: form.incoterm,
+          uploadedDocs: uploadedDocTypes,
+          packetScore: packetScore.overallScore,
+          missingDocs: packetScore.topMissing,
+        }}
+        onConfirm={doCreate}
+        onForceCreate={doCreate}
+      />
+      <PacketItemDrawer
+        open={packetDrawerOpen}
+        onOpenChange={setPacketDrawerOpen}
+        item={selectedPacketItem}
+        jurisdictionCode={form.jurisdiction_code}
+      />
     </div>
   );
 }
