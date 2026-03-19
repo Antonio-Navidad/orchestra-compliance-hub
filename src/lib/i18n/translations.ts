@@ -680,7 +680,7 @@ const es: Record<string, string> = {
   "nav.pricing": "Precios",
   "nav.guide": "Guía",
   "nav.newReview": "Nueva revisión",
-  "nav.dianColombia": "DIAN / Colombia",
+  "nav.complianceEngine": "Motor de Cumplimiento",
   "nav.reviewQueue": "Cola de revisión",
   "nav.decisionTwin": "Gemelo de decisión",
   "nav.legalKnowledge": "Base legal",
