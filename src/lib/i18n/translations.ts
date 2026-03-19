@@ -992,7 +992,7 @@ const fr: Record<string, string> = {
   "nav.pricing": "Tarification",
   "nav.guide": "Guide",
   "nav.newReview": "Nouvelle révision",
-  "nav.dianColombia": "DIAN / Colombia",
+  "nav.complianceEngine": "Moteur de Conformité",
   "nav.reviewQueue": "File de révision",
   "nav.decisionTwin": "Jumeau de décision",
   "nav.legalKnowledge": "Base juridique",
