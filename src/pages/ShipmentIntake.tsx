@@ -19,6 +19,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { cn } from "@/lib/utils";
 
 import { SHIPMENT_MODES, MODE_DOC_PROFILES, getApplicableConditionalDocs, type ShipmentModeId } from "@/lib/shipmentModes";
+import { getModeSubtitle } from "@/lib/modeDocumentDefs";
 import { ShipmentModeSelector } from "@/components/workspace/ShipmentModeSelector";
 import { DocChecklistPanel } from "@/components/workspace/DocChecklistPanel";
 import { ShipmentsSidebar } from "@/components/workspace/ShipmentsSidebar";
