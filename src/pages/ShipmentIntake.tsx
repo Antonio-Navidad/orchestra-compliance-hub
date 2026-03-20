@@ -561,6 +561,7 @@ export default function ShipmentIntake() {
                       originCountry={form.origin_country}
                       destinationCountry={form.destination_country}
                       plannedDeparture={form.planned_departure}
+                      estimatedArrival={form.estimated_arrival}
                     />
                   )}
                 </div>
