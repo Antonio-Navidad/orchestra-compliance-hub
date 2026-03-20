@@ -114,6 +114,38 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-size: 14px;
+    line-height: 1.6;
+    font-weight: 500;
+  }
+  h1, h2, h3 {
+    line-height: 1.3;
+  }
+  h1 {
+    @apply text-lg font-bold;
+  }
+  h2 {
+    @apply text-base font-semibold;
+  }
+  h3 {
+    @apply font-semibold;
+    font-size: 15px;
+  }
+  label {
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  input, select, textarea {
+    font-weight: 500;
+    font-size: 14px;
+  }
+  table td, table th {
+    font-size: 13px;
+    font-weight: 500;
+  }
+  table th {
+    font-weight: 600;
   }
 }
 
