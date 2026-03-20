@@ -134,7 +134,36 @@ export default function ShipmentIntake() {
   };
 
   const applyPreFill = (fields: Record<string, string>) => {
-    setForm(prev => ({ ...prev, ...fields }));
+    const fieldMap: Record<string, string> = {
+      etd: 'planned_departure',
+      eta: 'estimated_arrival',
+      origin_country: 'origin_country',
+      destination_country: 'destination_country',
+      hs_code: 'hs_code',
+      declared_value: 'declared_value',
+      currency: 'currency',
+      commodity_description: 'description',
+      incoterm: 'incoterms',
+      transport_mode: 'mode',
+      shipper: 'shipper',
+      consignee: 'consignee',
+      notify_party: 'notify_party',
+      bl_number: 'bl_number',
+      vessel_name: 'vessel_name',
+      container_number: 'container_number',
+      seal_number: 'seal_number',
+      port_of_loading: 'port_of_loading',
+      port_of_discharge: 'port_of_discharge',
+      quantity: 'quantity',
+      gross_weight: 'gross_weight',
+      net_weight: 'net_weight',
+    };
+    const mapped: Record<string, string> = {};
+    for (const [key, value] of Object.entries(fields)) {
+      const formKey = fieldMap[key] || key;
+      mapped[formKey] = value;
+    }
+    setForm(prev => ({ ...prev, ...mapped }));
   };
 
   const resetForm = () => {
