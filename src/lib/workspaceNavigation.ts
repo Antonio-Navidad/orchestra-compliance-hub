@@ -133,7 +133,7 @@ const OPERATIONS_NAV: NavGroup[] = [
   {
     labelKey: "navGroup.quickActions",
     items: [
-      { titleKey: "nav.newShipment", url: "/intake", icon: Plus },
+      { titleKey: "nav.shipments", url: "/intake", icon: Package },
       { titleKey: "nav.newWatchlist", url: "/watch-mode", icon: Radio },
     ],
   },
