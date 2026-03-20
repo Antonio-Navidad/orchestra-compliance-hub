@@ -38,6 +38,7 @@ import PurposeSelector from "./pages/PurposeSelector";
 import WorkspaceHome from "./pages/WorkspaceHome";
 import NotFound from "./pages/NotFound";
 import GuidePage from "./pages/GuidePage";
+import CommandCenter from "./pages/CommandCenter";
 
 const queryClient = new QueryClient();
 
@@ -119,6 +120,7 @@ function WorkspacePurposeWrapper() {
           <Route path="/seller-mode" element={<PurposeGate><MicroSellerMode /></PurposeGate>} />
           <Route path="/teams" element={<PurposeGate><TeamsBlackTier /></PurposeGate>} />
           <Route path="/guide" element={<PurposeGate><GuidePage /></PurposeGate>} />
+          <Route path="/command-center" element={<PurposeGate><CommandCenter /></PurposeGate>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

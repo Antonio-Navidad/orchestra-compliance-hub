@@ -4,7 +4,7 @@ import {
   Search, Eye, ShoppingCart, Radio, Zap, ShieldCheck,
   CreditCard, Lightbulb, Truck, Plane, Ship,
   AlertTriangle, Bell, GitBranch, Box, Route, Layers,
-  HelpCircle, FileSearch,
+  HelpCircle, FileSearch, KanbanSquare,
 } from "lucide-react";
 import type { WorkspacePurpose } from "@/hooks/useWorkspacePurpose";
 
@@ -31,6 +31,7 @@ const MARKETPLACE_NAV: NavGroup[] = [
     labelKey: "navGroup.ordersShipments",
     items: [
       { titleKey: "nav.dashboard", url: "/", icon: Activity },
+      { titleKey: "nav.commandCenter", url: "/command-center", icon: KanbanSquare },
       { titleKey: "nav.shipmentTracker", url: "/review", icon: Package },
       { titleKey: "nav.sellerMode", url: "/seller-mode", icon: ShoppingCart },
     ],
@@ -66,6 +67,7 @@ const COMPLIANCE_NAV: NavGroup[] = [
     labelKey: "navGroup.compliance",
     items: [
       { titleKey: "nav.dashboard", url: "/", icon: Activity },
+      { titleKey: "nav.commandCenter", url: "/command-center", icon: KanbanSquare },
       { titleKey: "nav.docIntel", url: "/doc-intel", icon: FileSearch },
       { titleKey: "nav.complianceEngine", url: "/compliance-engine", icon: ShieldCheck },
       { titleKey: "nav.classifyProduct", url: "/classify", icon: Search },
@@ -102,6 +104,7 @@ const ROUTE_PLANNING_NAV: NavGroup[] = [
     labelKey: "navGroup.planning",
     items: [
       { titleKey: "nav.dashboard", url: "/", icon: Activity },
+      { titleKey: "nav.commandCenter", url: "/command-center", icon: KanbanSquare },
       { titleKey: "nav.creatorMode", url: "/creator-mode", icon: Eye },
       { titleKey: "nav.routeBuilder", url: "/route-builder", icon: Map },
       { titleKey: "nav.decisionTwin", url: "/decision-twin", icon: Zap },
@@ -138,6 +141,7 @@ const OPERATIONS_NAV: NavGroup[] = [
     labelKey: "navGroup.controlTower",
     items: [
       { titleKey: "nav.dashboard", url: "/", icon: Activity },
+      { titleKey: "nav.commandCenter", url: "/command-center", icon: KanbanSquare },
       { titleKey: "nav.watchMode", url: "/watch-mode", icon: Radio },
       { titleKey: "nav.reviewQueue", url: "/review", icon: ClipboardList },
     ],
@@ -181,6 +185,7 @@ const ENTERPRISE_NAV: NavGroup[] = [
     labelKey: "navGroup.management",
     items: [
       { titleKey: "nav.dashboard", url: "/", icon: Activity },
+      { titleKey: "nav.commandCenter", url: "/command-center", icon: KanbanSquare },
       { titleKey: "nav.teams", url: "/teams", icon: Users },
       { titleKey: "nav.teamChat", url: "/team-chat", icon: Users },
       { titleKey: "nav.brokerScorecard", url: "/brokers", icon: Users },
