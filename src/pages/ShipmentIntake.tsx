@@ -131,6 +131,14 @@ export default function ShipmentIntake() {
   const [deadlineDrawerOpen, setDeadlineDrawerOpen] = useState(false);
   const [deadlineDrawerData, setDeadlineDrawerData] = useState<AlertDrawerData | null>(null);
 
+  // AI extraction pipeline
+  const docExtraction = useDocExtraction({
+    shipmentMode: form.mode,
+    commodityType: form.description,
+    countryOfOrigin: form.origin_country,
+    shipmentId: form.shipment_id,
+  });
+
   // Calculate deadlines for current shipment
   const shipmentDeadlines = useMemo(() => {
     return calculateDeadlines({
