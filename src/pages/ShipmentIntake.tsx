@@ -115,8 +115,8 @@ export default function ShipmentIntake() {
   const { t } = useLanguage();
 
   const [form, setForm] = useState({ ...INITIAL_FORM });
-  const [hsCodes, setHsCodes] = useState<string[]>([]);
-  const [aiSuggestedHS, setAiSuggestedHS] = useState<string[]>([]);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [aiSuggestedItems, setAiSuggestedItems] = useState<Array<{ hsCode: string; description?: string }>>([]);
   const [docs, setDocs] = useState<UploadedDoc[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedDocType, setSelectedDocType] = useState('commercial_invoice');
