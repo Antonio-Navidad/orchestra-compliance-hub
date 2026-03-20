@@ -38,7 +38,7 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <h1 className="text-sm font-bold tracking-tight">{t("app.title")}</h1>
+              <h1 className="text-sm font-bold tracking-tight text-sidebar-foreground/90">{t("app.title")}</h1>
               {currentPurpose && (
                 <p className="text-[9px] font-mono text-primary/70 tracking-wider truncate">
                   {currentPurpose.icon} {currentPurpose.label.toUpperCase()}
