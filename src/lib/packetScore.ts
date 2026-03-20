@@ -103,13 +103,53 @@ function getJurisdictionDocs(jurisdiction: string): Array<{ name: string; type: 
 }
 
 function getRegulatoryDocs(hsCode?: string): Array<{ name: string; type: string; required: boolean }> {
-  // Simplified: in production, HS code lookup would drive this
-  return [
-    { name: 'Export License / Permit', type: 'export_license', required: false },
-    { name: 'Import Permit', type: 'import_permit', required: false },
-    { name: 'Phytosanitary Certificate', type: 'phytosanitary_certificate', required: false },
-    { name: 'Inspection Certificate', type: 'inspection_certificate', required: false },
-  ];
+  const docs: Array<{ name: string; type: string; required: boolean }> = [];
+  if (!hsCode) return docs;
+
+  const ch = parseInt(hsCode.substring(0, 2));
+  if (isNaN(ch)) return docs;
+
+  // Food/agri (01-24): phytosanitary + FDA prior notice
+  if (ch >= 1 && ch <= 24) {
+    docs.push({ name: 'Phytosanitary Certificate', type: 'phytosanitary_certificate', required: true });
+    docs.push({ name: 'FDA Prior Notice', type: 'fda_prior_notice', required: true });
+    docs.push({ name: 'Fumigation Certificate / ISPM-15', type: 'fumigation_certificate', required: true });
+  }
+  // Chemicals (28-38): SDS/MSDS + EPA TSCA
+  if (ch >= 28 && ch <= 38) {
+    docs.push({ name: 'SDS / MSDS', type: 'dangerous_goods_declaration', required: true });
+    docs.push({ name: 'EPA TSCA Certification', type: 'epa_tsca', required: true });
+  }
+  // Pharma/medical (29-30, 90): FDA entry affirmation
+  if (ch === 29 || ch === 30 || ch === 90) {
+    docs.push({ name: 'FDA Entry Affirmation', type: 'fda_affirmation', required: true });
+  }
+  // Electronics/telecom (84-85): FCC declaration
+  if (ch === 84 || ch === 85) {
+    docs.push({ name: 'FCC Declaration', type: 'fcc_declaration', required: true });
+  }
+  // Steel/aluminum (72-76): SIMA license
+  if (ch >= 72 && ch <= 76) {
+    docs.push({ name: 'SIMA Steel Import License', type: 'sima_license', required: true });
+  }
+  // Textiles/apparel (50-63): textile visa
+  if (ch >= 50 && ch <= 63) {
+    docs.push({ name: 'Textile Visa / Quota Documentation', type: 'textile_visa', required: false });
+  }
+  // Firearms/ammunition (93): ATF Form 6
+  if (ch === 93) {
+    docs.push({ name: 'ATF Form 6 — Import Permit', type: 'atf_form_6', required: true });
+  }
+  // Wildlife (01, 03, 44): CITES permit
+  if (ch === 1 || ch === 3 || ch === 44) {
+    docs.push({ name: 'CITES Permit', type: 'cites_permit', required: false });
+  }
+
+  // Always add inspection and export license as optional
+  docs.push({ name: 'Inspection Certificate', type: 'inspection_certificate', required: false });
+  docs.push({ name: 'Export License', type: 'export_license', required: false });
+
+  return docs;
 }
 
 function scoreLayer(items: DocItem[]): number {
