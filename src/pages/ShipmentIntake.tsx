@@ -641,6 +641,11 @@ export default function ShipmentIntake() {
         onComplete={handleWizardComplete}
         existingImporters={existingImporters}
       />
+      <AlertDrawer
+        open={deadlineDrawerOpen}
+        onOpenChange={setDeadlineDrawerOpen}
+        data={deadlineDrawerData}
+      />
     </div>
   );
 }
