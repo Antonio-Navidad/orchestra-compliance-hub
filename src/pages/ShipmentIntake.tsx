@@ -54,6 +54,7 @@ const COO_OPTIONS = [
   { value: 'attached', label: 'Attached' },
   { value: 'pending', label: 'Pending' },
   { value: 'not_required', label: 'Not Required' },
+  { value: 'potentially_eligible', label: 'Potentially Eligible' },
   { value: 'unknown', label: 'Unknown' },
 ];
 
@@ -139,6 +140,10 @@ export default function ShipmentIntake() {
       eta: 'estimated_arrival',
       origin_country: 'origin_country',
       destination_country: 'destination_country',
+      import_country: 'import_country',
+      export_country: 'export_country',
+      place_of_receipt: 'place_of_receipt',
+      place_of_delivery: 'place_of_delivery',
       hs_code: 'hs_code',
       declared_value: 'declared_value',
       currency: 'currency',
@@ -154,15 +159,42 @@ export default function ShipmentIntake() {
       seal_number: 'seal_number',
       port_of_loading: 'port_of_loading',
       port_of_discharge: 'port_of_discharge',
+      total_pieces: 'quantity',
+      total_cartons: 'quantity',
       quantity: 'quantity',
       gross_weight: 'gross_weight',
       net_weight: 'net_weight',
+      total_cbm: 'volume',
+      freight_charges: 'freight_charges',
+      insurance_value: 'insurance_value',
+      cif_value: 'cif_value',
+      booking_reference: 'booking_reference',
+      purchase_order: 'purchase_order',
+      shippers_reference: 'shippers_reference',
+      customs_entry_number: 'customs_entry_number',
     };
     const mapped: Record<string, string> = {};
+    // Track if total_pieces was mapped so we prefer it over total_cartons for quantity
+    let piecesMapped = false;
     for (const [key, value] of Object.entries(fields)) {
       const formKey = fieldMap[key] || key;
+      // Prefer total_pieces over total_cartons for quantity field
+      if (key === 'total_cartons' && (piecesMapped || mapped['quantity'])) continue;
+      if (key === 'total_pieces') piecesMapped = true;
       mapped[formKey] = value;
     }
+
+    // Auto-detect COO eligibility for Colombia → US
+    const origin = mapped['origin_country'] || fields['origin_country'] || fields['export_country'] || '';
+    const dest = mapped['destination_country'] || fields['destination_country'] || fields['import_country'] || '';
+    const isColombiaToUS = 
+      (origin.toUpperCase() === 'CO' || origin.toLowerCase().includes('colombia')) &&
+      (dest.toUpperCase() === 'US' || dest.toLowerCase().includes('united states'));
+    
+    if (isColombiaToUS && (!mapped['coo_status'] || mapped['coo_status'] === 'unknown')) {
+      mapped['coo_status'] = 'potentially_eligible';
+    }
+
     setForm(prev => ({ ...prev, ...mapped }));
   };
 
@@ -529,6 +561,7 @@ export default function ShipmentIntake() {
                       originCountry={form.origin_country}
                       destinationCountry={form.destination_country}
                       plannedDeparture={form.planned_departure}
+                      estimatedArrival={form.estimated_arrival}
                     />
                   )}
                 </div>

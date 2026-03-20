@@ -113,7 +113,21 @@ export function DeclaredValueHint({ hsCode, declaredValue, destinationCountry, c
 
 // COO Status warning
 export function COOWarning({ cooStatus, destinationCountry }: { cooStatus: string; destinationCountry: string }) {
-  if (cooStatus !== "unknown") return null;
+  if (cooStatus !== "unknown" && cooStatus !== "potentially_eligible") return null;
+  
+  const isColombiaToUS = (destinationCountry || "").toUpperCase() === "US" || (destinationCountry || "").toLowerCase().includes("united states");
+
+  if (cooStatus === "potentially_eligible") {
+    return (
+      <div className="flex items-start gap-1.5 mt-1 text-primary">
+        <Info size={11} className="shrink-0 mt-0.5" />
+        <span className="text-[11px]">
+          🟢 Colombia → US shipments may qualify for preferential duty rates under the CTPA (Colombia Trade Promotion Agreement). Confirm with your supplier that goods meet origin requirements to claim 0% duty rate.
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-start gap-1.5 mt-1 text-risk-high">
       <AlertTriangle size={11} className="shrink-0 mt-0.5" />

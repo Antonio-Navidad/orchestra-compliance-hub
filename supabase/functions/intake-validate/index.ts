@@ -248,16 +248,29 @@ User Question: ${params.question}`;
       systemPrompt = `You are a document extraction expert for trade/customs shipping data. Extract only values clearly present in the provided raw document text.
 
 Extract any fields that appear in the text, including:
-shipper, consignee, notify party, HS code, declared value, currency, port of loading, port of discharge, vessel name, container number, seal number, B/L number, ETD, ETA, Incoterms, origin country, destination country, transport mode, commodity description, quantity, gross/net weight.
+shipper, consignee, notify_party, hs_code, declared_value, currency, port_of_loading, port_of_discharge, vessel_name, container_number, seal_number, bl_number, etd, eta, incoterm, origin_country, destination_country, import_country, export_country, place_of_receipt, place_of_delivery, transport_mode, commodity_description, quantity, gross_weight, net_weight, total_cartons, total_pieces, total_cbm, freight_charges, insurance_value, cif_value, booking_reference, purchase_order, shippers_reference, customs_entry_number.
+
+For quantity/weight/volume fields, extract the numeric value AND the unit separately. Examples:
+- "1,306.5 kg" → value: "1306.5", unit in field context
+- "525 ctns" → value: "525", unit in field context
+- "12.00 CBM" → value: "12.00", unit in field context
+
+Recognize all common unit variations:
+- Quantity: pcs, pieces, units, ea, each, ctns, cartons, ctn, boxes, pkgs, packages, bags, rolls, pallets, plt, drums, sets, pairs, dozens, doz, gross, bundles, sheets, reels, coils
+- Weight: kg, kgs, kilogram, lb, lbs, pound, oz, ounces, mt, metric ton, ton, tons, g, grams
+- Volume: cbm, m3, cubic meter, cft, ft3, cubic feet, l, liters, litres, gal, gallons
+
+If a document contains MULTIPLE quantity expressions (e.g. "525 cartons" AND "8,350 pieces" AND "1,306.5 kg"), extract ALL of them as separate fields (total_cartons, total_pieces, gross_weight, net_weight, total_cbm).
 
 Rules:
 1. Do not fabricate or guess values.
 2. If a field is not found, omit it.
 3. sourceText must contain the exact nearby phrase from the document.
 4. Confidence scoring:
-   - 95-100: exact labeled field
+   - 95-100: exact labeled field (e.g. "Net Weight: 1,226.5 kg")
    - 80-94: clearly present in context
-   - 60-79: inferred from nearby context`; 
+   - 60-79: inferred from nearby context
+   - For values in tables without clear labels: 75-85`;
 
       userPrompt = `Extract shipping fields from this raw document text.
 
@@ -266,7 +279,7 @@ RAW TEXT:
 ${documentText.slice(0, 120000)}
 ---
 
-Return all extracted fields with confidence and sourceText.`;
+Return all extracted fields with confidence and sourceText. Extract ALL quantity/weight/volume fields separately.`;
 
       tools = [{
         type: "function",
@@ -284,9 +297,10 @@ Return all extracted fields with confidence and sourceText.`;
                     fieldName: {
                       type: "string",
                       description:
-                        "Field key such as shipper, consignee, notify_party, hs_code, declared_value, currency, port_of_loading, port_of_discharge, vessel_name, container_number, seal_number, bl_number, etd, eta, incoterm, origin_country, destination_country, transport_mode, commodity_description, quantity, gross_weight, net_weight",
+                        "Field key: shipper, consignee, notify_party, hs_code, declared_value, currency, port_of_loading, port_of_discharge, vessel_name, container_number, seal_number, bl_number, etd, eta, incoterm, origin_country, destination_country, import_country, export_country, place_of_receipt, place_of_delivery, transport_mode, commodity_description, quantity, gross_weight, net_weight, total_cartons, total_pieces, total_cbm, freight_charges, insurance_value, cif_value, booking_reference, purchase_order, shippers_reference, customs_entry_number",
                     },
                     value: { type: "string" },
+                    unit: { type: "string", description: "Unit of measurement if applicable (kg, cbm, pcs, cartons, etc.)" },
                     confidence: { type: "number", description: "Confidence from 60 to 100" },
                     sourceText: { type: "string", description: "Exact nearby document text supporting this value" },
                   },
