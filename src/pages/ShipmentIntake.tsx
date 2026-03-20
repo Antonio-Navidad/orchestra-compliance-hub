@@ -22,6 +22,7 @@ import { SHIPMENT_MODES, MODE_DOC_PROFILES, getApplicableConditionalDocs, type S
 import { ShipmentModeSelector } from "@/components/workspace/ShipmentModeSelector";
 import { DocChecklistPanel } from "@/components/workspace/DocChecklistPanel";
 import { ShipmentsSidebar } from "@/components/workspace/ShipmentsSidebar";
+import { NewShipmentWizard, type WizardResult } from "@/components/workspace/NewShipmentWizard";
 
 import { OnboardingBanner } from "@/components/intake/OnboardingBanner";
 import { ResetDialog } from "@/components/intake/ResetDialog";
@@ -119,6 +120,17 @@ export default function ShipmentIntake() {
   const [showPreFill, setShowPreFill] = useState(false);
   const [showGate, setShowGate] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
+
+  // Fetch existing importers for autocomplete
+  const { data: existingImporters = [] } = useQuery({
+    queryKey: ["existing-importers"],
+    queryFn: async () => {
+      const { data } = await supabase.from("shipments").select("consignee").not("consignee", "is", null);
+      const names = [...new Set((data || []).map((r: any) => r.consignee).filter(Boolean))];
+      return names as string[];
+    },
+  });
 
   const { data: brokers = [] } = useQuery({
     queryKey: ["brokers"],
@@ -203,9 +215,41 @@ export default function ShipmentIntake() {
   };
 
   const handleNewShipment = () => {
+    setShowWizard(true);
+  };
+
+  const WIZARD_MODE_MAP: Record<string, ShipmentModeId> = {
+    ocean_import: 'ocean_import',
+    air_import: 'air_import',
+    us_export: 'us_export',
+    inbond_te: 'in_bond',
+  };
+
+  const handleWizardComplete = (result: WizardResult) => {
     resetForm();
     setSelectedShipmentId(null);
     setIsNewMode(true);
+    setShowWizard(false);
+
+    // Map wizard mode to shipment mode
+    const modeId = WIZARD_MODE_MAP[result.shipmentMode] || 'ocean_import';
+    handleModeChange(modeId);
+
+    // Pre-fill form fields from wizard
+    setForm(prev => ({
+      ...prev,
+      shipment_id: generateShipmentId(),
+      description: result.title,
+      consignee: result.importerOfRecord,
+      origin_country: result.countryOfOrigin,
+      port_of_entry: result.portOfEntry,
+      destination_country: result.shipmentMode === 'us_export' ? '' : 'United States',
+    }));
+
+    toast({
+      title: "Shipment workspace ready",
+      description: `${result.title} — ${result.commodityType}`,
+    });
   };
 
   const handleSelectShipment = async (id: string) => {
@@ -694,6 +738,12 @@ export default function ShipmentIntake() {
           missingDocs: packetScore.topMissing,
         }}
         onConfirm={doCreate} onForceCreate={doCreate}
+      />
+      <NewShipmentWizard
+        open={showWizard}
+        onOpenChange={setShowWizard}
+        onComplete={handleWizardComplete}
+        existingImporters={existingImporters}
       />
     </div>
   );
