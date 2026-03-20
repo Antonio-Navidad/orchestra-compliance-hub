@@ -585,7 +585,11 @@ export default function ShipmentIntake() {
                             "Upload corrected documents to the relevant slots",
                             "If the shipment is en route, prepare a written explanation letter for CBP"
                           ],
-                          quickActions: ["upload_document", "request_from_supplier", "add_note"],
+                          quickActions: [
+                            { label: "Upload document", type: "upload" as const },
+                            { label: "Request from supplier", type: "request" as const },
+                            { label: "Add note", type: "note" as const },
+                          ],
                         });
                         setDeadlineDrawerOpen(true);
                       }}
