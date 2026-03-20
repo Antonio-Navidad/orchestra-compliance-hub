@@ -77,7 +77,7 @@ type Section = 'active' | 'incomplete' | 'completed';
 const COMPLETED_STATUSES = ['cleared', 'delivered', 'closed', 'archived'];
 const PAUSED_STATUSES = ['paused', 'waiting_docs', 'draft'];
 
-export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment }: Props) {
+export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadlines = [], onClickDeadline }: Props) {
   const [expanded, setExpanded] = useState<Set<Section>>(new Set(['active']));
 
   const { data: shipments = [], isLoading } = useQuery({

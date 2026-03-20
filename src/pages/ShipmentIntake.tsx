@@ -404,6 +404,8 @@ export default function ShipmentIntake() {
         selectedId={selectedShipmentId}
         onSelect={handleSelectShipment}
         onNewShipment={handleNewShipment}
+        deadlines={shipmentDeadlines}
+        onClickDeadline={handleDeadlineClick}
       />
 
       {/* RIGHT: Workspace */}
