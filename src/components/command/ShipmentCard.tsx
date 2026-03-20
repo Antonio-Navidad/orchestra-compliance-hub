@@ -1,5 +1,8 @@
 import { Badge } from "@/components/ui/badge";
-import { Plane, Ship, Truck, FileWarning, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Plane, Ship, Truck, FileWarning, Clock, Download } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import * as XLSX from "xlsx";
 import type { TransportMode } from "@/types/orchestra";
 
 export interface CommandShipment {
@@ -106,9 +109,38 @@ export function ShipmentCard({ shipment: s, onClick, selected, onSelect }: Shipm
         <span className="text-[10px] text-muted-foreground flex items-center gap-1">
           <Clock size={9} /> {days}d ago
         </span>
-        <Badge variant="outline" className="text-[9px] font-mono px-1.5 py-0 max-w-[120px] truncate">
-          {getNextAction(s)}
-        </Badge>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={e => {
+              e.stopPropagation();
+              const row = {
+                "Shipment ID": s.shipment_id,
+                "Mode": s.mode,
+                "Lane": `${s.origin_country || "?"} → ${s.destination_country || "?"}`,
+                "Status": s.status,
+                "Declared Value": s.declared_value,
+                "HS Code": s.hs_code,
+                "Compliance Score": s.packet_score ?? 0,
+                "Consignee": s.consignee,
+                "Broker": s.assigned_broker || "",
+                "Created": s.created_at?.slice(0, 10),
+              };
+              const wb = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([row]), "Shipment");
+              XLSX.writeFile(wb, `Orchestra_${s.shipment_id}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+              toast({ title: "Exported", description: `${s.shipment_id} exported to Excel.` });
+            }}
+            title="Export to Excel"
+          >
+            <Download size={10} />
+          </Button>
+          <Badge variant="outline" className="text-[9px] font-mono px-1.5 py-0 max-w-[120px] truncate">
+            {getNextAction(s)}
+          </Badge>
+        </div>
       </div>
     </div>
   );

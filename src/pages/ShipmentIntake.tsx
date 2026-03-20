@@ -28,6 +28,8 @@ import { RepeatShipmentSelector } from "@/components/intake/RepeatShipmentSelect
 import { PreSubmissionGate } from "@/components/intake/PreSubmissionGate";
 import { PacketItemDrawer } from "@/components/intake/PacketItemDrawer";
 import { PacketScoreCard } from "@/components/PacketScoreCard";
+import { MultiHSCodeField } from "@/components/intake/MultiHSCodeField";
+import { IntakeExportButton } from "@/components/intake/IntakeExportButton";
 
 // Collapsible for packet layers
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -111,6 +113,8 @@ export default function ShipmentIntake() {
   const { t } = useLanguage();
 
   const [form, setForm] = useState({ ...INITIAL_FORM });
+  const [hsCodes, setHsCodes] = useState<string[]>([]);
+  const [aiSuggestedHS, setAiSuggestedHS] = useState<string[]>([]);
   const [docs, setDocs] = useState<UploadedDoc[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedDocType, setSelectedDocType] = useState('commercial_invoice');
@@ -148,10 +152,12 @@ export default function ShipmentIntake() {
       declared_value: 'declared_value',
       currency: 'currency',
       commodity_description: 'description',
-      incoterm: 'incoterms',
+      incoterm: 'incoterm',
       transport_mode: 'mode',
       shipper: 'shipper',
+      shipper_name: 'shipper',
       consignee: 'consignee',
+      consignee_name: 'consignee',
       notify_party: 'notify_party',
       bl_number: 'bl_number',
       vessel_name: 'vessel_name',
@@ -174,14 +180,25 @@ export default function ShipmentIntake() {
       customs_entry_number: 'customs_entry_number',
     };
     const mapped: Record<string, string> = {};
-    // Track if total_pieces was mapped so we prefer it over total_cartons for quantity
     let piecesMapped = false;
     for (const [key, value] of Object.entries(fields)) {
       const formKey = fieldMap[key] || key;
-      // Prefer total_pieces over total_cartons for quantity field
       if (key === 'total_cartons' && (piecesMapped || mapped['quantity'])) continue;
       if (key === 'total_pieces') piecesMapped = true;
+      // Skip address fields — only use name fields for consignee/shipper
+      if (['consignee_address', 'consignee_city_state', 'consignee_country',
+           'shipper_address', 'shipper_city_state', 'shipper_country'].includes(key)) continue;
       mapped[formKey] = value;
+    }
+
+    // Normalize mode to lowercase to match Select option values
+    if (mapped['mode']) {
+      mapped['mode'] = mapped['mode'].toLowerCase() as any;
+    }
+
+    // Normalize incoterm to uppercase to match Select option values
+    if (mapped['incoterm']) {
+      mapped['incoterm'] = mapped['incoterm'].toUpperCase();
     }
 
     // Auto-detect COO eligibility for Colombia → US
@@ -191,8 +208,19 @@ export default function ShipmentIntake() {
       (origin.toUpperCase() === 'CO' || origin.toLowerCase().includes('colombia')) &&
       (dest.toUpperCase() === 'US' || dest.toLowerCase().includes('united states'));
     
-    if (isColombiaToUS && (!mapped['coo_status'] || mapped['coo_status'] === 'unknown')) {
+    if (isColombiaToUS) {
       mapped['coo_status'] = 'potentially_eligible';
+    }
+
+    // Handle HS codes — may be comma-separated or single
+    const hsValue = mapped['hs_code'] || '';
+    if (hsValue) {
+      const codes = hsValue.split(/[,;]/).map((c: string) => c.trim()).filter(Boolean);
+      if (codes.length > 0) {
+        setHsCodes(codes);
+        setAiSuggestedHS(codes);
+        mapped['hs_code'] = codes[0]; // Keep first as primary
+      }
     }
 
     setForm(prev => ({ ...prev, ...mapped }));
@@ -200,6 +228,8 @@ export default function ShipmentIntake() {
 
   const resetForm = () => {
     setForm({ ...INITIAL_FORM, shipment_id: generateShipmentId() });
+    setHsCodes([]);
+    setAiSuggestedHS([]);
     setDocs([]);
     setExpandedLayers(new Set());
   };
@@ -458,16 +488,27 @@ export default function ShipmentIntake() {
                   <Textarea value={form.description} onChange={e => updateField('description', e.target.value)} placeholder={t("intake.commodityPlaceholder")} rows={2} />
                   <DescriptionQualityHint description={form.description} />
                 </div>
-                <div className="space-y-1.5" data-field="hs_code">
+                <div className="md:col-span-2 space-y-1.5" data-field="hs_code">
                   <Label className="text-xs font-mono">{t("intake.hsCode")}</Label>
-                  <Input value={form.hs_code} onChange={e => updateField('hs_code', e.target.value)} placeholder="8471.30" className="font-mono" />
-                  <HSCodeValidation
-                    hsCode={form.hs_code}
-                    description={form.description}
-                    destinationCountry={form.destination_country || form.jurisdiction_code}
+                  <MultiHSCodeField
+                    hsCodes={hsCodes.length > 0 ? hsCodes : (form.hs_code ? [form.hs_code] : [])}
+                    onCodesChange={(codes) => {
+                      setHsCodes(codes);
+                      updateField('hs_code', codes.join(', '));
+                    }}
                     declaredValue={form.declared_value}
                     currency={form.currency}
+                    aiSuggestions={aiSuggestedHS}
                   />
+                  {hsCodes.length <= 1 && form.hs_code && (
+                    <HSCodeValidation
+                      hsCode={form.hs_code}
+                      description={form.description}
+                      destinationCountry={form.destination_country || form.jurisdiction_code}
+                      declaredValue={form.declared_value}
+                      currency={form.currency}
+                    />
+                  )}
                 </div>
                 <div className="space-y-1.5" data-field="quantity">
                   <Label className="text-xs font-mono">{t("intake.quantity")}</Label>
@@ -541,7 +582,7 @@ export default function ShipmentIntake() {
                       {COO_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <COOWarning cooStatus={form.coo_status} destinationCountry={form.destination_country || form.jurisdiction_code} />
+                  <COOWarning cooStatus={form.coo_status} destinationCountry={form.destination_country || form.jurisdiction_code} originCountry={form.origin_country} declaredValue={form.declared_value} currency={form.currency} />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-mono">{t("intake.priority")}</Label>
@@ -555,7 +596,13 @@ export default function ShipmentIntake() {
                 <div className="space-y-1.5">
                   <Label className="text-xs font-mono">{t("intake.plannedDeparture")}</Label>
                   <Input type="date" value={form.planned_departure} onChange={e => updateField('planned_departure', e.target.value)} />
-                  {form.planned_departure && form.mode && form.destination_country && (
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-mono">{t("intake.estimatedArrival")}</Label>
+                  <Input type="date" value={form.estimated_arrival} onChange={e => updateField('estimated_arrival', e.target.value)} />
+                </div>
+                {form.planned_departure && form.destination_country && (
+                  <div className="md:col-span-2">
                     <FilingDeadlineTimeline
                       mode={form.mode}
                       originCountry={form.origin_country}
@@ -563,12 +610,8 @@ export default function ShipmentIntake() {
                       plannedDeparture={form.planned_departure}
                       estimatedArrival={form.estimated_arrival}
                     />
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">{t("intake.estimatedArrival")}</Label>
-                  <Input type="date" value={form.estimated_arrival} onChange={e => updateField('estimated_arrival', e.target.value)} />
-                </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -701,6 +744,9 @@ export default function ShipmentIntake() {
                 ))}
               </div>
             </div>
+
+            {/* Export Button */}
+            <IntakeExportButton form={form} docs={docs} packetScore={packetScore} className="w-full" />
 
             {/* Quick stats */}
             <Card>
