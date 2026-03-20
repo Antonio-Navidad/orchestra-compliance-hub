@@ -60,7 +60,7 @@ const COMPLIANCE_NAV: NavGroup[] = [
     labelKey: "navGroup.quickActions",
     items: [
       { titleKey: "nav.newReview", url: "/validate-docs", icon: Plus },
-      { titleKey: "nav.newShipment", url: "/intake", icon: Package },
+      { titleKey: "nav.shipments", url: "/intake", icon: Package },
     ],
   },
   {
