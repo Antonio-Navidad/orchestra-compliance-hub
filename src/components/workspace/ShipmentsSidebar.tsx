@@ -5,8 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, ChevronDown, Ship, Plane, Truck, CheckCircle2, AlertTriangle, XCircle, Pause } from "lucide-react";
+import { Plus, ChevronDown, Ship, Plane, Truck, CheckCircle2, AlertTriangle, XCircle, Pause, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { ShipmentDeadline } from "@/lib/deadlineEngine";
+import { getMostUrgentDeadline } from "@/lib/deadlineEngine";
 
 export interface ShipmentListItem {
   shipment_id: string;
@@ -25,6 +27,8 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onNewShipment: () => void;
+  deadlines?: ShipmentDeadline[];
+  onClickDeadline?: (d: ShipmentDeadline) => void;
 }
 
 const MODE_ICONS: Record<string, React.ReactNode> = {
