@@ -91,25 +91,35 @@ Destination Country: ${params.destinationCountry || "US"}`;
 User Question: ${params.question}`;
       // No tools - just chat completion
     } else if (action === "extract_document") {
-      systemPrompt = `You are a document extraction expert for trade/customs documents. Your task is to extract field values ONLY from the actual text provided. CRITICAL RULES:
-1. Every value you return MUST appear verbatim or very closely in the document text.
-2. If a field is not present in the document, DO NOT include it — do not guess or fabricate values.
-3. The sourceText for each field MUST be the exact passage from the document where you found that value.
-4. Never use default or common example values. Only extract what the document actually contains.
-5. Set confidence to 100 only if the value is unambiguously present. Use 70-85 if you had to interpret context.`;
-      userPrompt = `Extract shipping fields ONLY from the following document text. Return only fields whose values appear in the text — do not invent or assume any values.
+      systemPrompt = `You are a document extraction expert for trade and customs shipping documents (Bills of Lading, Commercial Invoices, Packing Lists, etc.).
+
+Your job is to find and extract field values that are present in the document text. Follow these rules:
+
+EXTRACTION RULES:
+- Extract every field you can find in the text. Look for labeled fields (e.g. "Shipper:", "B/L No:") AND values that appear in context (e.g. a 6-10 digit HS code like 6109.10.00, currency amounts like USD 47,195).
+- Only extract values that are clearly present in the document text. Do not fabricate or guess values.
+- If a field is not found, simply omit it from the results — do not include it with a made-up value.
+- For sourceText, quote the nearby text from the document where you found the value (a short phrase or line).
+
+CONFIDENCE SCORING:
+- 95-100%: Value appears next to a clear label (e.g. "Consignee: Pacific Apparel Group LLC")
+- 80-94%: Value is clearly present but not explicitly labeled (e.g. an HS code found in a goods description table)
+- 60-79%: Value is inferred from surrounding context with reasonable certainty
+
+TARGET: Extract 10-20 fields from a typical shipping document. A Bill of Lading should yield at least 10 fields.`;
+      userPrompt = `Extract all shipping-related fields from this document text. Find every value you can — shipper, consignee, ports, vessel, container numbers, HS codes, values, dates, etc.
 
 Document text:
 ---
 ${params.documentText}
 ---
 
-Extract all available fields with accurate confidence scores and source text references.`;
+Return all fields found with their confidence scores and the source text where each was found.`;
       tools = [{
         type: "function",
         function: {
           name: "extract_fields",
-          description: "Return extracted shipping fields from document",
+          description: "Return extracted shipping fields from the document",
           parameters: {
             type: "object",
             properties: {
@@ -118,12 +128,21 @@ Extract all available fields with accurate confidence scores and source text ref
                 items: {
                   type: "object",
                   properties: {
-                    fieldName: { type: "string", enum: ["shipper", "consignee", "origin_country", "destination_country", "hs_code", "declared_value", "currency", "description", "quantity", "port_of_entry", "incoterm", "planned_departure", "estimated_arrival", "gross_weight", "net_weight"] },
+                    fieldName: { type: "string", enum: [
+                      "shipper", "consignee", "notify_party",
+                      "origin_country", "destination_country",
+                      "port_of_loading", "port_of_discharge",
+                      "hs_code", "declared_value", "currency",
+                      "description", "quantity", "gross_weight", "net_weight",
+                      "incoterm", "planned_departure", "estimated_arrival",
+                      "vessel_name", "container_number", "seal_number",
+                      "bl_number", "transport_mode"
+                    ] },
                     value: { type: "string" },
-                    confidence: { type: "number", description: "0-100" },
-                    sourceText: { type: "string", description: "Original text in document this was extracted from" },
+                    confidence: { type: "number", description: "Confidence 0-100 based on how clearly the value appeared" },
+                    sourceText: { type: "string", description: "The nearby text from the document where this value was found" },
                   },
-                  required: ["fieldName", "value", "confidence"],
+                  required: ["fieldName", "value", "confidence", "sourceText"],
                 },
               },
             },
