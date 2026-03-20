@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +24,10 @@ import { DocChecklistPanel } from "@/components/workspace/DocChecklistPanel";
 import { ShipmentsSidebar } from "@/components/workspace/ShipmentsSidebar";
 import { NewShipmentWizard, type WizardResult } from "@/components/workspace/NewShipmentWizard";
 import { DocumentsTab } from "@/components/workspace/DocumentsTab";
+import { DeadlineBar } from "@/components/workspace/DeadlineBar";
+import { AlertDrawer } from "@/components/workspace/AlertDrawer";
+import { calculateDeadlines, getDeadlinesWithin7Days } from "@/lib/deadlineEngine";
+import { getDeadlineDrawer, type AlertDrawerData } from "@/lib/alertDrawerContent";
 
 import { OnboardingBanner } from "@/components/intake/OnboardingBanner";
 import { ResetDialog } from "@/components/intake/ResetDialog";
