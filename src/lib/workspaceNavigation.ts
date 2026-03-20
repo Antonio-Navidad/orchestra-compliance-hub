@@ -31,6 +31,7 @@ const MARKETPLACE_NAV: NavGroup[] = [
     labelKey: "navGroup.ordersShipments",
     items: [
       { titleKey: "nav.dashboard", url: "/", icon: Activity },
+      { titleKey: "nav.commandCenter", url: "/command-center", icon: KanbanSquare },
       { titleKey: "nav.shipmentTracker", url: "/review", icon: Package },
       { titleKey: "nav.sellerMode", url: "/seller-mode", icon: ShoppingCart },
     ],
