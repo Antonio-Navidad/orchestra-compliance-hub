@@ -25,76 +25,122 @@ function base64ToBytes(base64: string): Uint8Array {
   return bytes;
 }
 
+/** Call Anthropic Claude API */
+async function callClaude(
+  apiKey: string,
+  system: string,
+  userContent: string | Array<{ type: string; [k: string]: any }>,
+  tools?: any[],
+  toolChoice?: any,
+): Promise<any> {
+  const messages: any[] = [
+    { role: "user", content: userContent },
+  ];
+
+  const body: any = {
+    model: "claude-sonnet-4-6-20250514",
+    max_tokens: 8192,
+    system,
+    messages,
+  };
+
+  if (tools && tools.length > 0) {
+    // Convert OpenAI-style tool definitions to Anthropic format
+    body.tools = tools.map((t: any) => ({
+      name: t.function.name,
+      description: t.function.description,
+      input_schema: t.function.parameters,
+    }));
+    if (toolChoice) {
+      body.tool_choice = { type: "tool", name: toolChoice.function.name };
+    }
+  }
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    if (response.status === 429) {
+      throw { status: 429, message: "Rate limit exceeded. Please try again shortly." };
+    }
+    if (response.status === 402 || response.status === 400) {
+      const t = await response.text();
+      console.error("Anthropic API error:", response.status, t);
+      throw { status: response.status, message: `Claude API error: ${response.status}` };
+    }
+    const t = await response.text();
+    console.error("Anthropic API error:", response.status, t);
+    throw { status: 500, message: `Claude API error: ${response.status}` };
+  }
+
+  return await response.json();
+}
+
+/** Extract tool result from Anthropic response */
+function extractToolResult(response: any): any {
+  const toolBlock = response.content?.find((b: any) => b.type === "tool_use");
+  if (toolBlock) return toolBlock.input;
+  // Fallback to text content
+  const textBlock = response.content?.find((b: any) => b.type === "text");
+  return textBlock?.text || null;
+}
+
+/** Extract text content from Anthropic response */
+function extractTextResult(response: any): string {
+  const textBlock = response.content?.find((b: any) => b.type === "text");
+  return textBlock?.text || "";
+}
+
+/** Use Claude vision to extract raw text from a PDF */
 async function extractRawTextFromPdf(
-  LOVABLE_API_KEY: string,
+  apiKey: string,
   fileBytes: Uint8Array,
   mimeType: string,
 ): Promise<string> {
   const pdfBase64 = bytesToBase64(fileBytes);
+  const mediaType = mimeType === "application/pdf" ? "application/pdf" : mimeType;
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      temperature: 0,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You extract raw text from trade documents. Return only text that appears in the document. Preserve labels, line breaks, and key table values.",
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "image_url",
-              image_url: { url: `data:${mimeType};base64,${pdfBase64}` },
+  const response = await callClaude(
+    apiKey,
+    "You extract raw text from trade documents. Return only text that appears in the document. Preserve labels, line breaks, and key table values.",
+    [
+      {
+        type: "document",
+        source: { type: "base64", media_type: mediaType, data: pdfBase64 },
+      },
+      {
+        type: "text",
+        text: "Extract the full readable text from this document. Include all key shipping fields exactly as written (shipper, consignee, B/L, vessel, container, ports, values, HS codes, Incoterms, ETD, ETA). Do not summarize.",
+      },
+    ],
+    [
+      {
+        function: {
+          name: "pdf_text_result",
+          description: "Return raw extracted text from the PDF",
+          parameters: {
+            type: "object",
+            properties: {
+              rawText: { type: "string" },
             },
-            {
-              type: "text",
-              text: "Extract the full readable text from this PDF. Include all key shipping fields exactly as written (shipper, consignee, B/L, vessel, container, ports, values, HS codes, Incoterms, ETD, ETA). Do not summarize.",
-            },
-          ],
-        },
-      ],
-      tools: [
-        {
-          type: "function",
-          function: {
-            name: "pdf_text_result",
-            description: "Return raw extracted text from the PDF",
-            parameters: {
-              type: "object",
-              properties: {
-                rawText: { type: "string" },
-              },
-              required: ["rawText"],
-              additionalProperties: false,
-            },
+            required: ["rawText"],
           },
         },
-      ],
-      tool_choice: { type: "function", function: { name: "pdf_text_result" } },
-    }),
-  });
+      },
+    ],
+    { function: { name: "pdf_text_result" } },
+  );
 
-  if (!response.ok) {
-    const responseBody = await response.text();
-    throw new Error(`PDF text extraction failed: ${response.status} ${responseBody}`);
-  }
-
-  const data = await response.json();
-  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-  if (toolCall?.function?.arguments) {
-    const parsed = JSON.parse(toolCall.function.arguments);
-    return String(parsed.rawText || "");
-  }
-
-  return String(data.choices?.[0]?.message?.content || "");
+  const result = extractToolResult(response);
+  if (result?.rawText) return String(result.rawText);
+  return extractTextResult(response);
 }
 
 serve(async (req) => {
@@ -102,8 +148,8 @@ serve(async (req) => {
 
   try {
     const { action, ...params } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured");
 
     let systemPrompt = "";
     let userPrompt = "";
@@ -119,7 +165,6 @@ Destination Country: ${params.destinationCountry || "US"}
 Declared Value: ${params.declaredValue || "N/A"}
 Currency: ${params.currency || "USD"}`;
       tools = [{
-        type: "function",
         function: {
           name: "hs_validation",
           description: "Return HS code validation results",
@@ -136,11 +181,10 @@ Currency: ${params.currency || "USD"}`;
               tradeAgreementNote: { type: "string", description: "Note about applicable trade agreements that could reduce duty" },
             },
             required: ["officialDescription", "matches", "confidence", "warning", "estimatedDutyRate"],
-            additionalProperties: false,
           },
         },
       }];
-      toolChoice = { type: "function", function: { name: "hs_validation" } };
+      toolChoice = { function: { name: "hs_validation" } };
     } else if (action === "validate_description") {
       systemPrompt = "You are a customs compliance expert. Evaluate commodity description quality for customs declaration purposes.";
       userPrompt = `Evaluate this commodity description for customs compliance quality.
@@ -148,7 +192,6 @@ Description: "${params.description}"
 HS Code: ${params.hsCode || "not provided"}
 Destination Country: ${params.destinationCountry || "US"}`;
       tools = [{
-        type: "function",
         function: {
           name: "description_quality",
           description: "Return description quality assessment",
@@ -164,13 +207,12 @@ Destination Country: ${params.destinationCountry || "US"}`;
               examinationRiskIncrease: { type: "string", description: "Estimated customs examination risk increase %" },
             },
             required: ["quality", "score", "issues", "suggestions", "compliantExample"],
-            additionalProperties: false,
           },
         },
       }];
-      toolChoice = { type: "function", function: { name: "description_quality" } };
+      toolChoice = { function: { name: "description_quality" } };
     } else if (action === "coach") {
-      systemPrompt = `You are Orchestra's AI Compliance Coach. Answer the user's question about their specific shipment using the context provided. Be specific, actionable, and reference the actual shipment data. Always suggest relevant Orchestra features when applicable. Keep answers concise (3-5 sentences max) but include specific regulatory references where helpful.`;
+      systemPrompt = `You are Orchestra's AI Compliance Coach — a senior licensed customs broker assistant. Answer the user's question about their specific shipment using the context provided. Be specific, actionable, and reference the actual shipment data. Always suggest relevant Orchestra features when applicable. Keep answers concise (3-5 sentences max) but include specific regulatory references where helpful.`;
       userPrompt = `Shipment Context:
 - Lane: ${params.originCountry || "?"} → ${params.destinationCountry || "?"}
 - Mode: ${params.mode || "?"}
@@ -181,7 +223,7 @@ Destination Country: ${params.destinationCountry || "US"}`;
 - COO Status: ${params.cooStatus || "unknown"}
 
 User Question: ${params.question}`;
-      // No tools - just chat completion
+      // No tools - just text completion
     } else if (action === "extract_document") {
       const mimeType = typeof params.mimeType === "string" ? params.mimeType : "application/octet-stream";
       const fileName = typeof params.fileName === "string" ? params.fileName : "uploaded-document";
@@ -192,16 +234,14 @@ User Question: ${params.question}`;
       let loadedBinaryPayload = false;
       let fileBytes: Uint8Array | null = null;
 
+      // Try storage fetch
       if (!documentText && typeof params.storageBucket === "string" && typeof params.storagePath === "string") {
         const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
         const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
         if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
           const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
           const { data: storageFile, error: storageError } = await adminClient.storage
-            .from(params.storageBucket)
-            .download(params.storagePath);
-
+            .from(params.storageBucket).download(params.storagePath);
           if (!storageError && storageFile) {
             fileBytes = new Uint8Array(await storageFile.arrayBuffer());
             fetchedFromStorage = true;
@@ -211,6 +251,7 @@ User Question: ${params.question}`;
         }
       }
 
+      // Try base64 payload
       if (!documentText && !fileBytes && typeof params.documentBase64 === "string") {
         try {
           fileBytes = base64ToBytes(params.documentBase64);
@@ -220,9 +261,10 @@ User Question: ${params.question}`;
         }
       }
 
+      // Extract text from binary
       if (!documentText && fileBytes) {
         if (isPdf) {
-          documentText = await extractRawTextFromPdf(LOVABLE_API_KEY, fileBytes, mimeType);
+          documentText = await extractRawTextFromPdf(ANTHROPIC_API_KEY, fileBytes, mimeType);
         } else {
           documentText = new TextDecoder().decode(fileBytes);
         }
@@ -230,16 +272,13 @@ User Question: ${params.question}`;
 
       documentText = documentText.replace(/\u0000/g, " ").trim();
 
-      console.info(
-        "[extract_document] pipeline_debug",
-        JSON.stringify({
-          fileFetchedFromStorage: fetchedFromStorage,
-          filePayloadLoaded: loadedBinaryPayload,
-          mimeType,
-          extractedTextCharCount: documentText.length,
-          extractedTextPreview: documentText.slice(0, 200),
-        }),
-      );
+      console.info("[extract_document] pipeline_debug", JSON.stringify({
+        fileFetchedFromStorage: fetchedFromStorage,
+        filePayloadLoaded: loadedBinaryPayload,
+        mimeType,
+        extractedTextCharCount: documentText.length,
+        extractedTextPreview: documentText.slice(0, 200),
+      }));
 
       if (!documentText) {
         throw new Error("No readable text could be extracted from the uploaded file.");
@@ -255,17 +294,14 @@ CRITICAL — Shipper and Consignee name separation:
 Extract any fields that appear in the text, including:
 shipper_name, consignee_name, shipper_address, shipper_city_state, shipper_country, consignee_address, consignee_city_state, consignee_country, notify_party, hs_code, declared_value, currency, port_of_loading, port_of_discharge, vessel_name, container_number, seal_number, bl_number, etd, eta, incoterm, origin_country, destination_country, import_country, export_country, place_of_receipt, place_of_delivery, transport_mode, commodity_description, quantity, gross_weight, net_weight, total_cartons, total_pieces, total_cbm, freight_charges, insurance_value, cif_value, booking_reference, purchase_order, shippers_reference, customs_entry_number.
 
-For quantity/weight/volume fields, extract the numeric value AND the unit separately. Examples:
-- "1,306.5 kg" → value: "1306.5", unit in field context
-- "525 ctns" → value: "525", unit in field context
-- "12.00 CBM" → value: "12.00", unit in field context
+For quantity/weight/volume fields, extract the numeric value AND the unit separately.
 
 Recognize all common unit variations:
 - Quantity: pcs, pieces, units, ea, each, ctns, cartons, ctn, boxes, pkgs, packages, bags, rolls, pallets, plt, drums, sets, pairs, dozens, doz, gross, bundles, sheets, reels, coils
 - Weight: kg, kgs, kilogram, lb, lbs, pound, oz, ounces, mt, metric ton, ton, tons, g, grams
 - Volume: cbm, m3, cubic meter, cft, ft3, cubic feet, l, liters, litres, gal, gallons
 
-If a document contains MULTIPLE quantity expressions (e.g. "525 cartons" AND "8,350 pieces" AND "1,306.5 kg"), extract ALL of them as separate fields (total_cartons, total_pieces, gross_weight, net_weight, total_cbm).
+If a document contains MULTIPLE quantity expressions, extract ALL of them as separate fields.
 
 Rules:
 1. Do not fabricate or guess values.
@@ -287,7 +323,6 @@ ${documentText.slice(0, 120000)}
 Return all extracted fields with confidence and sourceText. Extract ALL quantity/weight/volume fields separately.`;
 
       tools = [{
-        type: "function",
         function: {
           name: "extract_fields",
           description: "Return extracted shipping fields found in document text",
@@ -301,8 +336,7 @@ Return all extracted fields with confidence and sourceText. Extract ALL quantity
                   properties: {
                     fieldName: {
                       type: "string",
-                      description:
-                        "Field key: shipper_name, consignee_name, shipper_address, shipper_city_state, shipper_country, consignee_address, consignee_city_state, consignee_country, notify_party, hs_code, declared_value, currency, port_of_loading, port_of_discharge, vessel_name, container_number, seal_number, bl_number, etd, eta, incoterm, origin_country, destination_country, import_country, export_country, place_of_receipt, place_of_delivery, transport_mode, commodity_description, quantity, gross_weight, net_weight, total_cartons, total_pieces, total_cbm, freight_charges, insurance_value, cif_value, booking_reference, purchase_order, shippers_reference, customs_entry_number",
+                      description: "Field key: shipper_name, consignee_name, shipper_address, shipper_city_state, shipper_country, consignee_address, consignee_city_state, consignee_country, notify_party, hs_code, declared_value, currency, port_of_loading, port_of_discharge, vessel_name, container_number, seal_number, bl_number, etd, eta, incoterm, origin_country, destination_country, import_country, export_country, place_of_receipt, place_of_delivery, transport_mode, commodity_description, quantity, gross_weight, net_weight, total_cartons, total_pieces, total_cbm, freight_charges, insurance_value, cif_value, booking_reference, purchase_order, shippers_reference, customs_entry_number",
                     },
                     value: { type: "string" },
                     unit: { type: "string", description: "Unit of measurement if applicable (kg, cbm, pcs, cartons, etc.)" },
@@ -310,16 +344,14 @@ Return all extracted fields with confidence and sourceText. Extract ALL quantity
                     sourceText: { type: "string", description: "Exact nearby document text supporting this value" },
                   },
                   required: ["fieldName", "value", "confidence", "sourceText"],
-                  additionalProperties: false,
                 },
               },
             },
             required: ["fields"],
-            additionalProperties: false,
           },
         },
       }];
-      toolChoice = { type: "function", function: { name: "extract_fields" } };
+      toolChoice = { function: { name: "extract_fields" } };
     } else if (action === "pre_submission_check") {
       systemPrompt = "You are a customs compliance auditor. Perform a final pre-submission validation on this shipment and identify all blockers, warnings, and ready items.";
       userPrompt = `Pre-submission compliance check for shipment:
@@ -337,7 +369,6 @@ Return all extracted fields with confidence and sourceText. Extract ALL quantity
 - Packet Score: ${params.packetScore || 0}%
 - Missing Documents: ${(params.missingDocs || []).join(", ") || "NONE"}`;
       tools = [{
-        type: "function",
         function: {
           name: "pre_submission_result",
           description: "Return pre-submission compliance check results",
@@ -375,74 +406,46 @@ Return all extracted fields with confidence and sourceText. Extract ALL quantity
               },
             },
             required: ["overallReadiness", "clearanceRate", "blockers", "warnings", "readyItems"],
-            additionalProperties: false,
           },
         },
       }];
-      toolChoice = { type: "function", function: { name: "pre_submission_result" } };
+      toolChoice = { function: { name: "pre_submission_result" } };
     } else {
       return new Response(JSON.stringify({ error: "Unknown action" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const body: any = {
-      model: "google/gemini-3-flash-preview",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-    };
-    if (tools.length > 0) {
-      body.tools = tools;
-      body.tool_choice = toolChoice;
-    }
+    // Call Claude
+    const claudeResponse = await callClaude(
+      ANTHROPIC_API_KEY,
+      systemPrompt,
+      userPrompt,
+      tools.length > 0 ? tools : undefined,
+      toolChoice,
+    );
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      throw new Error(`AI gateway error: ${response.status}`);
-    }
-
-    const data = await response.json();
-
+    // Handle coach (text response)
     if (action === "coach") {
-      const content = data.choices?.[0]?.message?.content || "I couldn't generate a response. Please try again.";
-      return new Response(JSON.stringify({ answer: content }), {
+      const content = extractTextResult(claudeResponse);
+      return new Response(JSON.stringify({ answer: content || "I couldn't generate a response. Please try again." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("AI did not return structured results");
-    const result = JSON.parse(toolCall.function.arguments);
+    // Handle tool responses
+    const result = extractToolResult(claudeResponse);
+    if (!result) throw new Error("Claude did not return structured results");
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (e) {
+  } catch (e: any) {
     console.error("intake-validate error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const status = e?.status || 500;
+    const message = e instanceof Error ? e.message : (e?.message || "Unknown error");
+    return new Response(JSON.stringify({ error: message }), {
+      status, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
