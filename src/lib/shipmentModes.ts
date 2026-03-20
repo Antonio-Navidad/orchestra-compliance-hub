@@ -3,7 +3,12 @@
  * Each mode drives a specific document checklist, filing requirements, and compliance rules.
  */
 
-export type ShipmentModeId = 'ocean_import' | 'air_import' | 'us_export' | 'in_bond';
+export type ShipmentModeId =
+  | 'ocean_import' | 'air_import' | 'land_import_mexico' | 'land_import_canada'
+  | 'ocean_export' | 'air_export' | 'land_export_mexico' | 'land_export_canada'
+  | 'us_export' | 'in_bond';
+
+export type ShipmentModeGroup = 'import' | 'export' | 'other';
 
 export interface ShipmentModeConfig {
   id: ShipmentModeId;
@@ -13,44 +18,123 @@ export interface ShipmentModeConfig {
   description: string;
   transportMode: 'sea' | 'air' | 'land';
   direction: 'inbound' | 'outbound' | 'transit';
+  group: ShipmentModeGroup;
+  placeholder?: boolean;
 }
 
+export const SHIPMENT_MODE_GROUPS: { key: ShipmentModeGroup; label: string }[] = [
+  { key: 'import', label: 'Importing into the U.S.' },
+  { key: 'export', label: 'Exporting from the U.S.' },
+  { key: 'other', label: 'Other' },
+];
+
 export const SHIPMENT_MODES: ShipmentModeConfig[] = [
+  // ── Import ──
   {
     id: 'ocean_import',
     label: 'Ocean Import',
     shortLabel: 'Ocean',
     icon: '🚢',
-    description: 'Full-container or LCL ocean freight arriving at U.S. ports',
+    description: '14 docs required + ISF mandatory',
     transportMode: 'sea',
     direction: 'inbound',
+    group: 'import',
   },
   {
     id: 'air_import',
     label: 'Air Import',
     shortLabel: 'Air',
     icon: '✈️',
-    description: 'Air cargo arriving at U.S. airports of entry',
+    description: '11 docs required, no ISF',
     transportMode: 'air',
     direction: 'inbound',
+    group: 'import',
   },
   {
-    id: 'us_export',
-    label: 'U.S. Export',
-    shortLabel: 'Export',
-    icon: '📦',
-    description: 'Goods departing U.S. ports for international destinations',
+    id: 'land_import_mexico',
+    label: 'Land / Truck Import — Mexico',
+    shortLabel: 'Truck MX',
+    icon: '🚛',
+    description: 'PAPS + Pedimento required',
+    transportMode: 'land',
+    direction: 'inbound',
+    group: 'import',
+    placeholder: true,
+  },
+  {
+    id: 'land_import_canada',
+    label: 'Land / Truck Import — Canada',
+    shortLabel: 'Truck CA',
+    icon: '🚛',
+    description: 'PARS + ACI eManifest required',
+    transportMode: 'land',
+    direction: 'inbound',
+    group: 'import',
+    placeholder: true,
+  },
+  // ── Export ──
+  {
+    id: 'ocean_export',
+    label: 'Ocean Export',
+    shortLabel: 'Ocean Exp',
+    icon: '🚢',
+    description: 'EEI/AES + ocean docs',
     transportMode: 'sea',
     direction: 'outbound',
+    group: 'export',
+  },
+  {
+    id: 'air_export',
+    label: 'Air Export',
+    shortLabel: 'Air Exp',
+    icon: '✈️',
+    description: 'EEI/AES + air docs',
+    transportMode: 'air',
+    direction: 'outbound',
+    group: 'export',
+  },
+  {
+    id: 'land_export_mexico',
+    label: 'Land / Truck Export — Mexico',
+    shortLabel: 'Truck MX Exp',
+    icon: '🚛',
+    description: 'EEI/AES + Pedimento coordination',
+    transportMode: 'land',
+    direction: 'outbound',
+    group: 'export',
+    placeholder: true,
+  },
+  {
+    id: 'land_export_canada',
+    label: 'Land / Truck Export — Canada',
+    shortLabel: 'Truck CA Exp',
+    icon: '🚛',
+    description: 'EEI/AES + CARM coordination',
+    transportMode: 'land',
+    direction: 'outbound',
+    group: 'export',
+    placeholder: true,
+  },
+  // ── Other ──
+  {
+    id: 'us_export',
+    label: 'U.S. Export (Legacy)',
+    shortLabel: 'Export',
+    icon: '📦',
+    description: 'EEI/AES + 8 docs, denied party screening required',
+    transportMode: 'sea',
+    direction: 'outbound',
+    group: 'export',
   },
   {
     id: 'in_bond',
     label: 'In-Bond / T&E',
     shortLabel: 'In-Bond',
     icon: '🔒',
-    description: 'Transportation & Exportation or Immediate Transportation entries',
+    description: 'CBP Form 7512 workflow',
     transportMode: 'sea',
     direction: 'transit',
+    group: 'other',
   },
 ];
 
