@@ -28,7 +28,7 @@ import { RepeatShipmentSelector } from "@/components/intake/RepeatShipmentSelect
 import { PreSubmissionGate } from "@/components/intake/PreSubmissionGate";
 import { PacketItemDrawer } from "@/components/intake/PacketItemDrawer";
 import { PacketScoreCard } from "@/components/PacketScoreCard";
-import { MultiHSCodeField } from "@/components/intake/MultiHSCodeField";
+import { LineItemTable, type LineItem } from "@/components/intake/LineItemTable";
 import { IntakeExportButton } from "@/components/intake/IntakeExportButton";
 
 // Collapsible for packet layers
