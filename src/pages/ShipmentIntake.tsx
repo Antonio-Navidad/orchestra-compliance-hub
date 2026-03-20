@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { computePacketScore } from "@/lib/packetScore";
-import { Upload, X, FileText, Sparkles, ClipboardList, ShieldCheck, FileCheck, Save, Clock } from "lucide-react";
+import { Upload, X, FileText, Sparkles, ClipboardList, ShieldCheck, FileCheck, Save, Clock, Brain } from "lucide-react";
 import type { TransportMode } from "@/types/orchestra";
 import { useLanguage } from "@/hooks/useLanguage";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,8 @@ import { NewShipmentWizard, type WizardResult } from "@/components/workspace/New
 import { DocumentsTab } from "@/components/workspace/DocumentsTab";
 import { DeadlineBar } from "@/components/workspace/DeadlineBar";
 import { AlertDrawer } from "@/components/workspace/AlertDrawer";
+import { AIVerificationTab } from "@/components/workspace/AIVerificationTab";
+import { useDocExtraction } from "@/hooks/useDocExtraction";
 import { calculateDeadlines, getDeadlinesWithin7Days } from "@/lib/deadlineEngine";
 import { getDeadlineDrawer, type AlertDrawerData } from "@/lib/alertDrawerContent";
 
@@ -128,6 +130,14 @@ export default function ShipmentIntake() {
   const [showWizard, setShowWizard] = useState(false);
   const [deadlineDrawerOpen, setDeadlineDrawerOpen] = useState(false);
   const [deadlineDrawerData, setDeadlineDrawerData] = useState<AlertDrawerData | null>(null);
+
+  // AI extraction pipeline
+  const docExtraction = useDocExtraction({
+    shipmentMode: form.mode,
+    commodityType: form.description,
+    countryOfOrigin: form.origin_country,
+    shipmentId: form.shipment_id,
+  });
 
   // Calculate deadlines for current shipment
   const shipmentDeadlines = useMemo(() => {
@@ -463,8 +473,12 @@ export default function ShipmentIntake() {
                       <ClipboardList size={12} /> Documents
                     </TabsTrigger>
                     <TabsTrigger value="documents" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                      <FileText size={12} /> AI Verification
-                      {docs.length > 0 && <Badge variant="outline" className="text-[9px] px-1 py-0 ml-1">{docs.length}</Badge>}
+                      <Brain size={12} /> AI Verification
+                      {Object.keys(docExtraction.extractedDocs).length > 0 && (
+                        <Badge variant="outline" className="text-[9px] px-1 py-0 ml-1">
+                          {Object.keys(docExtraction.extractedDocs).length}
+                        </Badge>
+                      )}
                     </TabsTrigger>
                     <TabsTrigger value="compliance" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                       <ShieldCheck size={12} /> Workflow Log
@@ -499,9 +513,12 @@ export default function ShipmentIntake() {
 
                   {/* ─── AI Verification Tab ─── */}
                   <TabsContent value="documents" className="mt-4 space-y-4">
+                    {/* Upload section */}
                     <Card>
                       <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-semibold">Upload Documents</CardTitle>
+                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                          <Upload size={14} /> Upload Documents for AI Analysis
+                        </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="flex gap-2 flex-wrap">
@@ -521,16 +538,16 @@ export default function ShipmentIntake() {
 
                         <div
                           className={cn(
-                            "border-2 border-dashed rounded-lg p-8 text-center transition-colors",
+                            "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
                             isDragging ? 'border-primary bg-primary/5' : 'border-border'
                           )}
                           onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
                           onDragLeave={() => setIsDragging(false)}
                           onDrop={handleDrop}
                         >
-                          <Upload className="mx-auto mb-2 text-muted-foreground" size={24} />
-                          <p className="text-sm text-muted-foreground">Drop files here or click Browse</p>
-                          <p className="text-[11px] text-muted-foreground mt-1">
+                          <Upload className="mx-auto mb-2 text-muted-foreground" size={20} />
+                          <p className="text-xs text-muted-foreground">Drop files here — AI will extract and cross-reference all data</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">
                             Uploading as: <strong>{DOC_TYPES.find(d => d.value === selectedDocType)?.label}</strong>
                           </p>
                         </div>
@@ -555,6 +572,33 @@ export default function ShipmentIntake() {
                         )}
                       </CardContent>
                     </Card>
+
+                    {/* AI Verification Panels */}
+                    <AIVerificationTab
+                      extractedDocs={docExtraction.extractedDocs}
+                      crossRefResults={docExtraction.crossRefResults}
+                      onOpenDrawer={(alertId, context) => {
+                        setDeadlineDrawerData({
+                          id: `crossref_${alertId}`,
+                          title: context?.field ? `${context.docA} ↔ ${context.docB}: ${context.field}` : "Cross-Reference Issue",
+                          severity: "high",
+                          whatIsThis: context?.finding || "A discrepancy was detected between two uploaded documents during AI cross-reference analysis.",
+                          whyItMatters: "Document discrepancies can trigger CBP examination holds, delays of 2–7 days, and additional storage and demurrage charges at the port terminal.",
+                          whatToDo: [
+                            "Review the flagged data points in both documents",
+                            "Contact your supplier to confirm which value is correct",
+                            "Upload corrected documents to the relevant slots",
+                            "If the shipment is en route, prepare a written explanation letter for CBP"
+                          ],
+                          quickActions: [
+                            { label: "Upload document", type: "upload" as const },
+                            { label: "Request from supplier", type: "request" as const },
+                            { label: "Add note", type: "note" as const },
+                          ],
+                        });
+                        setDeadlineDrawerOpen(true);
+                      }}
+                    />
 
                     <div className="flex justify-between">
                       <Button variant="outline" onClick={() => setActiveTab('details')} className="text-xs">← Back to Documents</Button>
