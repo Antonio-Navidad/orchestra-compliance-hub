@@ -81,6 +81,8 @@ interface DocumentsTabProps {
   hsCode: string;
   shipmentSubtitle: string;
   shipmentId: string;
+  deadlines?: import('@/lib/deadlineEngine').ShipmentDeadline[];
+  onClickDeadline?: (d: import('@/lib/deadlineEngine').ShipmentDeadline) => void;
   onViewAIAnalysis?: () => void;
   onUploadDoc?: (docId: string, files: FileList) => void;
 }
