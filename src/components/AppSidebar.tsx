@@ -104,7 +104,7 @@ export function AppSidebar() {
               variant="ghost"
               size="sm"
               onClick={clearPurpose}
-              className="text-[10px] font-mono text-muted-foreground hover:text-foreground h-auto p-1 justify-start"
+              className="text-[11px] font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground/90 h-auto p-1 justify-start"
             >
               <Repeat size={10} className="mr-1" /> {t("nav.switchWorkspace")}
             </Button>
