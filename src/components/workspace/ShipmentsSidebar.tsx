@@ -83,6 +83,10 @@ const PAUSED_STATUSES = ['paused', 'waiting_docs', 'draft'];
 export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadlines = [], onClickDeadline }: Props) {
   const [expanded, setExpanded] = useState<Set<Section>>(new Set(['active']));
 
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  const queryClient = useQueryClient();
+
   const { data: shipments = [], isLoading } = useQuery({
     queryKey: ["shipments-sidebar-list"],
     queryFn: async () => {
@@ -93,6 +97,42 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
         .limit(200);
       if (error) throw error;
       return (data || []) as ShipmentListItem[];
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (shipmentId: string) => {
+      const { error } = await supabase
+        .from("shipments")
+        .delete()
+        .eq("shipment_id", shipmentId);
+      if (error) throw error;
+    },
+    onSuccess: (_, shipmentId) => {
+      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+      queryClient.invalidateQueries({ queryKey: ["command-shipments"] });
+      toast({ title: "Shipment deleted", description: `${shipmentId} has been permanently removed.` });
+      if (selectedId === shipmentId) onNewShipment();
+    },
+    onError: (e: any) => {
+      toast({ title: "Delete failed", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const pauseMutation = useMutation({
+    mutationFn: async (shipmentId: string) => {
+      const { error } = await supabase
+        .from("shipments")
+        .update({ status: "paused" as any })
+        .eq("shipment_id", shipmentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+      toast({ title: "Workflow paused" });
+    },
+    onError: (e: any) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
     },
   });
 
