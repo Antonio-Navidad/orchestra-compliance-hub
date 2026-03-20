@@ -32,7 +32,6 @@ export function ShipmentModeSelector({ selected, onSelect }: Props) {
                       "relative flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-all",
                       "hover:border-primary/40 hover:shadow-sm",
                       "active:scale-[0.98]",
-                      mode.placeholder && "opacity-75",
                       active
                         ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
                         : "border-border bg-card"
@@ -52,11 +51,6 @@ export function ShipmentModeSelector({ selected, onSelect }: Props) {
                     <p className="text-[11px] leading-snug text-muted-foreground">
                       {mode.description}
                     </p>
-                    {mode.placeholder && (
-                      <Badge variant="outline" className="text-[9px] mt-1 border-muted-foreground/30 text-muted-foreground">
-                        Full checklist coming soon
-                      </Badge>
-                    )}
                     {active && (
                       <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary" />
                     )}

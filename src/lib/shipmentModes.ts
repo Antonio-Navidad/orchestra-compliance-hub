@@ -19,7 +19,6 @@ export interface ShipmentModeConfig {
   transportMode: 'sea' | 'air' | 'land';
   direction: 'inbound' | 'outbound' | 'transit';
   group: ShipmentModeGroup;
-  placeholder?: boolean;
 }
 
 export const SHIPMENT_MODE_GROUPS: { key: ShipmentModeGroup; label: string }[] = [
@@ -52,25 +51,23 @@ export const SHIPMENT_MODES: ShipmentModeConfig[] = [
   },
   {
     id: 'land_import_mexico',
-    label: 'Land / Truck Import — Mexico',
+    label: 'Land Freight — Mexico Import',
     shortLabel: 'Truck MX',
     icon: '🚛',
-    description: 'PAPS + Pedimento required',
+    description: 'PAPS + Pedimento + Carta Porte required',
     transportMode: 'land',
     direction: 'inbound',
     group: 'import',
-    placeholder: true,
   },
   {
     id: 'land_import_canada',
-    label: 'Land / Truck Import — Canada',
+    label: 'Land Freight — Canada Import',
     shortLabel: 'Truck CA',
     icon: '🚛',
-    description: 'PARS + ACI eManifest required',
+    description: 'PAPS + Inward Cargo Manifest required',
     transportMode: 'land',
     direction: 'inbound',
     group: 'import',
-    placeholder: true,
   },
   // ── Export ──
   {
@@ -95,25 +92,23 @@ export const SHIPMENT_MODES: ShipmentModeConfig[] = [
   },
   {
     id: 'land_export_mexico',
-    label: 'Land / Truck Export — Mexico',
+    label: 'Land Freight — Mexico Export',
     shortLabel: 'Truck MX Exp',
     icon: '🚛',
-    description: 'EEI/AES + Pedimento coordination',
+    description: 'EEI/AES + Pedimento + Carta Porte coordination',
     transportMode: 'land',
     direction: 'outbound',
     group: 'export',
-    placeholder: true,
   },
   {
     id: 'land_export_canada',
-    label: 'Land / Truck Export — Canada',
+    label: 'Land Freight — Canada Export',
     shortLabel: 'Truck CA Exp',
     icon: '🚛',
-    description: 'EEI/AES + CARM coordination',
+    description: 'EEI/AES + ACI eManifest + CARM coordination',
     transportMode: 'land',
     direction: 'outbound',
     group: 'export',
-    placeholder: true,
   },
   // ── Other ──
   {
@@ -660,14 +655,12 @@ const IN_BOND_RISKS: KeyRisk[] = [
 // ──────────────────────────────────────────
 // Assembled profiles
 // ──────────────────────────────────────────
-const PLACEHOLDER_PROFILE = (modeId: ShipmentModeId): ModeDocProfile => ({
-  modeId,
-  required: [],
-  conditional: [],
-  optional: [],
-  filingDeadlines: [],
-  keyRisks: [],
-});
+import {
+  LAND_IMPORT_MEXICO_PROFILE,
+  LAND_EXPORT_MEXICO_PROFILE,
+  LAND_IMPORT_CANADA_PROFILE,
+  LAND_EXPORT_CANADA_PROFILE,
+} from './landFreightProfiles';
 
 export const MODE_DOC_PROFILES: Record<ShipmentModeId, ModeDocProfile> = {
   ocean_import: {
@@ -686,8 +679,8 @@ export const MODE_DOC_PROFILES: Record<ShipmentModeId, ModeDocProfile> = {
     filingDeadlines: AIR_IMPORT_DEADLINES,
     keyRisks: AIR_IMPORT_RISKS,
   },
-  land_import_mexico: PLACEHOLDER_PROFILE('land_import_mexico'),
-  land_import_canada: PLACEHOLDER_PROFILE('land_import_canada'),
+  land_import_mexico: LAND_IMPORT_MEXICO_PROFILE,
+  land_import_canada: LAND_IMPORT_CANADA_PROFILE,
   ocean_export: {
     modeId: 'ocean_export',
     required: US_EXPORT_REQUIRED,
@@ -704,8 +697,8 @@ export const MODE_DOC_PROFILES: Record<ShipmentModeId, ModeDocProfile> = {
     filingDeadlines: US_EXPORT_DEADLINES,
     keyRisks: US_EXPORT_RISKS,
   },
-  land_export_mexico: PLACEHOLDER_PROFILE('land_export_mexico'),
-  land_export_canada: PLACEHOLDER_PROFILE('land_export_canada'),
+  land_export_mexico: LAND_EXPORT_MEXICO_PROFILE,
+  land_export_canada: LAND_EXPORT_CANADA_PROFILE,
   us_export: {
     modeId: 'us_export',
     required: US_EXPORT_REQUIRED,
