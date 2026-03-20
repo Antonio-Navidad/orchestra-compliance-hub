@@ -26,6 +26,8 @@ import { NewShipmentWizard, type WizardResult } from "@/components/workspace/New
 import { DocumentsTab } from "@/components/workspace/DocumentsTab";
 import { DeadlineBar } from "@/components/workspace/DeadlineBar";
 import { AlertDrawer } from "@/components/workspace/AlertDrawer";
+import { AIVerificationTab } from "@/components/workspace/AIVerificationTab";
+import { useDocExtraction } from "@/hooks/useDocExtraction";
 import { calculateDeadlines, getDeadlinesWithin7Days } from "@/lib/deadlineEngine";
 import { getDeadlineDrawer, type AlertDrawerData } from "@/lib/alertDrawerContent";
 
