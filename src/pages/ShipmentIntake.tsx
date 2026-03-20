@@ -473,8 +473,12 @@ export default function ShipmentIntake() {
                       <ClipboardList size={12} /> Documents
                     </TabsTrigger>
                     <TabsTrigger value="documents" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                      <FileText size={12} /> AI Verification
-                      {docs.length > 0 && <Badge variant="outline" className="text-[9px] px-1 py-0 ml-1">{docs.length}</Badge>}
+                      <Brain size={12} /> AI Verification
+                      {Object.keys(docExtraction.extractedDocs).length > 0 && (
+                        <Badge variant="outline" className="text-[9px] px-1 py-0 ml-1">
+                          {Object.keys(docExtraction.extractedDocs).length}
+                        </Badge>
+                      )}
                     </TabsTrigger>
                     <TabsTrigger value="compliance" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                       <ShieldCheck size={12} /> Workflow Log
