@@ -28,6 +28,7 @@ import { DeadlineBar } from "@/components/workspace/DeadlineBar";
 import { AlertDrawer } from "@/components/workspace/AlertDrawer";
 import { AIVerificationTab } from "@/components/workspace/AIVerificationTab";
 import { useDocExtraction } from "@/hooks/useDocExtraction";
+import { WorkflowLogTab, type WorkflowShipment } from "@/components/workspace/WorkflowLogTab";
 import { calculateDeadlines, getDeadlinesWithin7Days } from "@/lib/deadlineEngine";
 import { getDeadlineDrawer, type AlertDrawerData } from "@/lib/alertDrawerContent";
 
