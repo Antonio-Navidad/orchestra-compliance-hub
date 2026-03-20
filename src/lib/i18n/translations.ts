@@ -61,6 +61,7 @@ const en = {
   "nav.signOut": "Sign Out",
   "nav.switchWorkspace": "Switch Workspace",
   "nav.newShipment": "New Shipment",
+  "nav.shipments": "Shipments",
   "nav.newRoute": "New Route",
   "nav.shipmentTracker": "Shipment Tracker",
   "nav.sellerMode": "Seller Mode",

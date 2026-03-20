@@ -23,7 +23,7 @@ const MARKETPLACE_NAV: NavGroup[] = [
   {
     labelKey: "navGroup.quickActions",
     items: [
-      { titleKey: "nav.newShipment", url: "/intake", icon: Plus },
+      { titleKey: "nav.shipments", url: "/intake", icon: Package },
       { titleKey: "nav.newRoute", url: "/creator-mode", icon: Route },
     ],
   },
@@ -60,7 +60,7 @@ const COMPLIANCE_NAV: NavGroup[] = [
     labelKey: "navGroup.quickActions",
     items: [
       { titleKey: "nav.newReview", url: "/validate-docs", icon: Plus },
-      { titleKey: "nav.newShipment", url: "/intake", icon: Package },
+      { titleKey: "nav.shipments", url: "/intake", icon: Package },
     ],
   },
   {
@@ -97,7 +97,7 @@ const ROUTE_PLANNING_NAV: NavGroup[] = [
     labelKey: "navGroup.quickActions",
     items: [
       { titleKey: "nav.newRoute", url: "/creator-mode", icon: Plus },
-      { titleKey: "nav.newShipment", url: "/intake", icon: Package },
+      { titleKey: "nav.shipments", url: "/intake", icon: Package },
     ],
   },
   {
@@ -133,7 +133,7 @@ const OPERATIONS_NAV: NavGroup[] = [
   {
     labelKey: "navGroup.quickActions",
     items: [
-      { titleKey: "nav.newShipment", url: "/intake", icon: Plus },
+      { titleKey: "nav.shipments", url: "/intake", icon: Package },
       { titleKey: "nav.newWatchlist", url: "/watch-mode", icon: Radio },
     ],
   },
@@ -177,7 +177,7 @@ const ENTERPRISE_NAV: NavGroup[] = [
   {
     labelKey: "navGroup.quickActions",
     items: [
-      { titleKey: "nav.newShipment", url: "/intake", icon: Plus },
+      { titleKey: "nav.shipments", url: "/intake", icon: Package },
       { titleKey: "nav.newRoute", url: "/creator-mode", icon: Route },
     ],
   },
