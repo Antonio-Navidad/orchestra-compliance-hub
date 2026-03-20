@@ -436,6 +436,11 @@ export default function ShipmentIntake() {
             </Button>
             <ResetDialog onReset={handleNewShipment} />
           </div>
+          </div>
+          {/* Deadline row */}
+          {urgentDeadlines.length > 0 && (
+            <DeadlineBar deadlines={urgentDeadlines} onClickDeadline={handleDeadlineClick} />
+          )}
         </div>
 
         {/* Workspace content */}
