@@ -112,17 +112,20 @@ export function DeclaredValueHint({ hsCode, declaredValue, destinationCountry, c
 }
 
 // COO Status warning
-export function COOWarning({ cooStatus, destinationCountry }: { cooStatus: string; destinationCountry: string }) {
+export function COOWarning({ cooStatus, destinationCountry, originCountry, declaredValue, currency }: { cooStatus: string; destinationCountry: string; originCountry?: string; declaredValue?: string; currency?: string }) {
   if (cooStatus !== "unknown" && cooStatus !== "potentially_eligible") return null;
-  
-  const isColombiaToUS = (destinationCountry || "").toUpperCase() === "US" || (destinationCountry || "").toLowerCase().includes("united states");
 
   if (cooStatus === "potentially_eligible") {
+    const val = declaredValue ? parseFloat(declaredValue) : 0;
+    // Approximate general duty for apparel from Colombia ~12-15%
+    const estimatedDuty = val > 0 ? (val * 0.125).toFixed(2) : null;
+    const cur = currency || "USD";
     return (
       <div className="flex items-start gap-1.5 mt-1 text-primary">
         <Info size={11} className="shrink-0 mt-0.5" />
         <span className="text-[11px]">
-          🟢 Colombia → US shipments may qualify for preferential duty rates under the CTPA (Colombia Trade Promotion Agreement). Confirm with your supplier that goods meet origin requirements to claim 0% duty rate.
+          🟢 Colombia → US shipments may qualify for 0% duty under the CTPA (Colombia Trade Promotion Agreement). Confirm with your supplier that goods meet rules of origin requirements.
+          {estimatedDuty && <> Estimated duty at general rate: {cur} {parseFloat(estimatedDuty).toLocaleString()} — potential saving if CTPA applies: {cur} {parseFloat(estimatedDuty).toLocaleString()}.</>}
         </span>
       </div>
     );

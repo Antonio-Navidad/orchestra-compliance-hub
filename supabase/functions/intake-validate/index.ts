@@ -302,7 +302,7 @@ Return all extracted fields with confidence and sourceText. Extract ALL quantity
                     fieldName: {
                       type: "string",
                       description:
-                        "Field key: shipper, consignee, notify_party, hs_code, declared_value, currency, port_of_loading, port_of_discharge, vessel_name, container_number, seal_number, bl_number, etd, eta, incoterm, origin_country, destination_country, import_country, export_country, place_of_receipt, place_of_delivery, transport_mode, commodity_description, quantity, gross_weight, net_weight, total_cartons, total_pieces, total_cbm, freight_charges, insurance_value, cif_value, booking_reference, purchase_order, shippers_reference, customs_entry_number",
+                        "Field key: shipper_name, consignee_name, shipper_address, shipper_city_state, shipper_country, consignee_address, consignee_city_state, consignee_country, notify_party, hs_code, declared_value, currency, port_of_loading, port_of_discharge, vessel_name, container_number, seal_number, bl_number, etd, eta, incoterm, origin_country, destination_country, import_country, export_country, place_of_receipt, place_of_delivery, transport_mode, commodity_description, quantity, gross_weight, net_weight, total_cartons, total_pieces, total_cbm, freight_charges, insurance_value, cif_value, booking_reference, purchase_order, shippers_reference, customs_entry_number",
                     },
                     value: { type: "string" },
                     unit: { type: "string", description: "Unit of measurement if applicable (kg, cbm, pcs, cartons, etc.)" },

@@ -568,7 +568,13 @@ export default function ShipmentIntake() {
                 <div className="space-y-1.5">
                   <Label className="text-xs font-mono">{t("intake.plannedDeparture")}</Label>
                   <Input type="date" value={form.planned_departure} onChange={e => updateField('planned_departure', e.target.value)} />
-                  {form.planned_departure && form.mode && form.destination_country && (
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-mono">{t("intake.estimatedArrival")}</Label>
+                  <Input type="date" value={form.estimated_arrival} onChange={e => updateField('estimated_arrival', e.target.value)} />
+                </div>
+                {form.planned_departure && form.destination_country && (
+                  <div className="md:col-span-2">
                     <FilingDeadlineTimeline
                       mode={form.mode}
                       originCountry={form.origin_country}
@@ -576,12 +582,8 @@ export default function ShipmentIntake() {
                       plannedDeparture={form.planned_departure}
                       estimatedArrival={form.estimated_arrival}
                     />
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-mono">{t("intake.estimatedArrival")}</Label>
-                  <Input type="date" value={form.estimated_arrival} onChange={e => updateField('estimated_arrival', e.target.value)} />
-                </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
