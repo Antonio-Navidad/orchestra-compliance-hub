@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle2, AlertTriangle, XCircle, MinusCircle, ChevronDown,
-  Upload, FileText, Mail, RefreshCw, Loader2
+  Upload, FileText, Mail, RefreshCw, Loader2, Info
 } from "lucide-react";
 
 export type DocCardState = 'verified' | 'issue' | 'missing' | 'not_applicable' | 'processing';
