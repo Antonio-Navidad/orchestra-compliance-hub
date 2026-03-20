@@ -509,9 +509,12 @@ export default function ShipmentIntake() {
 
                   {/* ─── AI Verification Tab ─── */}
                   <TabsContent value="documents" className="mt-4 space-y-4">
+                    {/* Upload section */}
                     <Card>
                       <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-semibold">Upload Documents</CardTitle>
+                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                          <Upload size={14} /> Upload Documents for AI Analysis
+                        </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="flex gap-2 flex-wrap">
@@ -531,16 +534,16 @@ export default function ShipmentIntake() {
 
                         <div
                           className={cn(
-                            "border-2 border-dashed rounded-lg p-8 text-center transition-colors",
+                            "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
                             isDragging ? 'border-primary bg-primary/5' : 'border-border'
                           )}
                           onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
                           onDragLeave={() => setIsDragging(false)}
                           onDrop={handleDrop}
                         >
-                          <Upload className="mx-auto mb-2 text-muted-foreground" size={24} />
-                          <p className="text-sm text-muted-foreground">Drop files here or click Browse</p>
-                          <p className="text-[11px] text-muted-foreground mt-1">
+                          <Upload className="mx-auto mb-2 text-muted-foreground" size={20} />
+                          <p className="text-xs text-muted-foreground">Drop files here — AI will extract and cross-reference all data</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">
                             Uploading as: <strong>{DOC_TYPES.find(d => d.value === selectedDocType)?.label}</strong>
                           </p>
                         </div>
@@ -565,6 +568,28 @@ export default function ShipmentIntake() {
                         )}
                       </CardContent>
                     </Card>
+
+                    {/* AI Verification Panels */}
+                    <AIVerificationTab
+                      extractedDocs={docExtraction.extractedDocs}
+                      crossRefResults={docExtraction.crossRefResults}
+                      onOpenDrawer={(alertId, context) => {
+                        setDeadlineDrawerData({
+                          title: context?.field ? `${context.docA} ↔ ${context.docB}: ${context.field}` : "Cross-Reference Issue",
+                          severity: "high",
+                          whatIsThis: context?.finding || "A discrepancy was detected between two uploaded documents during AI cross-reference analysis.",
+                          whyItMatters: "Document discrepancies can trigger CBP examination holds, delays of 2–7 days, and additional storage and demurrage charges at the port terminal.",
+                          whatToDo: [
+                            "Review the flagged data points in both documents",
+                            "Contact your supplier to confirm which value is correct",
+                            "Upload corrected documents to the relevant slots",
+                            "If the shipment is en route, prepare a written explanation letter for CBP"
+                          ],
+                          quickActions: ["upload_document", "request_from_supplier", "add_note"],
+                        });
+                        setDeadlineDrawerOpen(true);
+                      }}
+                    />
 
                     <div className="flex justify-between">
                       <Button variant="outline" onClick={() => setActiveTab('details')} className="text-xs">← Back to Documents</Button>
