@@ -501,35 +501,21 @@ export default function ShipmentIntake() {
                   <Textarea value={form.description} onChange={e => updateField('description', e.target.value)} placeholder={t("intake.commodityPlaceholder")} rows={2} />
                   <DescriptionQualityHint description={form.description} />
                 </div>
-                <div className="md:col-span-2 space-y-1.5" data-field="hs_code">
-                  <Label className="text-xs font-mono">{t("intake.hsCode")}</Label>
-                  <MultiHSCodeField
-                    hsCodes={hsCodes.length > 0 ? hsCodes : (form.hs_code ? [form.hs_code] : [])}
-                    onCodesChange={(codes) => {
-                      setHsCodes(codes);
+                <div className="md:col-span-2 space-y-1.5" data-field="line_items">
+                  <Label className="text-xs font-mono">COMMODITY LINE ITEMS</Label>
+                  <LineItemTable
+                    items={lineItems}
+                    onItemsChange={(items) => {
+                      setLineItems(items);
+                      // Sync hs_code and declared_value from line items
+                      const codes = items.map(i => i.hsCode).filter(Boolean);
                       updateField('hs_code', codes.join(', '));
+                      const total = items.reduce((s, r) => s + (parseFloat(r.quantity) || 0) * (parseFloat(r.unitValue) || 0), 0);
+                      if (total > 0) updateField('declared_value', total.toFixed(2));
                     }}
-                    declaredValue={form.declared_value}
                     currency={form.currency}
-                    aiSuggestions={aiSuggestedHS}
+                    aiSuggestions={aiSuggestedItems}
                   />
-                  {hsCodes.length <= 1 && form.hs_code && (
-                    <HSCodeValidation
-                      hsCode={form.hs_code}
-                      description={form.description}
-                      destinationCountry={form.destination_country || form.jurisdiction_code}
-                      declaredValue={form.declared_value}
-                      currency={form.currency}
-                    />
-                  )}
-                </div>
-                <div className="space-y-1.5" data-field="quantity">
-                  <Label className="text-xs font-mono">{t("intake.quantity")}</Label>
-                  <Input type="number" value={form.quantity} onChange={e => updateField('quantity', e.target.value)} placeholder="100" />
-                </div>
-                <div className="space-y-1.5" data-field="declared_value">
-                  <Label className="text-xs font-mono">{t("intake.declaredValue")}</Label>
-                  <Input type="number" value={form.declared_value} onChange={e => updateField('declared_value', e.target.value)} placeholder="50000" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-mono">{t("intake.currency")}</Label>
@@ -543,6 +529,10 @@ export default function ShipmentIntake() {
                       <SelectItem value="MXN">MXN</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-1.5" data-field="declared_value">
+                  <Label className="text-xs font-mono">{t("intake.declaredValue")} (auto-summed)</Label>
+                  <Input type="number" value={form.declared_value} onChange={e => updateField('declared_value', e.target.value)} placeholder="50000" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-mono">{t("intake.incoterm")}</Label>
