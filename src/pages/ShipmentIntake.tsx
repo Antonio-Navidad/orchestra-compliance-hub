@@ -215,9 +215,41 @@ export default function ShipmentIntake() {
   };
 
   const handleNewShipment = () => {
+    setShowWizard(true);
+  };
+
+  const WIZARD_MODE_MAP: Record<string, ShipmentModeId> = {
+    ocean_import: 'ocean_import',
+    air_import: 'air_import',
+    us_export: 'us_export',
+    inbond_te: 'inbond_te',
+  };
+
+  const handleWizardComplete = (result: WizardResult) => {
     resetForm();
     setSelectedShipmentId(null);
     setIsNewMode(true);
+    setShowWizard(false);
+
+    // Map wizard mode to shipment mode
+    const modeId = WIZARD_MODE_MAP[result.shipmentMode] || 'ocean_import';
+    handleModeChange(modeId);
+
+    // Pre-fill form fields from wizard
+    setForm(prev => ({
+      ...prev,
+      shipment_id: generateShipmentId(),
+      description: result.title,
+      consignee: result.importerOfRecord,
+      origin_country: result.countryOfOrigin,
+      port_of_entry: result.portOfEntry,
+      destination_country: result.shipmentMode === 'us_export' ? '' : 'United States',
+    }));
+
+    toast({
+      title: "Shipment workspace ready",
+      description: `${result.title} — ${result.commodityType}`,
+    });
   };
 
   const handleSelectShipment = async (id: string) => {
