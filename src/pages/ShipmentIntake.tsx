@@ -54,6 +54,7 @@ const COO_OPTIONS = [
   { value: 'attached', label: 'Attached' },
   { value: 'pending', label: 'Pending' },
   { value: 'not_required', label: 'Not Required' },
+  { value: 'potentially_eligible', label: 'Potentially Eligible' },
   { value: 'unknown', label: 'Unknown' },
 ];
 
