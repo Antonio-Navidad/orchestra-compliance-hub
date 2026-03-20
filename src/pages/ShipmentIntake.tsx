@@ -222,7 +222,7 @@ export default function ShipmentIntake() {
     ocean_import: 'ocean_import',
     air_import: 'air_import',
     us_export: 'us_export',
-    inbond_te: 'inbond_te',
+    inbond_te: 'in_bond',
   };
 
   const handleWizardComplete = (result: WizardResult) => {
