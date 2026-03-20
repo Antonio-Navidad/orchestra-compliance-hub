@@ -464,7 +464,6 @@ const BASE_DOCS: Record<string, Omit<DocInfo, "whyRequired" | "laneDelayWarnings
       "Include it in the document packet.",
     ],
   },
-  },
 
   paps_document: {
     name: "PAPS Document (Pre-Arrival Processing System)",
