@@ -148,10 +148,12 @@ export default function ShipmentIntake() {
       declared_value: 'declared_value',
       currency: 'currency',
       commodity_description: 'description',
-      incoterm: 'incoterms',
+      incoterm: 'incoterm',
       transport_mode: 'mode',
       shipper: 'shipper',
+      shipper_name: 'shipper',
       consignee: 'consignee',
+      consignee_name: 'consignee',
       notify_party: 'notify_party',
       bl_number: 'bl_number',
       vessel_name: 'vessel_name',
@@ -174,14 +176,25 @@ export default function ShipmentIntake() {
       customs_entry_number: 'customs_entry_number',
     };
     const mapped: Record<string, string> = {};
-    // Track if total_pieces was mapped so we prefer it over total_cartons for quantity
     let piecesMapped = false;
     for (const [key, value] of Object.entries(fields)) {
       const formKey = fieldMap[key] || key;
-      // Prefer total_pieces over total_cartons for quantity field
       if (key === 'total_cartons' && (piecesMapped || mapped['quantity'])) continue;
       if (key === 'total_pieces') piecesMapped = true;
+      // Skip address fields — only use name fields for consignee/shipper
+      if (['consignee_address', 'consignee_city_state', 'consignee_country',
+           'shipper_address', 'shipper_city_state', 'shipper_country'].includes(key)) continue;
       mapped[formKey] = value;
+    }
+
+    // Normalize mode to lowercase to match Select option values
+    if (mapped['mode']) {
+      mapped['mode'] = mapped['mode'].toLowerCase() as any;
+    }
+
+    // Normalize incoterm to uppercase to match Select option values
+    if (mapped['incoterm']) {
+      mapped['incoterm'] = mapped['incoterm'].toUpperCase();
     }
 
     // Auto-detect COO eligibility for Colombia → US
@@ -191,7 +204,7 @@ export default function ShipmentIntake() {
       (origin.toUpperCase() === 'CO' || origin.toLowerCase().includes('colombia')) &&
       (dest.toUpperCase() === 'US' || dest.toLowerCase().includes('united states'));
     
-    if (isColombiaToUS && (!mapped['coo_status'] || mapped['coo_status'] === 'unknown')) {
+    if (isColombiaToUS) {
       mapped['coo_status'] = 'potentially_eligible';
     }
 
