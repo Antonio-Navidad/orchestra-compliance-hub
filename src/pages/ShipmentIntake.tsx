@@ -575,6 +575,7 @@ export default function ShipmentIntake() {
                       crossRefResults={docExtraction.crossRefResults}
                       onOpenDrawer={(alertId, context) => {
                         setDeadlineDrawerData({
+                          id: `crossref_${alertId}`,
                           title: context?.field ? `${context.docA} ↔ ${context.docB}: ${context.field}` : "Cross-Reference Issue",
                           severity: "high",
                           whatIsThis: context?.finding || "A discrepancy was detected between two uploaded documents during AI cross-reference analysis.",
