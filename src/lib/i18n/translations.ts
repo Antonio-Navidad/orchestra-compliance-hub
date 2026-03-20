@@ -57,6 +57,7 @@ const en = {
 
   // Nav items
   "nav.dashboard": "Dashboard",
+  "nav.commandCenter": "Command Center",
   "nav.signOut": "Sign Out",
   "nav.switchWorkspace": "Switch Workspace",
   "nav.newShipment": "New Shipment",
