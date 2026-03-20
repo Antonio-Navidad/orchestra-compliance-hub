@@ -19,7 +19,6 @@ export interface ShipmentModeConfig {
   transportMode: 'sea' | 'air' | 'land';
   direction: 'inbound' | 'outbound' | 'transit';
   group: ShipmentModeGroup;
-  placeholder?: boolean;
 }
 
 export const SHIPMENT_MODE_GROUPS: { key: ShipmentModeGroup; label: string }[] = [

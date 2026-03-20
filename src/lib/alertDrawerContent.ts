@@ -1392,3 +1392,392 @@ export function getDeadlineDrawer(deadline: ShipmentDeadline): AlertDrawerData {
     financialImpact: deadline.penalty,
   };
 }
+
+// ─── Land Freight — Mexico Alert Drawers ───
+
+const LAND_MEXICO_DRAWERS: Record<string, AlertDrawerData> = {
+  carta_porte: {
+    id: 'carta_porte',
+    title: 'Carta Porte / CFDI UUID Missing',
+    severity: 'critical',
+    whatIsThis: 'The Carta Porte is a mandatory Mexican digital tax document (CFDI with Complemento Carta Porte, version 3.1) that must accompany all freight moving through Mexican territory. It is issued by the Mexican carrier and contains a UUID — a unique fiscal identification number. For foreign trade operations crossing the U.S.-Mexico border, this UUID is required to generate the DODA document and complete Mexican customs clearance. Enforcement became mandatory January 1, 2024.',
+    whyItMatters: 'Without the Carta Porte UUID, the Mexican broker cannot file the DODA, the truck cannot clear Mexican customs on the export side, and the shipment cannot legally depart Mexico. If caught transporting goods in Mexico without a valid Carta Porte, the carrier faces fines and the shipment can be impounded. This is entirely the Mexican carrier\'s responsibility to issue — but the U.S. broker must collect the UUID number before the truck departs.',
+    whatToDo: [
+      'Contact the Mexican carrier or the Mexican customs broker and request the Carta Porte UUID for this shipment.',
+      'Provide the carrier with the correct cargo description, weight, origin and destination addresses, and route details so they can generate the document accurately.',
+      'Confirm the Carta Porte version is 3.1 (mandatory since July 2024).',
+      'Store the UUID in this shipment record — it must be referenced in the U.S. entry documentation for northbound clearance.',
+    ],
+    quickActions: [
+      { label: 'Upload Carta Porte', type: 'upload', docId: 'carta_porte' },
+      { label: 'Request from Mexican carrier', type: 'request' },
+      { label: 'Add note', type: 'note' },
+    ],
+    regulation: 'SAT Mexico — Complemento Carta Porte v3.1',
+    financialImpact: 'Shipment impounded + SAT fine',
+  },
+  pedimento: {
+    id: 'pedimento',
+    title: 'Pedimento Number Missing',
+    severity: 'critical',
+    whatIsThis: 'The Pedimento de Importación is Mexico\'s official customs declaration document, filed electronically by the Mexican customs broker (agente aduanal) through Mexico\'s customs system (VUCEM). It is required for every commercial crossing into or out of Mexico. It contains a unique alphanumeric number that identifies the Mexican customs entry.',
+    whyItMatters: 'CBP uses the Pedimento number to verify the shipment was legally cleared on the Mexican side. For northbound shipments, the Mexican broker must complete the Pedimento for the export from Mexico before the truck can depart. Without this number confirmed, the U.S. entry is incomplete and the truck may be turned away or held at the port of entry.',
+    whatToDo: [
+      'Confirm a licensed Mexican customs broker (agente aduanal) has been appointed for this shipment.',
+      'Provide the Mexican broker with the commercial invoice in Spanish, packing list, and USMCA certificate if applicable.',
+      'Request the Pedimento number once filed — it is issued electronically through VUCEM.',
+      'Verify the Pedimento number matches the cargo description in your commercial documents before the truck departs.',
+    ],
+    quickActions: [
+      { label: 'Upload Pedimento', type: 'upload', docId: 'pedimento' },
+      { label: 'Request from Mexican broker', type: 'request' },
+      { label: 'Add note', type: 'note' },
+    ],
+    regulation: 'Mexican Customs Law (Ley Aduanera)',
+    financialImpact: 'Truck held at border until Pedimento filed',
+  },
+  mexican_broker_appointment: {
+    id: 'mexican_broker_appointment',
+    title: 'Mexican Customs Broker Not Appointed',
+    severity: 'critical',
+    whatIsThis: 'Every commercial shipment crossing the U.S.-Mexico border requires a licensed customs broker on BOTH sides. The U.S. customs broker handles the U.S. side. A separate Mexican customs broker (agente aduanal), licensed by the Mexican government, is required to handle the Mexican side — filing the Pedimento and clearing the goods through Mexican customs.',
+    whyItMatters: 'Without a Mexican customs broker appointed, the shipment will stop at the border. The truck has no one to file the Mexican Pedimento or clear the goods on the Mexican side. This is one of the most common causes of unexpected delays for shippers new to U.S.-Mexico freight. Neither the U.S. broker nor the carrier can perform this function.',
+    whatToDo: [
+      'Ask your Mexican supplier or the consignee to confirm which Mexican customs broker they use and at which port of entry they operate.',
+      'Note that most Mexican customs brokers only operate at specific border crossings — routing freight to the wrong port creates delays.',
+      'Share the Mexican broker\'s name and contact with the U.S. broker so both sides can coordinate document exchange before the truck departs.',
+    ],
+    quickActions: [
+      { label: 'Upload broker confirmation', type: 'upload', docId: 'mexican_broker_appointment' },
+      { label: 'Request broker details from supplier', type: 'request' },
+      { label: 'Add note', type: 'note' },
+    ],
+    financialImpact: 'Indefinite border delay',
+  },
+  paps_document: {
+    id: 'paps_document',
+    title: 'PAPS Document Missing',
+    severity: 'critical',
+    whatIsThis: 'PAPS stands for Pre-Arrival Processing System. It is the land border equivalent of the ocean ISF filing. The carrier places a PAPS barcode sticker on the commercial documents at pickup. This sticker contains a unique cargo control number (CCN) made up of the carrier code plus a shipment number. The U.S. customs broker uses this number to pre-file the entry with CBP before the truck arrives at the border.',
+    whyItMatters: 'CBP matches the physical truck to the broker\'s entry filing using the PAPS barcode. If the PAPS number is not in the system or does not match the broker\'s filing when the truck arrives, the truck will be turned away from the port of entry and must circle back. This causes significant delay and additional carrier costs.',
+    whatToDo: [
+      'Confirm with the carrier that a PAPS sticker has been affixed to the commercial documents at time of pickup.',
+      'Obtain the PAPS number (cargo control number) from the carrier and provide it to the customs broker immediately.',
+      'The broker uses this number to pre-file the entry in ACE.',
+      'Verify with the broker that the entry has been set up and accepted before the truck departs toward the border.',
+    ],
+    quickActions: [
+      { label: 'Upload PAPS document', type: 'upload', docId: 'paps_document' },
+      { label: 'Request from carrier', type: 'request' },
+      { label: 'Add note', type: 'note' },
+    ],
+    regulation: 'CBP Pre-Arrival Processing System',
+    financialImpact: 'Truck turned away — $500–$2,000 in delay costs',
+  },
+  doda: {
+    id: 'doda',
+    title: 'DODA Document Missing',
+    severity: 'high',
+    whatIsThis: 'The DODA (Documento de Operación para Despacho Aduanero) is a Mexican customs clearance operation document that links the Carta Porte UUID to the Mexican customs entry (Pedimento). It is required for all foreign trade operations crossing the U.S.-Mexico border.',
+    whyItMatters: 'Without the DODA, the transport and customs declarations are not connected, and the truck cannot legally cross the border for international trade purposes.',
+    whatToDo: [
+      'Ensure the Carta Porte UUID has been obtained from the Mexican carrier.',
+      'The Mexican customs broker generates the DODA through the Mexican customs system.',
+      'Verify the DODA references both the correct Carta Porte UUID and Pedimento number.',
+    ],
+    quickActions: [
+      { label: 'Upload DODA', type: 'upload', docId: 'doda' },
+      { label: 'Request from Mexican broker', type: 'request' },
+      { label: 'Add note', type: 'note' },
+    ],
+    financialImpact: 'Truck stopped at Mexican customs checkpoint',
+  },
+  inward_cargo_manifest: {
+    id: 'inward_cargo_manifest',
+    title: 'Inward Cargo Manifest Missing',
+    severity: 'high',
+    whatIsThis: 'Document prepared by the U.S. customs broker, filed under the Border Cargo Selectivity (BCS) system. The driver presents this at the port of entry. It contains the entry number that CBP uses to match the truck to the filed entry.',
+    whyItMatters: 'Without this document, the driver cannot proceed through primary inspection at the port of entry. CBP cannot match the physical truck to the electronic entry filing.',
+    whatToDo: [
+      'Confirm the customs broker has prepared the inward cargo manifest.',
+      'Ensure the manifest contains the correct entry number and PAPS/cargo control number.',
+      'Provide the manifest to the driver before the truck departs toward the border.',
+    ],
+    quickActions: [
+      { label: 'Upload manifest', type: 'upload', docId: 'inward_cargo_manifest' },
+      { label: 'Request from broker', type: 'request' },
+      { label: 'Add note', type: 'note' },
+    ],
+    financialImpact: 'Truck held at border until corrected documents arrive',
+  },
+  carta_instrucciones: {
+    id: 'carta_instrucciones',
+    title: 'Letter of Instructions Missing',
+    severity: 'medium',
+    whatIsThis: 'Contact sheet containing names and phone numbers for all parties involved in the Mexico border crossing: shipper, consignee, U.S. broker, Mexican broker, carrier, and driver.',
+    whyItMatters: 'If any issue arises at the border, the driver needs to reach the correct person instantly. Without this, problems that could be resolved in minutes turn into hours-long delays.',
+    whatToDo: [
+      'Compile contact information for all parties: shipper, consignee, U.S. broker, Mexican broker, carrier dispatcher, and driver.',
+      'Provide the letter to the driver before departure.',
+    ],
+    quickActions: [
+      { label: 'Upload letter', type: 'upload', docId: 'carta_instrucciones' },
+      { label: 'Add note', type: 'note' },
+    ],
+  },
+  nom_compliance: {
+    id: 'nom_compliance',
+    title: 'NOM Compliance Documentation Missing',
+    severity: 'high',
+    whatIsThis: 'Normas Oficiales Mexicanas (NOM) are Mexican product safety standards. Required for regulated product categories including electronics, food, textiles, toys, and chemicals entering Mexico.',
+    whyItMatters: 'Mexican customs will not release goods that require NOM compliance without proper documentation. Products may be refused entry and returned at exporter\'s expense.',
+    whatToDo: [
+      'Verify NOM requirements for your specific product category with the Mexican customs broker.',
+      'Obtain NOM compliance certification or test reports from an accredited Mexican testing laboratory.',
+      'Ensure the NOM mark appears on the product and/or packaging as required.',
+      'Note: U.S. UL/FCC certifications do NOT substitute for NOM compliance.',
+    ],
+    quickActions: [
+      { label: 'Upload NOM certificate', type: 'upload', docId: 'nom_compliance' },
+      { label: 'Request from supplier', type: 'request' },
+      { label: 'Add note', type: 'note' },
+    ],
+    financialImpact: 'Goods refused by Mexican customs. Storage + re-export costs.',
+  },
+};
+
+// ─── Land Freight — Canada Alert Drawers ───
+
+const LAND_CANADA_DRAWERS: Record<string, AlertDrawerData> = {
+  aci_emanifest: {
+    id: 'aci_emanifest',
+    title: 'ACI eManifest Not Filed / Missing',
+    severity: 'critical',
+    whatIsThis: 'ACI (Advance Commercial Information) eManifest is a mandatory electronic pre-arrival filing required by the Canada Border Services Agency (CBSA) for all commercial truck crossings into Canada. The carrier — not the customs broker — is responsible for filing this through the CBSA eManifest Portal at least 1 hour before the truck arrives at the Canadian border. It contains conveyance and cargo data that CBSA uses for risk assessment before the truck arrives.',
+    whyItMatters: 'The ACI eManifest and the PARS release filing are two completely separate requirements. Missing or late eManifest filing results in an AMPS (Administrative Monetary Penalty System) penalty of up to $8,000 CAD for non-filing or $750 CAD for late filing. The truck may also be refused entry at the border crossing.',
+    whatToDo: [
+      'Confirm with the carrier that they are ACI eManifest compliant and have a valid CBSA Carrier Code.',
+      'Provide all shipment details to the carrier as early as possible — carrier must file before loading.',
+      'The Canadian customs broker monitors PARS separately; confirm both the eManifest and the PARS release are filed and accepted at least 1 hour before border arrival.',
+      'The driver must present the ACI Lead Sheet (barcoded paper document) to the CBSA officer at the border.',
+    ],
+    quickActions: [
+      { label: 'Upload eManifest confirmation', type: 'upload', docId: 'aci_emanifest' },
+      { label: 'Request from carrier', type: 'request' },
+      { label: 'Add note', type: 'note' },
+    ],
+    regulation: 'CBSA Advance Commercial Information (ACI) requirements',
+    financialImpact: 'Up to $8,000 CAD penalty for non-filing',
+  },
+  carm_registration: {
+    id: 'carm_registration',
+    title: 'CARM Registration — Canadian Importer Not Confirmed',
+    severity: 'critical',
+    whatIsThis: 'CARM (CBSA Assessment and Revenue Management) is Canada\'s new customs processing system that became the official system of record on October 21, 2024. All Canadian importers must be registered in the CARM Client Portal with a Business Number (BN) and must have posted their own financial security (surety bond or cash deposit) to receive goods before paying duties under the Release Prior to Payment (RPP) program. As of May 20, 2025, customs brokers can no longer post their own security on behalf of importers.',
+    whyItMatters: 'If the Canadian importer is not registered in CARM and has not posted financial security, their goods will not be released before duties are paid. This means the truck sits at the border until payment is made. For high-value commercial shipments, this is a significant cash flow and delay issue. The old B3 entry form no longer exists — everything goes through CARM.',
+    whatToDo: [
+      'Verify with the Canadian importer that they are registered in the CARM Client Portal at ccp-pcc.cbsa-asfc.gc.ca.',
+      'Confirm they have enrolled in the RPP sub-program and posted financial security.',
+      'Confirm they have delegated authority to the Canadian customs broker in the portal.',
+      'For non-resident importers (NRIs) — U.S. companies acting as the importer of record in Canada — the NRI must also register directly in CARM; the broker cannot do this on their behalf.',
+    ],
+    quickActions: [
+      { label: 'Upload CARM confirmation', type: 'upload', docId: 'carm_registration' },
+      { label: 'Request from Canadian importer', type: 'request' },
+      { label: 'Add note', type: 'note' },
+      { label: 'CARM Client Portal', type: 'link', href: 'https://ccp-pcc.cbsa-asfc.gc.ca' },
+    ],
+    regulation: 'CBSA Assessment and Revenue Management (CARM)',
+    financialImpact: 'Goods held at border until duties paid in full',
+  },
+  pars_document: {
+    id: 'pars_document',
+    title: 'PARS Document Missing (Canada)',
+    severity: 'critical',
+    whatIsThis: 'PARS (Pre-Arrival Review System) is Canada\'s pre-clearance system for commercial truck freight. It is the Canadian equivalent of the U.S. PAPS system. The carrier affixes a PARS barcode sticker to the shipping documents at pickup. The sticker contains a Cargo Control Number (CCN) made up of the carrier\'s CBSA Carrier Code plus a unique shipment number. The Canadian customs broker uses this number to submit the release request to CBSA before the truck arrives.',
+    whyItMatters: 'PARS and the ACI eManifest must BOTH be on file with CBSA at least 1 hour before the driver arrives at the Canadian border. If PARS is not set up, CBSA has no release request to match to the truck and the driver will be turned away. Unlike the U.S. system, PARS and ACI eManifest are completely separate — filing one does not fulfill the other.',
+    whatToDo: [
+      'Confirm the carrier has affixed a PARS sticker to the commercial documents at time of pickup.',
+      'Obtain the PARS number (CCN) from the carrier and pass it to the Canadian customs broker immediately.',
+      'The broker submits the PARS release request through CBSA\'s electronic system.',
+      'Verify with the broker that PARS is accepted before the truck departs toward the border. You can often verify PARS status through the broker\'s online tracking tool.',
+    ],
+    quickActions: [
+      { label: 'Upload PARS document', type: 'upload', docId: 'pars_document' },
+      { label: 'Request from carrier', type: 'request' },
+      { label: 'Add note', type: 'note' },
+    ],
+    regulation: 'CBSA Pre-Arrival Review System',
+    financialImpact: 'Truck turned away at Canadian border',
+  },
+  aci_lead_sheet: {
+    id: 'aci_lead_sheet',
+    title: 'ACI Lead Sheet Missing',
+    severity: 'high',
+    whatIsThis: 'Paper document the driver presents to the CBSA officer at the Canadian border. Contains the barcoded Cargo Control Number and confirms the ACI eManifest is on file.',
+    whyItMatters: 'CBSA officers scan this barcode to pull up the electronic eManifest. Without it, the truck cannot be processed at the border.',
+    whatToDo: [
+      'Confirm the carrier has generated the ACI Lead Sheet from the eManifest system.',
+      'Ensure the driver has the physical lead sheet before departing for the border.',
+      'Verify the CCN on the lead sheet matches the eManifest filing.',
+    ],
+    quickActions: [
+      { label: 'Upload lead sheet', type: 'upload', docId: 'aci_lead_sheet' },
+      { label: 'Request from carrier', type: 'request' },
+      { label: 'Add note', type: 'note' },
+    ],
+    financialImpact: 'Truck held at border until lead sheet produced',
+  },
+  cad_filing: {
+    id: 'cad_filing',
+    title: 'Commercial Accounting Declaration (CAD) Not Filed',
+    severity: 'high',
+    whatIsThis: 'The CAD replaces the old B3 and B2 forms as of October 21, 2024. Filed by the Canadian customs broker through the CARM Client Portal within 5 business days of release. This is how Canadian duties and taxes are assessed and paid.',
+    whyItMatters: 'Late filing results in AMPS penalties. The CAD is the legal filing that determines what the Canadian importer owes in duties, GST/HST, and other fees.',
+    whatToDo: [
+      'Confirm the Canadian customs broker has filed or will file the CAD within 5 business days of release.',
+      'Provide all required data: HS codes, value for duty, country of origin, USMCA claim if applicable.',
+      'Ensure the Canadian importer\'s Business Number is correct in the filing.',
+    ],
+    quickActions: [
+      { label: 'Upload CAD confirmation', type: 'upload', docId: 'cad_filing' },
+      { label: 'Request from Canadian broker', type: 'request' },
+      { label: 'Add note', type: 'note' },
+    ],
+    regulation: 'CBSA CARM',
+    financialImpact: 'AMPS penalties for late filing',
+  },
+  canada_customs_invoice: {
+    id: 'canada_customs_invoice',
+    title: 'Canada Customs Invoice (CCI) Missing',
+    severity: 'high',
+    whatIsThis: 'A Canadian-format invoice required by CBSA. Different from the standard U.S. commercial invoice — it includes specific fields required by Canadian customs regulations such as place of direct shipment, conditions of sale, and currency of settlement in a prescribed format.',
+    whyItMatters: 'Without the CCI, CBSA may delay processing or assess duties at the highest applicable rate. The standard U.S. commercial invoice may not contain all required Canadian fields.',
+    whatToDo: [
+      'Prepare a Canada Customs Invoice in the prescribed CBSA format.',
+      'Include all required Canadian-specific fields: place of direct shipment, conditions of sale, currency of settlement.',
+      'Provide to the Canadian customs broker for entry filing.',
+    ],
+    quickActions: [
+      { label: 'Upload CCI', type: 'upload', docId: 'canada_customs_invoice' },
+      { label: 'Request from exporter', type: 'request' },
+      { label: 'Add note', type: 'note' },
+    ],
+    financialImpact: 'Duties assessed at highest applicable rate',
+  },
+};
+
+// ─── Land Freight — Shared Info Drawers ───
+
+const LAND_INFO_DRAWERS: Record<string, AlertDrawerData> = {
+  no_isf_land: {
+    id: 'no_isf_land',
+    title: 'ISF Not Required for Land Freight',
+    severity: 'info',
+    whatIsThis: 'The Importer Security Filing (ISF 10+2) is required ONLY for ocean freight entering the United States. Land freight uses the PAPS (Pre-Arrival Processing System) instead. PAPS serves a similar purpose — pre-notifying CBP of incoming cargo — but is a completely different system.',
+    whyItMatters: 'You do not need to file an ISF for this land freight shipment. The PAPS barcode and pre-filed entry serve the pre-arrival notification function for land border crossings.',
+    whatToDo: [
+      'Ensure the PAPS document is set up correctly — this replaces ISF for land freight.',
+      'The carrier affixes the PAPS barcode sticker and the broker pre-files the entry.',
+    ],
+    quickActions: [{ label: 'Add note', type: 'note' }],
+  },
+  no_hmf_land: {
+    id: 'no_hmf_land',
+    title: 'Harbor Maintenance Fee Not Applicable',
+    severity: 'info',
+    whatIsThis: 'The Harbor Maintenance Fee (HMF) of 0.125% applies ONLY to ocean freight arriving at U.S. seaports. Land freight crossing at border checkpoints is exempt from HMF.',
+    whyItMatters: 'This fee has been automatically suppressed for this land freight shipment. No action required.',
+    whatToDo: [],
+    quickActions: [],
+  },
+  usmca_land_prompt: {
+    id: 'usmca_land_prompt',
+    title: 'USMCA Eligibility — Check Recommended',
+    severity: 'medium',
+    whatIsThis: 'For all Mexico and Canada land freight, USMCA (United States–Mexico–Canada Agreement) is commonly used to eliminate or reduce duties. USMCA is far more prevalent in land freight than ocean freight because the trading partners are the USMCA member countries.',
+    whyItMatters: 'If your goods qualify under USMCA, duties may be reduced to 0%. For Canada-origin goods, USMCA qualification also exempts the shipment from Merchandise Processing Fee (MPF). This can represent significant savings.',
+    whatToDo: [
+      'Ask your supplier whether the goods meet USMCA rules of origin.',
+      'Obtain a USMCA Certificate of Origin with all 9 required data elements.',
+      'Upload the certificate to this shipment to claim preferential treatment.',
+    ],
+    quickActions: [
+      { label: 'Upload USMCA certificate', type: 'upload', docId: 'usmca_certificate' },
+      { label: 'Request from supplier', type: 'request' },
+      { label: 'Add note', type: 'note' },
+    ],
+    financialImpact: 'Potential 100% duty savings + MPF exemption (Canada)',
+  },
+  cargo_insurance_mexico: {
+    id: 'cargo_insurance_mexico',
+    title: 'Cargo Insurance — Mexico Territory Coverage',
+    severity: 'medium',
+    whatIsThis: 'Mexican carriers are not legally required to carry cargo insurance. For goods moving inside Mexico, your existing cargo insurance policy may not cover the Mexico territory leg of the journey.',
+    whyItMatters: 'If goods are lost or damaged while in transit through Mexico and your insurance policy doesn\'t extend to Mexico territory, you have no coverage. This is a common gap in shipper insurance policies.',
+    whatToDo: [
+      'Check your cargo insurance policy to verify whether it covers Mexico territory.',
+      'If not covered, request a Mexico territory endorsement from your insurer.',
+      'Alternatively, verify whether the Mexican carrier provides any cargo liability coverage.',
+    ],
+    quickActions: [{ label: 'Add note', type: 'note' }],
+  },
+  immex_program: {
+    id: 'immex_program',
+    title: 'IMMEX / Maquiladora Program Status',
+    severity: 'info',
+    whatIsThis: 'The IMMEX program (Industria Manufacturera, Maquiladora y de Servicios de Exportación) allows certified Mexican manufacturers to temporarily import materials duty-free into Mexico for manufacturing and re-export. This changes the customs value calculation on the Mexico side.',
+    whyItMatters: 'If your Mexican trading partner is IMMEX-certified, they may be exempt from Mexican IVA (16% VAT) on temporary imports. This affects the landed cost calculation and should be noted in the shipment profile.',
+    whatToDo: [
+      'Ask your Mexican supplier or importer whether they are IMMEX-certified.',
+      'If yes, note this in the shipment profile — it affects duty and tax calculations on the Mexico side.',
+    ],
+    quickActions: [{ label: 'Add note', type: 'note' }],
+  },
+};
+
+// Register all land freight drawers
+Object.assign(DRAWER_TEMPLATES, LAND_MEXICO_DRAWERS, LAND_CANADA_DRAWERS, LAND_INFO_DRAWERS);
+
+// Also register land-specific document type drawers
+const LAND_DOC_DRAWERS: Record<string, AlertDrawerData> = {
+  truck_bol: {
+    id: 'truck_bol',
+    title: 'Bill of Lading / Truck BOL',
+    severity: 'high',
+    whatIsThis: 'Transport contract and receipt for goods issued by the truck carrier. For land freight, this is typically a straight bill of lading or standard truck BOL identifying the cargo, shipper, consignee, and routing.',
+    whyItMatters: 'CBP uses the BOL to verify cargo contents against the filed entry. The driver presents this at the port of entry along with the PAPS/PARS barcode. Mismatches trigger inspection.',
+    whatToDo: [
+      'Obtain the truck BOL from the carrier at time of pickup.',
+      'Verify the description, weight, and piece count match the commercial invoice and packing list.',
+      'Ensure the PAPS or PARS barcode number is noted on the BOL.',
+      'Provide to the customs broker for entry filing.',
+    ],
+    quickActions: [
+      { label: 'Upload BOL', type: 'upload', docId: 'truck_bol' },
+      { label: 'Request from carrier', type: 'request' },
+      { label: 'Add note', type: 'note' },
+    ],
+    financialImpact: 'Entry rejected. Truck turned away until corrected.',
+  },
+  commercial_invoice_mx: {
+    id: 'commercial_invoice_mx',
+    title: 'Commercial Invoice (Spanish version required)',
+    severity: 'high',
+    whatIsThis: 'The primary transaction document for assessing duties. For Mexico crossings, a Spanish-language version must also be available for the Mexican customs broker to file the Pedimento.',
+    whyItMatters: 'The Mexican customs broker cannot file the Pedimento without a Spanish-language invoice. CBP also requires the invoice for U.S. entry filing.',
+    whatToDo: [
+      'Ensure both English and Spanish versions of the commercial invoice are available.',
+      'The Spanish version must contain all the same data: seller, buyer, descriptions, values, origin, Incoterms.',
+      'Provide the Spanish version to the Mexican customs broker.',
+    ],
+    quickActions: [
+      { label: 'Upload invoice', type: 'upload', docId: 'commercial_invoice_mx' },
+      { label: 'Request Spanish version', type: 'request' },
+      { label: 'Add note', type: 'note' },
+    ],
+    financialImpact: 'Mexican Pedimento cannot be filed without Spanish invoice.',
+  },
+};
+
+Object.assign(DRAWER_TEMPLATES, LAND_DOC_DRAWERS);
