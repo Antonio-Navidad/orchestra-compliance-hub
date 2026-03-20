@@ -97,7 +97,7 @@ const ROUTE_PLANNING_NAV: NavGroup[] = [
     labelKey: "navGroup.quickActions",
     items: [
       { titleKey: "nav.newRoute", url: "/creator-mode", icon: Plus },
-      { titleKey: "nav.newShipment", url: "/intake", icon: Package },
+      { titleKey: "nav.shipments", url: "/intake", icon: Package },
     ],
   },
   {
