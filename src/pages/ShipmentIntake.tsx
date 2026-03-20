@@ -417,7 +417,7 @@ export default function ShipmentIntake() {
         jurisdiction_code: (data as any).jurisdiction_code || 'US',
       }));
       setActiveTab('details');
-      setIsPaused(data.status === 'paused' || data.status === 'waiting_docs');
+      setIsPaused((data.status as string) === 'paused' || data.status === 'waiting_docs');
     }
 
     // Load hold data
