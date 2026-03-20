@@ -796,6 +796,112 @@ export const JURISDICTION_PACKS: Record<string, JurisdictionRulePack> = {
     singleWindow: { name: "Indian Customs Single Window (ICSW)", description: "Single interface for all import/export clearances", url: "https://www.icegate.gov.in" },
     source: { authority: "Central Board of Indirect Taxes and Customs (CBIC)", url: "https://www.cbic.gov.in", jurisdiction: "IN", modeRelevance: ["sea", "air"], stageRelevance: ["pre_shipment", "in_transit", "arrival", "clearance"], reviewDate: "2026-03-15", rulesVersion: RULE_PACKS_VERSION },
   },
+
+  CA: {
+    code: "CA",
+    name: "Canada",
+    region: "North America",
+    currency: "CAD",
+    importCore: {
+      requiredDocs: [
+        "commercial_invoice",
+        "packing_list",
+        "bill_of_lading",
+        "pars_document",
+        "aci_emanifest",
+        "carm_cad",
+        "certificate_of_origin",
+      ],
+      filingRequirements: [
+        "ACI eManifest filed by carrier ≥1 hour before border arrival",
+        "PARS release request filed by broker before arrival",
+        "Commercial Accounting Declaration (CAD) via CARM within 5 business days of release",
+        "Importer must be registered in CARM Client Portal with Business Number (BN)",
+        "Importer must post own financial security for RPP (brokers cannot post since May 2025)",
+        "CFIA import permit required for food, plants, and animal products",
+      ],
+      commonLicenses: [
+        "CFIA import permit (food, agriculture, plants)",
+        "Health Canada authorization (pharmaceuticals, medical devices)",
+        "ISED certification (electronics, radio equipment)",
+        "Transport Canada approval (vehicles, dangerous goods)",
+        "CITES permit (wildlife, exotic products)",
+      ],
+      brokerCheckpoints: [
+        "Verify CARM registration and RPP enrollment for Canadian importer",
+        "Confirm carrier has valid CBSA Carrier Code for ACI eManifest",
+        "Verify PARS barcode affixed to documents at pickup",
+        "Confirm both ACI eManifest and PARS filed ≥1 hour before border",
+        "Check USMCA eligibility — MPF exempt for qualifying Canada-origin goods",
+      ],
+      fineTraps: [
+        "ACI eManifest non-filing: up to $8,000 CAD AMPS penalty",
+        "ACI eManifest late filing: $750 CAD AMPS penalty",
+        "PARS not on file at arrival: truck refused entry at border",
+        "CARM CAD late filing: AMPS penalties and interest on duties owing",
+        "Importer not registered in CARM: goods not released under RPP — truck held at border",
+        "Incorrect tariff classification: AMPS penalty C390 up to $25,000 CAD",
+      ],
+      beginnerWarnings: [
+        "CARM replaced the legacy ACROSS system on October 21, 2024 — all filings now go through CARM Client Portal",
+        "Since May 20, 2025, customs brokers can no longer post financial security on behalf of importers — importers must register in CARM and post their own bond or cash deposit",
+        "ACI eManifest and PARS are two completely separate systems — carrier files eManifest, broker files PARS — both are mandatory",
+        "USMCA-qualifying goods from Canada are exempt from MPF — always check eligibility",
+        "The old B3 customs form no longer exists — it has been replaced by the Commercial Accounting Declaration (CAD) in CARM",
+      ],
+    },
+    exportCore: {
+      requiredDocs: [
+        "commercial_invoice",
+        "packing_list",
+        "bill_of_lading",
+        "export_declaration_cds",
+        "certificate_of_origin",
+      ],
+      filingRequirements: [
+        "Canadian Export Declaration via CARM/CDS for controlled or high-value goods",
+        "Export permits required for controlled goods under Export and Import Permits Act (EIPA)",
+        "CBSA export reporting for goods subject to export controls",
+      ],
+      commonLicenses: [
+        "Export permit under EIPA (controlled goods, technology)",
+        "CITES export permit (wildlife, exotic products)",
+        "Nuclear substances export license (CNSC)",
+      ],
+      brokerCheckpoints: [
+        "Verify export controls classification — check Canada's Export Control List",
+        "Confirm CBSA export reporting completed if applicable",
+        "Ensure USMCA certificate issued if buyer will claim preferential tariff",
+      ],
+      fineTraps: [
+        "Exporting controlled goods without permit: criminal penalties under EIPA",
+        "Failure to report exports of controlled goods: AMPS penalties",
+      ],
+      beginnerWarnings: [
+        "Not all Canadian exports require a declaration — but controlled goods, goods over certain thresholds, and goods to sanctioned destinations always do",
+        "USMCA certificates can be issued by the exporter, producer, or importer — no official form required, any format with 9 data elements is acceptable",
+      ],
+    },
+    customsDeclarationSystem: {
+      name: "CARM Client Portal",
+      description: "CBSA Assessment and Revenue Management — official system of record for all Canadian imports since October 2024",
+      url: "https://ccp-pcc.cbsa-asfc.gc.ca",
+    },
+    singleWindow: {
+      name: "CARM Single Window",
+      description: "Integrated portal for PGA filings coordinated through CARM",
+      url: "https://ccp-pcc.cbsa-asfc.gc.ca",
+    },
+    source: {
+      authority: "Canada Border Services Agency (CBSA)",
+      url: "https://www.cbsa-asfc.gc.ca",
+      jurisdiction: "CA",
+      modeRelevance: ["sea", "air", "land"],
+      stageRelevance: ["pre_shipment", "in_transit", "arrival", "clearance"],
+      reviewDate: "2026-03-15",
+      rulesVersion: RULE_PACKS_VERSION,
+    },
+  },
 };
 
 // ── EU National Overlays ──────────────────────────────────────────────
