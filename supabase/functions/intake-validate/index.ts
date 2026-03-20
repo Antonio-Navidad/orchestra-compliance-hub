@@ -91,12 +91,20 @@ Destination Country: ${params.destinationCountry || "US"}`;
 User Question: ${params.question}`;
       // No tools - just chat completion
     } else if (action === "extract_document") {
-      systemPrompt = "You are a document extraction expert for trade/customs documents. Extract all available shipping fields from the document text provided.";
-      userPrompt = `Extract shipping fields from this document text:
+      systemPrompt = `You are a document extraction expert for trade/customs documents. Your task is to extract field values ONLY from the actual text provided. CRITICAL RULES:
+1. Every value you return MUST appear verbatim or very closely in the document text.
+2. If a field is not present in the document, DO NOT include it — do not guess or fabricate values.
+3. The sourceText for each field MUST be the exact passage from the document where you found that value.
+4. Never use default or common example values. Only extract what the document actually contains.
+5. Set confidence to 100 only if the value is unambiguously present. Use 70-85 if you had to interpret context.`;
+      userPrompt = `Extract shipping fields ONLY from the following document text. Return only fields whose values appear in the text — do not invent or assume any values.
 
+Document text:
+---
 ${params.documentText}
+---
 
-Extract all available fields and return them with confidence scores.`;
+Extract all available fields with accurate confidence scores and source text references.`;
       tools = [{
         type: "function",
         function: {
