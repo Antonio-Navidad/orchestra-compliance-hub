@@ -660,6 +660,15 @@ const IN_BOND_RISKS: KeyRisk[] = [
 // ──────────────────────────────────────────
 // Assembled profiles
 // ──────────────────────────────────────────
+const PLACEHOLDER_PROFILE = (modeId: ShipmentModeId): ModeDocProfile => ({
+  modeId,
+  required: [],
+  conditional: [],
+  optional: [],
+  filingDeadlines: [],
+  keyRisks: [],
+});
+
 export const MODE_DOC_PROFILES: Record<ShipmentModeId, ModeDocProfile> = {
   ocean_import: {
     modeId: 'ocean_import',
@@ -677,6 +686,26 @@ export const MODE_DOC_PROFILES: Record<ShipmentModeId, ModeDocProfile> = {
     filingDeadlines: AIR_IMPORT_DEADLINES,
     keyRisks: AIR_IMPORT_RISKS,
   },
+  land_import_mexico: PLACEHOLDER_PROFILE('land_import_mexico'),
+  land_import_canada: PLACEHOLDER_PROFILE('land_import_canada'),
+  ocean_export: {
+    modeId: 'ocean_export',
+    required: US_EXPORT_REQUIRED,
+    conditional: [],
+    optional: [],
+    filingDeadlines: US_EXPORT_DEADLINES,
+    keyRisks: US_EXPORT_RISKS,
+  },
+  air_export: {
+    modeId: 'air_export',
+    required: US_EXPORT_REQUIRED,
+    conditional: [],
+    optional: [],
+    filingDeadlines: US_EXPORT_DEADLINES,
+    keyRisks: US_EXPORT_RISKS,
+  },
+  land_export_mexico: PLACEHOLDER_PROFILE('land_export_mexico'),
+  land_export_canada: PLACEHOLDER_PROFILE('land_export_canada'),
   us_export: {
     modeId: 'us_export',
     required: US_EXPORT_REQUIRED,
