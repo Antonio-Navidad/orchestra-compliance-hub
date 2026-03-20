@@ -46,14 +46,40 @@ export function SmartPreFillModal({ open, onOpenChange, onApply }: SmartPreFillM
   const [fileName, setFileName] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const toBase64 = (bytes: Uint8Array) => {
+    let binary = "";
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+    return btoa(binary);
+  };
+
   const handleFile = async (file: File) => {
     setFileName(file.name);
     setStep("processing");
 
     try {
-      const text = await file.text();
+      const fallbackMime = file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "text/plain";
+      const mimeType = file.type || fallbackMime;
+      const shouldSendBinary = mimeType === "application/pdf" || !mimeType.startsWith("text/");
+
+      const requestBody: Record<string, unknown> = {
+        action: "extract_document",
+        fileName: file.name,
+        mimeType,
+      };
+
+      if (shouldSendBinary) {
+        const arrayBuffer = await file.arrayBuffer();
+        requestBody.documentBase64 = toBase64(new Uint8Array(arrayBuffer));
+      } else {
+        const text = await file.text();
+        requestBody.documentText = text.slice(0, 60000);
+      }
+
       const { data, error } = await supabase.functions.invoke("intake-validate", {
-        body: { action: "extract_document", documentText: text.slice(0, 8000) },
+        body: requestBody,
       });
 
       if (error) throw error;

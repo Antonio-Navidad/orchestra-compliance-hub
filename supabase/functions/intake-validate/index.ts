@@ -1,9 +1,101 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(base64: string): Uint8Array {
+  const normalized = base64.replace(/\s/g, "");
+  const binary = atob(normalized);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function extractRawTextFromPdf(
+  LOVABLE_API_KEY: string,
+  fileBytes: Uint8Array,
+  mimeType: string,
+): Promise<string> {
+  const pdfBase64 = bytesToBase64(fileBytes);
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You extract raw text from trade documents. Return only text that appears in the document. Preserve labels, line breaks, and key table values.",
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: { url: `data:${mimeType};base64,${pdfBase64}` },
+            },
+            {
+              type: "text",
+              text: "Extract the full readable text from this PDF. Include all key shipping fields exactly as written (shipper, consignee, B/L, vessel, container, ports, values, HS codes, Incoterms, ETD, ETA). Do not summarize.",
+            },
+          ],
+        },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "pdf_text_result",
+            description: "Return raw extracted text from the PDF",
+            parameters: {
+              type: "object",
+              properties: {
+                rawText: { type: "string" },
+              },
+              required: ["rawText"],
+              additionalProperties: false,
+            },
+          },
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "pdf_text_result" } },
+    }),
+  });
+
+  if (!response.ok) {
+    const responseBody = await response.text();
+    throw new Error(`PDF text extraction failed: ${response.status} ${responseBody}`);
+  }
+
+  const data = await response.json();
+  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  if (toolCall?.function?.arguments) {
+    const parsed = JSON.parse(toolCall.function.arguments);
+    return String(parsed.rawText || "");
+  }
+
+  return String(data.choices?.[0]?.message?.content || "");
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -91,35 +183,96 @@ Destination Country: ${params.destinationCountry || "US"}`;
 User Question: ${params.question}`;
       // No tools - just chat completion
     } else if (action === "extract_document") {
-      systemPrompt = `You are a document extraction expert for trade and customs shipping documents (Bills of Lading, Commercial Invoices, Packing Lists, etc.).
+      const mimeType = typeof params.mimeType === "string" ? params.mimeType : "application/octet-stream";
+      const fileName = typeof params.fileName === "string" ? params.fileName : "uploaded-document";
+      const isPdf = mimeType === "application/pdf" || fileName.toLowerCase().endsWith(".pdf");
 
-Your job is to find and extract field values that are present in the document text. Follow these rules:
+      let documentText = typeof params.documentText === "string" ? params.documentText : "";
+      let fetchedFromStorage = false;
+      let loadedBinaryPayload = false;
+      let fileBytes: Uint8Array | null = null;
 
-EXTRACTION RULES:
-- Extract every field you can find in the text. Look for labeled fields (e.g. "Shipper:", "B/L No:") AND values that appear in context (e.g. a 6-10 digit HS code like 6109.10.00, currency amounts like USD 47,195).
-- Only extract values that are clearly present in the document text. Do not fabricate or guess values.
-- If a field is not found, simply omit it from the results — do not include it with a made-up value.
-- For sourceText, quote the nearby text from the document where you found the value (a short phrase or line).
+      if (!documentText && typeof params.storageBucket === "string" && typeof params.storagePath === "string") {
+        const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+        const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-CONFIDENCE SCORING:
-- 95-100%: Value appears next to a clear label (e.g. "Consignee: Pacific Apparel Group LLC")
-- 80-94%: Value is clearly present but not explicitly labeled (e.g. an HS code found in a goods description table)
-- 60-79%: Value is inferred from surrounding context with reasonable certainty
+        if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+          const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+          const { data: storageFile, error: storageError } = await adminClient.storage
+            .from(params.storageBucket)
+            .download(params.storagePath);
 
-TARGET: Extract 10-20 fields from a typical shipping document. A Bill of Lading should yield at least 10 fields.`;
-      userPrompt = `Extract all shipping-related fields from this document text. Find every value you can — shipper, consignee, ports, vessel, container numbers, HS codes, values, dates, etc.
+          if (!storageError && storageFile) {
+            fileBytes = new Uint8Array(await storageFile.arrayBuffer());
+            fetchedFromStorage = true;
+          } else {
+            console.error("[extract_document] storage fetch failed", storageError?.message);
+          }
+        }
+      }
 
-Document text:
+      if (!documentText && !fileBytes && typeof params.documentBase64 === "string") {
+        try {
+          fileBytes = base64ToBytes(params.documentBase64);
+          loadedBinaryPayload = true;
+        } catch (decodeError) {
+          console.error("[extract_document] base64 decode failed", decodeError);
+        }
+      }
+
+      if (!documentText && fileBytes) {
+        if (isPdf) {
+          documentText = await extractRawTextFromPdf(LOVABLE_API_KEY, fileBytes, mimeType);
+        } else {
+          documentText = new TextDecoder().decode(fileBytes);
+        }
+      }
+
+      documentText = documentText.replace(/\u0000/g, " ").trim();
+
+      console.info(
+        "[extract_document] pipeline_debug",
+        JSON.stringify({
+          fileFetchedFromStorage: fetchedFromStorage,
+          filePayloadLoaded: loadedBinaryPayload,
+          mimeType,
+          extractedTextCharCount: documentText.length,
+          extractedTextPreview: documentText.slice(0, 200),
+        }),
+      );
+
+      if (!documentText) {
+        throw new Error("No readable text could be extracted from the uploaded file.");
+      }
+
+      systemPrompt = `You are a document extraction expert for trade/customs shipping data. Extract only values clearly present in the provided raw document text.
+
+Extract any fields that appear in the text, including:
+shipper, consignee, notify party, HS code, declared value, currency, port of loading, port of discharge, vessel name, container number, seal number, B/L number, ETD, ETA, Incoterms, origin country, destination country, transport mode, commodity description, quantity, gross/net weight.
+
+Rules:
+1. Do not fabricate or guess values.
+2. If a field is not found, omit it.
+3. sourceText must contain the exact nearby phrase from the document.
+4. Confidence scoring:
+   - 95-100: exact labeled field
+   - 80-94: clearly present in context
+   - 60-79: inferred from nearby context`; 
+
+      userPrompt = `Extract shipping fields from this raw document text.
+
+RAW TEXT:
 ---
-${params.documentText}
+${documentText.slice(0, 120000)}
 ---
 
-Return all fields found with their confidence scores and the source text where each was found.`;
+Return all extracted fields with confidence and sourceText.`;
+
       tools = [{
         type: "function",
         function: {
           name: "extract_fields",
-          description: "Return extracted shipping fields from the document",
+          description: "Return extracted shipping fields found in document text",
           parameters: {
             type: "object",
             properties: {
@@ -128,21 +281,17 @@ Return all fields found with their confidence scores and the source text where e
                 items: {
                   type: "object",
                   properties: {
-                    fieldName: { type: "string", enum: [
-                      "shipper", "consignee", "notify_party",
-                      "origin_country", "destination_country",
-                      "port_of_loading", "port_of_discharge",
-                      "hs_code", "declared_value", "currency",
-                      "description", "quantity", "gross_weight", "net_weight",
-                      "incoterm", "planned_departure", "estimated_arrival",
-                      "vessel_name", "container_number", "seal_number",
-                      "bl_number", "transport_mode"
-                    ] },
+                    fieldName: {
+                      type: "string",
+                      description:
+                        "Field key such as shipper, consignee, notify_party, hs_code, declared_value, currency, port_of_loading, port_of_discharge, vessel_name, container_number, seal_number, bl_number, etd, eta, incoterm, origin_country, destination_country, transport_mode, commodity_description, quantity, gross_weight, net_weight",
+                    },
                     value: { type: "string" },
-                    confidence: { type: "number", description: "Confidence 0-100 based on how clearly the value appeared" },
-                    sourceText: { type: "string", description: "The nearby text from the document where this value was found" },
+                    confidence: { type: "number", description: "Confidence from 60 to 100" },
+                    sourceText: { type: "string", description: "Exact nearby document text supporting this value" },
                   },
                   required: ["fieldName", "value", "confidence", "sourceText"],
+                  additionalProperties: false,
                 },
               },
             },
