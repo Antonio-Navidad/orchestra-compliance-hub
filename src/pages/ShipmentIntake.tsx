@@ -212,6 +212,17 @@ export default function ShipmentIntake() {
       mapped['coo_status'] = 'potentially_eligible';
     }
 
+    // Handle HS codes — may be comma-separated or single
+    const hsValue = mapped['hs_code'] || '';
+    if (hsValue) {
+      const codes = hsValue.split(/[,;]/).map((c: string) => c.trim()).filter(Boolean);
+      if (codes.length > 0) {
+        setHsCodes(codes);
+        setAiSuggestedHS(codes);
+        mapped['hs_code'] = codes[0]; // Keep first as primary
+      }
+    }
+
     setForm(prev => ({ ...prev, ...mapped }));
   };
 
