@@ -19,6 +19,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { cn } from "@/lib/utils";
 
 import { SHIPMENT_MODES, MODE_DOC_PROFILES, getApplicableConditionalDocs, type ShipmentModeId } from "@/lib/shipmentModes";
+import { getModeSubtitle } from "@/lib/modeDocumentDefs";
 import { ShipmentModeSelector } from "@/components/workspace/ShipmentModeSelector";
 import { DocChecklistPanel } from "@/components/workspace/DocChecklistPanel";
 import { ShipmentsSidebar } from "@/components/workspace/ShipmentsSidebar";
@@ -827,7 +828,7 @@ export default function ShipmentIntake() {
                         shipmentId={form.shipment_id}
                         deadlines={shipmentDeadlines}
                         onClickDeadline={handleDeadlineClick}
-                        shipmentSubtitle={`${modeConfig.label} · ${form.origin_country || '—'} → ${form.destination_country || '—'} · ${form.description ? form.description.slice(0, 40) : 'No commodity'} ${form.hs_code ? `HTS ${form.hs_code.split(',')[0]}` : ''}`}
+                        shipmentSubtitle={getModeSubtitle(shipmentMode, form.origin_country, form.destination_country, form.description)}
                         onViewAIAnalysis={() => setActiveTab('documents')}
                         onUploadDoc={(docId, files) => {
                           Array.from(files).forEach(file => {
