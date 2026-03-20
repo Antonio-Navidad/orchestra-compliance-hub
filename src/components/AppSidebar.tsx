@@ -117,7 +117,7 @@ export function AppSidebar() {
                 variant="ghost"
                 size="sm"
                 onClick={signOut}
-                className="text-xs font-mono text-muted-foreground hover:text-foreground h-auto p-1 ml-auto"
+                className="text-[12px] font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground/90 h-auto p-1 ml-auto"
               >
                 <LogOut size={12} className="mr-1" /> {t("nav.signOut")}
               </Button>
