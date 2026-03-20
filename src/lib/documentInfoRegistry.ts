@@ -464,9 +464,239 @@ const BASE_DOCS: Record<string, Omit<DocInfo, "whyRequired" | "laneDelayWarnings
       "Include it in the document packet.",
     ],
   },
-};
+  },
 
-// ── Lane-context-aware builders ───────────────────────────────────────
+  paps_document: {
+    name: "PAPS Document (Pre-Arrival Processing System)",
+    whatItIs: "PAPS is the U.S. land border pre-clearance system. The carrier affixes a PAPS barcode sticker to the commercial shipping documents at the point of pickup. The sticker contains a unique Cargo Control Number (CCN) composed of the carrier's SCAC code plus a sequential shipment number. The U.S. customs broker uses this CCN to pre-file the entry with CBP in ACE before the truck arrives at the border. When the driver presents the barcoded documents at the port of entry, CBP matches the physical truck to the electronic filing.",
+    mustInclude: [
+      "Carrier SCAC code",
+      "Unique shipment number (CCN)",
+      "PAPS barcode sticker physically affixed to commercial documents",
+      "Matching entry number filed by broker in ACE",
+      "Carrier name and DOT number",
+    ],
+    commonMistakes: [
+      "PAPS barcode not affixed at pickup — driver arrives at border without it",
+      "Broker pre-files entry with a different CCN than what appears on the sticker",
+      "Carrier changes truck or trailer after sticker was affixed, invalidating the match",
+      "Entry not set up in ACE before truck departs — driver turned away at border",
+    ],
+    templateFields: [
+      { field: "Cargo Control Number (CCN)", description: "Carrier SCAC code + unique shipment number from PAPS barcode", whereToFind: "Carrier dispatch or pickup confirmation", format: "e.g. ABCD1234567" },
+      { field: "Carrier SCAC Code", description: "Standard Carrier Alpha Code assigned by NMFTA", whereToFind: "Carrier's operating authority documents", format: "4-letter alpha code" },
+      { field: "Entry Number", description: "CBP entry number filed by broker matching this PAPS", whereToFind: "Broker's ACE filing confirmation", format: "11-digit entry number" },
+    ],
+    walkthrough: [
+      "Confirm with the carrier that a PAPS sticker will be affixed to the commercial documents at the point of pickup.",
+      "Obtain the PAPS Cargo Control Number (CCN) from the carrier as soon as the sticker is applied.",
+      "Provide the CCN to your customs broker immediately so they can pre-file the entry in ACE.",
+      "Verify with the broker that the ACE entry is accepted and shows 'on file' status before the truck departs toward the border.",
+      "The driver presents the barcoded commercial documents to the CBP officer at the port of entry for scanning.",
+    ],
+  },
+
+  pars_document: {
+    name: "PARS Document (Pre-Arrival Review System)",
+    whatItIs: "PARS is Canada's pre-clearance system for commercial truck freight entering Canada. It is the Canadian equivalent of the U.S. PAPS system. The carrier affixes a PARS barcode sticker to the shipping documents at pickup. The sticker contains a Cargo Control Number (CCN) composed of the carrier's CBSA Carrier Code plus a unique shipment number. The Canadian customs broker uses this CCN to submit a release request to CBSA before the truck arrives at the Canadian border. PARS and the ACI eManifest are two completely separate requirements — both must be on file at least 1 hour before border arrival.",
+    mustInclude: [
+      "CBSA Carrier Code",
+      "Unique shipment number (CCN)",
+      "PARS barcode sticker physically affixed to shipping documents",
+      "Release request filed by Canadian customs broker in CBSA system",
+      "Carrier name and CBSA carrier bond number",
+    ],
+    commonMistakes: [
+      "Confusing PARS with ACI eManifest — they are separate systems filed by different parties",
+      "PARS barcode not affixed at pickup — Canadian broker cannot file release request",
+      "Filing PARS but forgetting ACI eManifest — truck still refused at border",
+      "Filing less than 1 hour before arrival — CBSA requires minimum 1-hour advance filing",
+    ],
+    templateFields: [
+      { field: "Cargo Control Number (CCN)", description: "CBSA Carrier Code + unique shipment number from PARS barcode", whereToFind: "Carrier dispatch or pickup confirmation", format: "e.g. 1234-5678901" },
+      { field: "CBSA Carrier Code", description: "Carrier code issued by Canada Border Services Agency", whereToFind: "Carrier's CBSA registration", format: "4-digit numeric code" },
+      { field: "Release Request Number", description: "Confirmation number from CBSA after broker files PARS release", whereToFind: "Canadian customs broker's system", format: "CBSA-assigned reference number" },
+    ],
+    walkthrough: [
+      "Confirm the carrier has a valid CBSA Carrier Code and is authorized for cross-border operations into Canada.",
+      "Ensure the carrier affixes a PARS barcode sticker to the commercial documents at the point of pickup.",
+      "Obtain the PARS CCN from the carrier and pass it to the Canadian customs broker immediately.",
+      "The Canadian broker submits the PARS release request electronically to CBSA — verify it is accepted.",
+      "Separately confirm the carrier has also filed the ACI eManifest — both must be on file ≥1 hour before border arrival.",
+      "The driver presents the PARS-barcoded documents to the CBSA officer at the border crossing.",
+    ],
+  },
+
+  carta_porte: {
+    name: "Carta Porte / CFDI with Complemento Carta Porte (CCP)",
+    whatItIs: "The Carta Porte is a mandatory Mexican digital tax document (CFDI with Complemento Carta Porte) that must accompany all freight moving through Mexican territory. It is issued by the Mexican carrier and stamped by Mexico's SAT (tax authority). For foreign trade operations crossing the U.S.-Mexico border, the Carta Porte contains a UUID — a unique fiscal identification number — that is required to generate the DODA document and complete Mexican customs clearance. Enforcement became mandatory January 1, 2024. Version 3.1 has been required since July 2024.",
+    mustInclude: [
+      "UUID (fiscal folio number) — the unique identifier for this Carta Porte",
+      "Shipper and receiver full names and RFC (Mexican tax ID)",
+      "Detailed cargo description matching the commercial invoice",
+      "Total weight and number of packages",
+      "Route: origin address, destination address, intermediate points",
+      "Vehicle plate number and SCT permit number",
+      "Driver name and license number",
+      "Complemento Carta Porte version (must be 3.1 as of July 2024)",
+    ],
+    commonMistakes: [
+      "Carrier issues Carta Porte under an outdated version (pre-3.1) — SAT rejects it",
+      "UUID not shared with U.S. broker or Mexican customs broker before departure",
+      "Cargo description on Carta Porte does not match the commercial invoice — triggers SAT audit",
+      "Missing intermediate route points for shipments crossing multiple Mexican states",
+      "Driver information incorrect or missing — truck can be impounded at Mexican checkpoints",
+    ],
+    templateFields: [
+      { field: "UUID (Fiscal Folio)", description: "Unique fiscal identification number stamped by SAT", whereToFind: "Mexican carrier's billing/dispatch system after SAT stamping", format: "36-character UUID, e.g. 6ba7b810-9dad-11d1-80b4-00c04fd430c8" },
+      { field: "Shipper RFC", description: "Mexican tax ID (Registro Federal de Contribuyentes) of the shipper", whereToFind: "Mexican supplier's tax registration", format: "12-13 alphanumeric characters" },
+      { field: "Vehicle Plate Number", description: "License plate of the truck carrying the freight", whereToFind: "Carrier dispatch confirmation", format: "Mexican plate format" },
+      { field: "SCT Permit Number", description: "Carrier's federal freight transport permit from SCT", whereToFind: "Carrier's operating authority documents", format: "Alphanumeric SCT permit number" },
+    ],
+    walkthrough: [
+      "Confirm the Mexican carrier is aware that Carta Porte CCP version 3.1 is required for this shipment.",
+      "Provide the carrier with accurate cargo description, weight, origin and destination addresses, and route details.",
+      "The carrier generates the CFDI with Complemento Carta Porte and submits it to SAT for stamping.",
+      "Obtain the UUID from the carrier once the document is stamped — this is the critical reference number.",
+      "Share the UUID with the Mexican customs broker (agente aduanal) so they can generate the DODA.",
+      "Store the UUID in this shipment record — it must be referenced in U.S. entry documentation for northbound clearance.",
+    ],
+  },
+
+  pedimento: {
+    name: "Pedimento de Importación / Exportación",
+    whatItIs: "The Pedimento is Mexico's official customs declaration document, equivalent to the U.S. CBP Form 7501. It is filed electronically by a licensed Mexican customs broker (agente aduanal) through Mexico's customs system VUCEM (Ventanilla Única de Comercio Exterior Mexicano). Every commercial crossing into or out of Mexico requires a Pedimento. It contains a unique alphanumeric number that identifies the Mexican customs entry and links to all duties, taxes, and regulatory requirements on the Mexican side.",
+    mustInclude: [
+      "Pedimento number (unique alphanumeric identifier)",
+      "Agente aduanal name, license number (patente), and aduana (customs house)",
+      "Importer/exporter RFC (Mexican tax ID)",
+      "Detailed cargo description with Mexican tariff classification (fracción arancelaria)",
+      "Declared value in Mexican pesos (or USD with exchange rate)",
+      "Country of origin",
+      "Duties and taxes calculated (IVA, DTA, IGI as applicable)",
+      "USMCA or other FTA claim notation if applicable",
+    ],
+    commonMistakes: [
+      "U.S. broker not collecting the Pedimento number from the Mexican broker — delays U.S. entry filing",
+      "Cargo description on Pedimento does not match U.S. commercial invoice — triggers examination on both sides",
+      "Mexican tariff classification differs from U.S. HTS code for same product — requires reconciliation",
+      "Pedimento filed at wrong aduana (customs house) for the selected border crossing",
+    ],
+    templateFields: [
+      { field: "Pedimento Number", description: "Unique alphanumeric customs entry number issued by VUCEM", whereToFind: "Mexican customs broker (agente aduanal) after filing", format: "e.g. 24 41 3461 4001234" },
+      { field: "Agente Aduanal Patente", description: "License number of the Mexican customs broker", whereToFind: "Mexican broker's credentials", format: "4-digit patente number" },
+      { field: "Aduana", description: "Mexican customs house code where the entry is filed", whereToFind: "Determined by the border crossing location", format: "3-digit aduana code, e.g. 240 (Nuevo Laredo)" },
+      { field: "Fracción Arancelaria", description: "Mexican tariff classification code", whereToFind: "Mexican broker classifies based on product description", format: "8-digit code from Mexico's tariff schedule (TIGIE)" },
+    ],
+    walkthrough: [
+      "Confirm a licensed Mexican customs broker (agente aduanal) has been appointed for this shipment.",
+      "Provide the Mexican broker with the commercial invoice (preferably in Spanish), packing list, and USMCA certificate if applicable.",
+      "The Mexican broker files the Pedimento electronically through VUCEM at the appropriate aduana.",
+      "Request the Pedimento number once filed — provide it to the U.S. customs broker for cross-reference.",
+      "Verify the Pedimento cargo description and value match the U.S. commercial invoice before the truck departs.",
+    ],
+  },
+
+  aci_emanifest: {
+    name: "ACI eManifest (Advance Commercial Information)",
+    whatItIs: "The ACI eManifest is a mandatory electronic pre-arrival filing required by the Canada Border Services Agency (CBSA) for all commercial truck crossings into Canada. The carrier — not the customs broker — is responsible for filing the ACI eManifest through the CBSA eManifest Portal or an approved service provider. It must be filed at least 1 hour before the truck arrives at the Canadian border. The eManifest contains conveyance data (truck, trailer, driver) and cargo data that CBSA uses for risk assessment. ACI eManifest and PARS are two completely separate systems — filing one does not fulfill the other.",
+    mustInclude: [
+      "Carrier CBSA Carrier Code",
+      "Conveyance details: truck plate number, trailer number",
+      "Driver name, date of birth, citizenship, and travel document number",
+      "Cargo description matching commercial documents",
+      "Shipper and consignee names and addresses",
+      "Weight and number of packages",
+      "Cargo Control Number (CCN) linking to PARS filing",
+      "Port of entry / border crossing",
+    ],
+    commonMistakes: [
+      "Confusing ACI eManifest (carrier responsibility) with PARS (broker responsibility) — both are required",
+      "Filing less than 1 hour before arrival — AMPS penalty of $750 CAD for late filing",
+      "Not filing at all — AMPS penalty up to $8,000 CAD",
+      "Driver information doesn't match travel documents presented at the border",
+      "Cargo weight or description doesn't match commercial invoice — triggers CBSA examination",
+    ],
+    templateFields: [
+      { field: "CBSA Carrier Code", description: "Carrier's registered code with Canada Border Services Agency", whereToFind: "Carrier's CBSA registration documents", format: "4-digit numeric code" },
+      { field: "Conveyance Reference Number (CRN)", description: "Unique trip identifier assigned by the carrier in the eManifest system", whereToFind: "Carrier's eManifest portal submission", format: "Carrier-assigned alphanumeric" },
+      { field: "Driver Travel Document", description: "Passport or FAST card number of the truck driver", whereToFind: "Driver's identification documents", format: "Passport number or FAST card number" },
+    ],
+    walkthrough: [
+      "Confirm with the carrier that they are ACI eManifest compliant and have a valid CBSA Carrier Code.",
+      "Provide all shipment details (cargo description, weight, shipper/consignee info) to the carrier well before departure.",
+      "The carrier files the ACI eManifest electronically at least 1 hour before the truck arrives at the Canadian border.",
+      "Separately, the Canadian customs broker files the PARS release request — confirm both are on file.",
+      "The driver must carry the ACI Lead Sheet (barcoded paper document) and present it to the CBSA officer at the border.",
+      "Verify the eManifest status shows 'accepted' in the carrier's portal before the truck departs.",
+    ],
+  },
+
+  carm_registration: {
+    name: "CARM Client Portal Registration Confirmation",
+    whatItIs: "CARM (CBSA Assessment and Revenue Management) is Canada's customs processing system that became the official system of record on October 21, 2024, replacing the legacy ACROSS system. All Canadian importers must be registered in the CARM Client Portal with a Business Number (BN) and must have posted their own financial security (surety bond or cash deposit) to receive goods before paying duties under the Release Prior to Payment (RPP) program. As of May 20, 2025, customs brokers can no longer post their own security on behalf of importers — importers must register and post security themselves.",
+    mustInclude: [
+      "Canadian importer's Business Number (BN)",
+      "CARM Client Portal registration confirmation",
+      "Release Prior to Payment (RPP) enrollment status",
+      "Financial security posting confirmation (surety bond or cash deposit)",
+      "Broker delegation authorization in the CARM portal",
+    ],
+    commonMistakes: [
+      "Assuming the customs broker can post security on behalf of the importer — this ended May 20, 2025",
+      "Importer not registered in CARM — goods held at border until duties are paid in full upfront",
+      "Non-resident importers (NRIs) not registering directly — NRIs must register themselves, the broker cannot do it",
+      "Forgetting to delegate authority to the customs broker within the CARM portal",
+      "Confusing the old B3 form process with the new CAD (Commercial Accounting Declaration) in CARM",
+    ],
+    templateFields: [
+      { field: "Business Number (BN)", description: "Canadian Business Number issued by CRA, used as importer identifier in CARM", whereToFind: "Canada Revenue Agency registration or importer's corporate documents", format: "15-character BN, e.g. 123456789RM0001" },
+      { field: "RPP Status", description: "Whether the importer is enrolled in Release Prior to Payment", whereToFind: "CARM Client Portal account settings", format: "Enrolled / Not Enrolled" },
+      { field: "Security Type", description: "Type of financial security posted by the importer", whereToFind: "CARM Client Portal security section", format: "Surety Bond / Cash Deposit" },
+    ],
+    walkthrough: [
+      "Verify the Canadian importer is registered at the CARM Client Portal: ccp-pcc.cbsa-asfc.gc.ca.",
+      "Confirm the importer has enrolled in the RPP (Release Prior to Payment) sub-program.",
+      "Verify the importer has posted their own financial security — surety bond or cash deposit — in the CARM portal.",
+      "Ensure the importer has delegated authority to the Canadian customs broker within the portal.",
+      "For non-resident importers (NRIs) acting as importer of record in Canada: the NRI must register directly in CARM — the broker cannot do this on their behalf.",
+      "Store the Business Number and RPP confirmation in this shipment record.",
+    ],
+  },
+
+  inward_cargo_manifest: {
+    name: "Inward Cargo Manifest",
+    whatItIs: "The Inward Cargo Manifest is a document prepared by the U.S. customs broker for land border entries filed under CBP's Border Cargo Selectivity (BCS) system. The driver presents this document to the CBP officer at the port of entry. It contains the entry number and links the physical truck to the broker's electronic filing. For land freight, this document serves a similar function to the carrier's manifest in ocean or air shipments, but it is prepared by the broker rather than the carrier.",
+    mustInclude: [
+      "Entry number matching the broker's ACE filing",
+      "PAPS Cargo Control Number (CCN)",
+      "Carrier name and SCAC code",
+      "Truck and trailer numbers",
+      "Cargo description matching commercial invoice",
+      "Number of packages and gross weight",
+      "Consignee name and address",
+      "Port of entry / border crossing",
+    ],
+    commonMistakes: [
+      "Entry number on manifest does not match what was filed in ACE — truck turned away",
+      "Manifest not printed and given to driver before departure — driver has no documents to present",
+      "Cargo description differs from commercial invoice — triggers CBP examination",
+      "Wrong port of entry listed — entry must be filed at the correct port",
+    ],
+    templateFields: [
+      { field: "Entry Number", description: "CBP entry number from the broker's ACE filing", whereToFind: "Customs broker's ACE system", format: "11-digit entry number" },
+      { field: "PAPS CCN", description: "Pre-Arrival Processing System Cargo Control Number", whereToFind: "PAPS barcode sticker on commercial documents", format: "Carrier SCAC + shipment number" },
+      { field: "Port of Entry Code", description: "CBP port code for the land border crossing", whereToFind: "CBP port code directory", format: "4-digit port code, e.g. 2304 (Laredo)" },
+    ],
+    walkthrough: [
+      "After the entry is filed in ACE using the PAPS number, prepare the Inward Cargo Manifest with the matching entry number.",
+      "Include all cargo details exactly as they appear on the commercial invoice and packing list.",
+      "Print the manifest and provide it to the truck driver before the truck departs toward the border.",
+      "The driver presents this document along with the PAPS-barcoded commercial documents to CBP at the port of entry.",
+      "CBP scans the PAPS barcode and matches it to the electronic entry — the manifest serves as the paper backup.",
+    ],
+  },
+};
 
 interface LaneContext {
   originName: string;
