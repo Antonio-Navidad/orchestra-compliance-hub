@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle2, AlertTriangle, XCircle, MinusCircle, ChevronDown,
-  Upload, FileText, Mail, RefreshCw
+  Upload, FileText, Mail, RefreshCw, Loader2
 } from "lucide-react";
 
-export type DocCardState = 'verified' | 'issue' | 'missing' | 'not_applicable';
+export type DocCardState = 'verified' | 'issue' | 'missing' | 'not_applicable' | 'processing';
 
 export interface ExtractedField {
   label: string;
@@ -31,8 +31,8 @@ export interface DocumentCardData {
   crossRefChecks?: CrossRefCheck[];
   discrepancies?: string[];
   notes?: string[];
-  /** For missing docs: action hint */
   actionHint?: string;
+  fileName?: string;
 }
 
 interface Props {
@@ -48,6 +48,7 @@ const STATE_CONFIG: Record<DocCardState, { border: string; dot: typeof CheckCirc
   verified: { border: 'border-l-green-500', dot: CheckCircle2, dotClass: 'text-green-500', bg: '' },
   issue: { border: 'border-l-amber-500', dot: AlertTriangle, dotClass: 'text-amber-500', bg: 'bg-amber-500/3' },
   missing: { border: 'border-l-red-500', dot: XCircle, dotClass: 'text-red-500', bg: 'bg-red-500/3' },
+  processing: { border: 'border-l-blue-500', dot: Loader2, dotClass: 'text-blue-500 animate-spin', bg: 'bg-blue-500/3' },
   not_applicable: { border: 'border-l-muted', dot: MinusCircle, dotClass: 'text-muted-foreground/50', bg: 'opacity-50' },
 };
 
@@ -71,6 +72,9 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
     }
     e.target.value = '';
   }, [doc.id, onUpload]);
+
+  // Auto-expand when processing completes with results
+  const shouldAutoExpand = doc.state === 'verified' && doc.extractedFields && doc.extractedFields.length > 1;
 
   if (doc.state === 'not_applicable' && !expanded) {
     return (
@@ -105,20 +109,32 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
       >
         <Icon size={14} className={cn(cfg.dotClass, "shrink-0")} />
         <div className="flex-1 min-w-0">
-          <span className="text-xs font-semibold block truncate">{doc.name}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold block truncate">{doc.name}</span>
+            {doc.fileName && (
+              <span className="text-[9px] text-muted-foreground/60 truncate max-w-[120px]">
+                {doc.fileName}
+              </span>
+            )}
+          </div>
           <span className="text-[10px] text-muted-foreground">{doc.statusLine}</span>
         </div>
-        <ChevronDown size={14} className={cn(
-          "text-muted-foreground transition-transform shrink-0",
-          expanded && "rotate-180"
-        )} />
+        {doc.state === 'processing' ? (
+          <Badge className="text-[9px] bg-blue-500/10 text-blue-500 border-blue-500/20 shrink-0 animate-pulse">
+            Extracting...
+          </Badge>
+        ) : (
+          <ChevronDown size={14} className={cn(
+            "text-muted-foreground transition-transform shrink-0",
+            expanded && "rotate-180"
+          )} />
+        )}
       </button>
 
       {/* Expanded content */}
-      {expanded && (
+      {expanded && doc.state !== 'processing' && (
         <div className="px-3 pb-3 pt-1 border-t border-border/50 space-y-3">
           {doc.state === 'missing' ? (
-            /* Upload drop zone for missing docs */
             <div
               className={cn(
                 "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
@@ -133,39 +149,41 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
                 Drop <strong>{doc.name}</strong> here or{" "}
                 <label className="text-primary cursor-pointer hover:underline">
                   click to upload
-                  <input type="file" className="hidden" onChange={handleFileInput} accept=".pdf,.jpg,.png,.doc,.docx" />
+                  <input type="file" className="hidden" onChange={handleFileInput} accept=".pdf,.jpg,.png,.doc,.docx,.xlsx" />
                 </label>
               </p>
               <p className="text-[10px] text-muted-foreground/60 mt-1">
-                AI will extract and verify all key data points
+                AI will extract and verify all key data points using Claude
               </p>
             </div>
           ) : (
-            /* Two-column: extracted data + cross-reference */
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {/* Left: AI extracted data */}
               {doc.extractedFields && doc.extractedFields.length > 0 && (
                 <div className="space-y-1.5">
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    AI Extracted Data
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <FileText size={10} /> AI Extracted Data
                   </h4>
-                  <div className="space-y-0.5">
+                  <div className="space-y-0.5 max-h-[300px] overflow-y-auto">
                     {doc.extractedFields.map((field, i) => (
                       <div
                         key={i}
                         className={cn(
-                          "flex items-center justify-between py-1 px-2 rounded text-[11px]",
+                          "flex items-start justify-between py-1 px-2 rounded text-[11px] gap-2",
                           i % 2 === 0 ? "bg-secondary/20" : ""
                         )}
                       >
-                        <span className="text-muted-foreground font-medium">{field.label}</span>
+                        <span className="text-muted-foreground font-medium shrink-0">{field.label}</span>
                         <span className={cn(
-                          "font-semibold",
+                          "font-semibold text-right break-words min-w-0",
                           field.status === 'verified' && "text-green-600",
                           field.status === 'flagged' && "text-amber-500",
                           field.status === 'error' && "text-red-500",
                         )}>
                           {field.value}
+                          {field.status === 'flagged' && (
+                            <span className="text-[9px] block text-amber-400 font-normal">Please verify</span>
+                          )}
                         </span>
                       </div>
                     ))}
@@ -198,6 +216,13 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
                   </div>
                 </div>
               )}
+
+              {/* Show message when no cross-ref data yet */}
+              {(!doc.crossRefChecks || doc.crossRefChecks.length === 0) && doc.state === 'verified' && (
+                <div className="flex items-center justify-center text-[11px] text-muted-foreground/50 py-4">
+                  Upload another document to enable cross-reference checks
+                </div>
+              )}
             </div>
           )}
 
@@ -216,12 +241,12 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
             </div>
           )}
 
-          {/* Info notes */}
+          {/* Warnings/notes */}
           {doc.notes && doc.notes.length > 0 && (
             <div className="space-y-1">
               {doc.notes.map((n, i) => (
-                <div key={i} className="rounded-md bg-secondary/30 border border-border p-2.5 text-[11px] text-muted-foreground">
-                  ℹ {n}
+                <div key={i} className="rounded-md bg-amber-500/5 border border-amber-500/15 p-2.5 text-[11px] text-amber-600 dark:text-amber-400">
+                  ⚠ {n}
                 </div>
               ))}
             </div>
@@ -239,14 +264,25 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
                 </Button>
               </>
             )}
-            {doc.state === 'issue' && (
+            {(doc.state === 'issue' || doc.state === 'verified') && (
               <label>
-                <input type="file" className="hidden" onChange={handleFileInput} accept=".pdf,.jpg,.png,.doc,.docx" />
+                <input type="file" className="hidden" onChange={handleFileInput} accept=".pdf,.jpg,.png,.doc,.docx,.xlsx" />
                 <Button variant="outline" size="sm" className="text-[10px] h-7 gap-1" asChild>
                   <span><RefreshCw size={10} /> Upload corrected version</span>
                 </Button>
               </label>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Processing state expanded content */}
+      {expanded && doc.state === 'processing' && (
+        <div className="px-3 pb-4 pt-2 border-t border-border/50">
+          <div className="flex flex-col items-center gap-2 py-6">
+            <Loader2 size={24} className="text-blue-500 animate-spin" />
+            <p className="text-xs text-muted-foreground font-medium">Extracting with Claude AI...</p>
+            <p className="text-[10px] text-muted-foreground/60">Identifying fields, verifying data, checking compliance</p>
           </div>
         </div>
       )}

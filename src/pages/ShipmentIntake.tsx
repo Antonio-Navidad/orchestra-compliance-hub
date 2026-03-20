@@ -453,6 +453,7 @@ export default function ShipmentIntake() {
                       incoterm={form.incoterm}
                       declaredValue={form.declared_value}
                       hsCode={form.hs_code}
+                      shipmentId={form.shipment_id}
                       shipmentSubtitle={`${modeConfig.label} · ${form.origin_country || '—'} → ${form.destination_country || '—'} · ${form.description ? form.description.slice(0, 40) : 'No commodity'} ${form.hs_code ? `HTS ${form.hs_code.split(',')[0]}` : ''}`}
                       onViewAIAnalysis={() => setActiveTab('documents')}
                       onUploadDoc={(docId, files) => {
