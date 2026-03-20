@@ -42,6 +42,7 @@ interface Props {
   onUploadCorrected?: (docId: string) => void;
   onMarkNA?: (docId: string) => void;
   onClickAlert?: (docId: string, message: string) => void;
+  onClickCard?: (docId: string) => void;
 }
 
 const STATE_CONFIG: Record<DocCardState, { border: string; dot: typeof CheckCircle2; dotClass: string; bg: string }> = {
