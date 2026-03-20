@@ -1264,6 +1264,86 @@ export type Database = {
         }
         Relationships: []
       }
+      importer_profiles: {
+        Row: {
+          ach_status: boolean | null
+          bond_number: string | null
+          bond_status: string | null
+          commodity_types: string[] | null
+          created_at: string
+          ein_cbp_number: string | null
+          fta_programs: string[] | null
+          hold_count: number | null
+          hts_codes_used: string[] | null
+          id: string
+          importer_name: string
+          last_shipment_date: string | null
+          last_shipment_id: string | null
+          metadata: Json | null
+          poa_expiry: string | null
+          poa_status: string | null
+          risk_flags: string[] | null
+          surety_company: string | null
+          updated_at: string
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          ach_status?: boolean | null
+          bond_number?: string | null
+          bond_status?: string | null
+          commodity_types?: string[] | null
+          created_at?: string
+          ein_cbp_number?: string | null
+          fta_programs?: string[] | null
+          hold_count?: number | null
+          hts_codes_used?: string[] | null
+          id?: string
+          importer_name: string
+          last_shipment_date?: string | null
+          last_shipment_id?: string | null
+          metadata?: Json | null
+          poa_expiry?: string | null
+          poa_status?: string | null
+          risk_flags?: string[] | null
+          surety_company?: string | null
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          ach_status?: boolean | null
+          bond_number?: string | null
+          bond_status?: string | null
+          commodity_types?: string[] | null
+          created_at?: string
+          ein_cbp_number?: string | null
+          fta_programs?: string[] | null
+          hold_count?: number | null
+          hts_codes_used?: string[] | null
+          id?: string
+          importer_name?: string
+          last_shipment_date?: string | null
+          last_shipment_id?: string | null
+          metadata?: Json | null
+          poa_expiry?: string | null
+          poa_status?: string | null
+          risk_flags?: string[] | null
+          surety_company?: string | null
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "importer_profiles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inbound_webhook_log: {
         Row: {
           callback_type: string
@@ -2666,6 +2746,65 @@ export type Database = {
           },
         ]
       }
+      shipment_holds: {
+        Row: {
+          created_at: string
+          demurrage_total: number | null
+          documents_submitted: Json | null
+          free_time_expires: string | null
+          hold_received_date: string | null
+          hold_status: string
+          hold_type: string
+          id: string
+          notes: string | null
+          port_ces_location: string | null
+          resolution_date: string | null
+          shipment_id: string
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          demurrage_total?: number | null
+          documents_submitted?: Json | null
+          free_time_expires?: string | null
+          hold_received_date?: string | null
+          hold_status?: string
+          hold_type: string
+          id?: string
+          notes?: string | null
+          port_ces_location?: string | null
+          resolution_date?: string | null
+          shipment_id: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          demurrage_total?: number | null
+          documents_submitted?: Json | null
+          free_time_expires?: string | null
+          hold_received_date?: string | null
+          hold_status?: string
+          hold_type?: string
+          id?: string
+          notes?: string | null
+          port_ces_location?: string | null
+          resolution_date?: string | null
+          shipment_id?: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipment_holds_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shipment_watchlist: {
         Row: {
           created_at: string
@@ -2818,6 +2957,56 @@ export type Database = {
           },
           {
             foreignKeyName: "shipments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_directory: {
+        Row: {
+          associated_hold: boolean | null
+          associated_importer: string | null
+          created_at: string
+          hold_details: string | null
+          id: string
+          source_documents: string[] | null
+          supplier_address: string | null
+          supplier_country: string | null
+          supplier_name: string
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          associated_hold?: boolean | null
+          associated_importer?: string | null
+          created_at?: string
+          hold_details?: string | null
+          id?: string
+          source_documents?: string[] | null
+          supplier_address?: string | null
+          supplier_country?: string | null
+          supplier_name: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          associated_hold?: boolean | null
+          associated_importer?: string | null
+          created_at?: string
+          hold_details?: string | null
+          id?: string
+          source_documents?: string[] | null
+          supplier_address?: string | null
+          supplier_country?: string | null
+          supplier_name?: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_directory_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
