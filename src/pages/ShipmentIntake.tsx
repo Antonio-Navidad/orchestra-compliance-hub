@@ -424,10 +424,8 @@ export default function ShipmentIntake() {
               <ShipmentModeSelector selected={shipmentMode} onSelect={handleModeChange} />
             </div>
 
-            {/* Main: tabs + right panel */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-              {/* Left: Tabbed workspace */}
-              <div className="lg:col-span-8">
+            {/* Main workspace */}
+            <div>
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsList className="w-full justify-start bg-card border border-border rounded-lg p-1 h-auto flex-wrap">
                     <TabsTrigger value="details" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
