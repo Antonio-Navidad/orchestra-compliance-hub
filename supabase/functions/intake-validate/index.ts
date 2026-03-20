@@ -230,7 +230,7 @@ User Question: ${params.question}`;
 
       documentText = documentText.replace(/\u0000/g, " ").trim();
 
-      console.log(
+      console.info(
         "[extract_document] pipeline_debug",
         JSON.stringify({
           fileFetchedFromStorage: fetchedFromStorage,
