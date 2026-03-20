@@ -546,6 +546,557 @@ const DRAWER_TEMPLATES: Record<string, AlertDrawerData> = {
     regulation: 'EAR 15 CFR 730-774 / OFAC 31 CFR 500',
     financialImpact: '$250,000–$1,000,000 per violation + criminal penalties',
   },
+
+  // ─── Remaining document-specific drawers ───
+
+  importer_registration: {
+    id: 'importer_registration',
+    title: 'Importer of Record Registration',
+    severity: 'critical',
+    whatIsThis: 'The Importer of Record (IOR) must be registered with CBP before any entries can be filed. This involves obtaining an Importer Number, which is either the importer\'s IRS Employer Identification Number (EIN) or a CBP-assigned number.',
+    whyItMatters: 'Without a valid Importer Number, CBP will not accept any entry filing. The IOR is legally responsible for all duties, taxes, fees, and compliance with all import laws — even if a broker is handling the paperwork.',
+    whatToDo: [
+      'If the importer has an EIN (IRS tax ID), this can be used as the Importer Number.',
+      'If no EIN, file CBP Form 5106 to obtain a CBP-assigned importer number.',
+      'First-time importers should register through ACE (Automated Commercial Environment).',
+      'Upload confirmation of registration to this slot.',
+    ],
+    quickActions: [
+      { label: 'Upload registration', type: 'upload', docId: 'importer_registration' },
+      { label: 'Visit ACE portal', type: 'link', href: 'https://ace.cbp.dhs.gov/' },
+    ],
+    regulation: '19 CFR 24.5',
+    financialImpact: 'Cannot file entry — cargo held at port',
+  },
+
+  ach_authorization: {
+    id: 'ach_authorization',
+    title: 'ACH Payment Authorization',
+    severity: 'medium',
+    whatIsThis: 'ACH (Automated Clearing House) is the electronic payment system used to pay customs duties, taxes, and fees to CBP. The ACH authorization allows CBP to debit the importer\'s bank account directly for duty payments.',
+    whyItMatters: 'Without ACH setup, duty payments must be made by certified check or cash — significantly slower and may delay cargo release. ACH is required for periodic monthly statements and reconciliation entries.',
+    whatToDo: [
+      'Complete CBP Form 400 (ACH Debit Authorization) with your bank details.',
+      'Submit the form to your CBP-assigned Revenue Division.',
+      'Allow 10–15 business days for ACH enrollment to process.',
+      'Once active, duties are debited automatically on the 15th working day after entry summary filing.',
+    ],
+    quickActions: [
+      { label: 'Upload ACH form', type: 'upload', docId: 'ach_authorization' },
+      { label: 'Add note', type: 'note' },
+    ],
+    regulation: '19 CFR 24.25',
+    financialImpact: 'Slower duty processing — potential release delays',
+  },
+
+  reconciliation_rider: {
+    id: 'reconciliation_rider',
+    title: 'Reconciliation Bond Rider',
+    severity: 'medium',
+    whatIsThis: 'A Reconciliation Bond Rider extends your continuous customs bond to cover reconciliation entries. Reconciliation is a CBP program that allows importers to file entry summaries with estimated data and then "reconcile" the final data later (e.g., when final value, classification, or FTA eligibility is determined).',
+    whyItMatters: 'If you participate in the Reconciliation program and your bond does not have the rider, CBP will reject your reconciliation filings. This results in late filing penalties and potential liquidation at the estimated (often higher) rate.',
+    whatToDo: [
+      'Contact your surety company and request a reconciliation rider on your continuous bond.',
+      'The rider is typically available at no additional cost or a minimal fee.',
+      'Upload confirmation that the rider is active.',
+    ],
+    quickActions: [
+      { label: 'Upload rider confirmation', type: 'upload', docId: 'reconciliation_rider' },
+      { label: 'Request from surety', type: 'request' },
+      { label: 'Mark as not applicable', type: 'mark_na' },
+    ],
+    regulation: '19 CFR 113.62',
+    financialImpact: 'Reconciliation filings rejected',
+  },
+
+  air_waybill: {
+    id: 'air_waybill',
+    title: 'Air Waybill (AWB)',
+    severity: 'critical',
+    whatIsThis: 'The air waybill is the air freight equivalent of an ocean bill of lading. It is a contract of carriage between the shipper and the airline, and serves as the primary identification document for air cargo shipments.',
+    whyItMatters: 'The AWB number is required on the entry filing and must match the manifest data filed with CBP through the Air Automated Manifest System (AAMS). Without a matching AWB, cargo cannot be released.',
+    whatToDo: [
+      'Obtain the air waybill from your freight forwarder or airline.',
+      'Verify the AWB number matches your booking confirmation.',
+      'Check that the shipper, consignee, and cargo description match your commercial invoice.',
+      'Upload and the AI will cross-reference against your commercial invoice.',
+    ],
+    quickActions: [
+      { label: 'Upload AWB', type: 'upload', docId: 'air_waybill' },
+      { label: 'Request from forwarder', type: 'request' },
+    ],
+    financialImpact: 'Cargo cannot be released',
+  },
+
+  insurance_certificate: {
+    id: 'insurance_certificate',
+    title: 'Insurance Certificate',
+    severity: 'medium',
+    whatIsThis: 'The insurance certificate provides evidence that the cargo is insured during transit. For CIF or CIP shipments, the insurance cost is part of the dutiable value and must be added to the customs valuation.',
+    whyItMatters: 'Under CIF/CIP Incoterms, insurance costs must be included in the declared value. Omitting insurance from the value is an undervaluation that can trigger a CF-28 request or penalty under 19 U.S.C. 1592.',
+    whatToDo: [
+      'Obtain the insurance certificate or policy from the seller or insurance provider.',
+      'Verify the coverage amount and currency match the commercial invoice value.',
+      'Add the insurance cost to the dutiable value on the entry summary.',
+      'Upload the certificate to complete your CIF documentation.',
+    ],
+    quickActions: [
+      { label: 'Upload certificate', type: 'upload', docId: 'insurance_certificate' },
+      { label: 'Request from seller', type: 'request' },
+      { label: 'Mark as not applicable', type: 'mark_na' },
+    ],
+    regulation: '19 CFR 152.103',
+    financialImpact: 'Undervaluation penalty risk',
+  },
+
+  pro_forma_invoice: {
+    id: 'pro_forma_invoice',
+    title: 'Pro Forma Invoice',
+    severity: 'low',
+    whatIsThis: 'A pro forma invoice is a preliminary invoice issued before the final commercial invoice is available. It provides estimated values, descriptions, and terms that allow customs processing to begin while the final invoice is pending.',
+    whyItMatters: 'Filing with a pro forma invoice is acceptable under 19 CFR 141.86, but a Post Summary Correction (PSC) must be filed once the final invoice is available. If the final value differs significantly, duty adjustments and interest may apply.',
+    whatToDo: [
+      'Use the pro forma invoice to begin the entry process if the final invoice is not yet available.',
+      'Mark the entry as "pro forma" so the broker files a Post Summary Correction when the final invoice arrives.',
+      'Upload the pro forma now, then replace with the final commercial invoice when received.',
+    ],
+    quickActions: [
+      { label: 'Upload pro forma', type: 'upload', docId: 'pro_forma_invoice' },
+      { label: 'Request from supplier', type: 'request' },
+    ],
+    financialImpact: 'Duty adjustment + interest if values change',
+  },
+
+  purchase_order: {
+    id: 'purchase_order',
+    title: 'Purchase Order / Sales Contract',
+    severity: 'medium',
+    whatIsThis: 'The purchase order or sales contract documents the agreed terms of sale between buyer and seller: quantities, prices, delivery terms, and payment conditions. It serves as the foundational agreement against which all other shipment documents are verified.',
+    whyItMatters: 'CBP may request the PO during a CF-28 audit to verify the transaction value. The PO is also critical for identifying related-party transactions, assists, and royalty payments that must be added to the dutiable value.',
+    whatToDo: [
+      'Upload the original purchase order or signed sales contract.',
+      'Verify that quantities, prices, and terms match the commercial invoice.',
+      'If amendments were made, include the amendment documents.',
+      'Keep on file for 5 years per record-keeping requirements.',
+    ],
+    quickActions: [
+      { label: 'Upload PO', type: 'upload', docId: 'purchase_order' },
+      { label: 'Request from buyer', type: 'request' },
+    ],
+    regulation: '19 CFR 163',
+    financialImpact: 'CF-28 response complications',
+  },
+
+  ams_verification: {
+    id: 'ams_verification',
+    title: 'AMS Data Match Verification',
+    severity: 'medium',
+    whatIsThis: 'The Automated Manifest System (AMS) data is filed by the carrier/vessel operator with CBP before vessel arrival. AMS verification confirms that the manifest data matches your ISF and B/L data — particularly container numbers, seal numbers, and bill of lading numbers.',
+    whyItMatters: 'AMS mismatches trigger automatic holds in CBP\'s targeting system. The vessel cannot discharge your container if AMS data does not match the ISF filing.',
+    whatToDo: [
+      'Verify with your carrier that AMS has been filed and matches your B/L data.',
+      'If discrepancies exist, request the carrier to amend the AMS filing.',
+      'Upload carrier confirmation of AMS filing.',
+    ],
+    quickActions: [
+      { label: 'Upload AMS confirmation', type: 'upload', docId: 'ams_verification' },
+      { label: 'Request from carrier', type: 'request' },
+    ],
+    financialImpact: 'Container hold at port',
+  },
+
+  arrival_notice: {
+    id: 'arrival_notice',
+    title: 'Arrival Notice',
+    severity: 'medium',
+    whatIsThis: 'The arrival notice is issued by the ocean carrier or their agent notifying the consignee of the vessel\'s expected arrival. It includes free time allowance, per diem rates, and terminal contact information.',
+    whyItMatters: 'The arrival notice starts the free time clock. Missing it means you may not know when demurrage charges begin. It also contains terminal information needed for drayage pickup.',
+    whatToDo: [
+      'Contact your freight forwarder or carrier to obtain the arrival notice.',
+      'Note the free time expiration date and set a reminder.',
+      'Arrange trucking/drayage before free time expires.',
+      'Upload the notice and the system will track free time automatically.',
+    ],
+    quickActions: [
+      { label: 'Upload arrival notice', type: 'upload', docId: 'arrival_notice' },
+      { label: 'Request from carrier', type: 'request' },
+    ],
+    financialImpact: '$150–$350/day demurrage after free time',
+  },
+
+  entry_3461: {
+    id: 'entry_3461',
+    title: 'CBP Form 3461 — Entry/Immediate Delivery',
+    severity: 'critical',
+    whatIsThis: 'CBP Form 3461 is the initial entry document that requests release of cargo from CBP custody. It provides basic information about the shipment to allow CBP to make a release determination. Filing the 3461 triggers the 10-business-day clock for filing the Entry Summary (7501).',
+    whyItMatters: 'Without a 3461, cargo remains in CBP custody at the port. The 3461 must be filed before cargo can be released. For perishable goods, delays can result in spoilage and total loss.',
+    whatToDo: [
+      'File the 3461 through ABI/ACE with basic shipment data.',
+      'Include: importer number, entry type, port of entry, carrier code, B/L number, HTS codes, and country of origin.',
+      'Once CBP releases the 3461, the 10-business-day clock starts for the 7501.',
+      'Upload the filed 3461 confirmation.',
+    ],
+    quickActions: [
+      { label: 'Upload 3461', type: 'upload', docId: 'entry_3461' },
+      { label: 'Add note', type: 'note' },
+    ],
+    regulation: '19 CFR 142.3',
+    financialImpact: 'Cargo held in CBP custody',
+  },
+
+  hts_worksheet: {
+    id: 'hts_worksheet',
+    title: 'HTS Classification Worksheet',
+    severity: 'medium',
+    whatIsThis: 'The HTS Classification Worksheet documents the rationale for classifying your merchandise under specific Harmonized Tariff Schedule (HTS) codes. It shows the General Rules of Interpretation (GRI) analysis used to arrive at the correct classification.',
+    whyItMatters: 'Proper classification documentation protects you during CBP audits. If CBP challenges your classification, a well-documented worksheet demonstrates reasonable care under 19 U.S.C. 1484. Without it, penalties for misclassification are harder to mitigate.',
+    whatToDo: [
+      'Document the classification analysis for each product in the shipment.',
+      'Apply the General Rules of Interpretation (GRI 1-6) in order.',
+      'Consider requesting a binding ruling from CBP (Form 177) for complex products.',
+      'Keep the worksheet on file for 5 years.',
+    ],
+    quickActions: [
+      { label: 'Upload worksheet', type: 'upload', docId: 'hts_worksheet' },
+      { label: 'Open classification tool', type: 'navigate', href: '/product-classification' },
+    ],
+    regulation: '19 U.S.C. 1484 / GRI 1-6',
+    financialImpact: 'Misclassification penalties',
+  },
+
+  delivery_order: {
+    id: 'delivery_order',
+    title: 'Delivery Order',
+    severity: 'medium',
+    whatIsThis: 'The delivery order authorizes the terminal or CFS to release the cargo to a specified trucking company. It is issued by the carrier or their agent after the B/L has been surrendered and freight charges paid.',
+    whyItMatters: 'Without a delivery order, the terminal will not release the container to your trucker, even if CBP has cleared the cargo. This is one of the most common causes of unnecessary demurrage charges.',
+    whatToDo: [
+      'Request the delivery order from the carrier or freight forwarder once the B/L is surrendered.',
+      'Verify freight charges are paid — the carrier will not issue a D/O until freight is settled.',
+      'Provide the D/O to your trucking company for pickup.',
+      'Upload the D/O to track the release process.',
+    ],
+    quickActions: [
+      { label: 'Upload D/O', type: 'upload', docId: 'delivery_order' },
+      { label: 'Request from carrier', type: 'request' },
+    ],
+    financialImpact: 'Demurrage charges if delayed',
+  },
+
+  ach_duty_payment: {
+    id: 'ach_duty_payment',
+    title: 'ACH Duty Payment Authorization',
+    severity: 'medium',
+    whatIsThis: 'This authorizes the ACH debit for the specific duty payment on this entry. Duties are debited on the 15th working day after the entry summary (7501) is filed.',
+    whyItMatters: 'If the ACH payment fails (insufficient funds, account issues), CBP will issue a demand for payment and assess interest. Repeated ACH failures can result in your ACH privileges being revoked.',
+    whatToDo: [
+      'Verify sufficient funds are available in the ACH-linked account.',
+      'Confirm the duty amount matches your entry summary calculations.',
+      'If the ACH setup is not active, arrange alternative payment (certified check).',
+    ],
+    quickActions: [
+      { label: 'Upload payment confirmation', type: 'upload', docId: 'ach_duty_payment' },
+      { label: 'Add note', type: 'note' },
+    ],
+    financialImpact: 'Interest on late payment',
+  },
+
+  country_of_origin: {
+    id: 'country_of_origin',
+    title: 'Country of Origin Declaration',
+    severity: 'high',
+    whatIsThis: 'The Country of Origin Declaration certifies where the goods were manufactured or substantially transformed. This determines the applicable duty rate, FTA eligibility, AD/CVD applicability, and any Section 301 additional tariffs.',
+    whyItMatters: 'An incorrect country of origin can result in wrong duty rates, missed AD/CVD deposits (potentially 200%+ additional duty), invalid FTA claims, and 19 U.S.C. 1592 penalties for material false statements.',
+    whatToDo: [
+      'Obtain a signed declaration from the manufacturer or supplier confirming where the goods were made.',
+      'Verify the origin matches all other documents (invoice, B/L, ISF, FTA cert).',
+      'For goods with components from multiple countries, determine where substantial transformation occurred.',
+      'Upload the declaration to this slot.',
+    ],
+    quickActions: [
+      { label: 'Upload declaration', type: 'upload', docId: 'country_of_origin' },
+      { label: 'Request from supplier', type: 'request' },
+    ],
+    regulation: '19 CFR 102 / 19 U.S.C. 1304',
+    financialImpact: 'Wrong duty rates + penalties',
+  },
+
+  manufacturer_affidavit: {
+    id: 'manufacturer_affidavit',
+    title: "Manufacturer's Affidavit / Supplier Declaration",
+    severity: 'medium',
+    whatIsThis: 'A manufacturer\'s affidavit or supplier declaration is a signed statement from the manufacturer confirming the materials used, manufacturing process, and origin of the goods. It supports your classification and valuation claims.',
+    whyItMatters: 'CBP may request this document during a CF-28 audit to verify your classification, origin, or value claims. Having it ready speeds up the response and demonstrates reasonable care.',
+    whatToDo: [
+      'Request a detailed affidavit from the manufacturer on their letterhead.',
+      'It should describe: materials used, manufacturing process, country of manufacture, and product specifications.',
+      'For FTA claims, the affidavit should confirm origin criteria are met.',
+      'Keep on file for 5 years per 19 CFR 163.',
+    ],
+    quickActions: [
+      { label: 'Upload affidavit', type: 'upload', docId: 'manufacturer_affidavit' },
+      { label: 'Request from supplier', type: 'request' },
+    ],
+    regulation: '19 CFR 163',
+    financialImpact: 'CF-28 response complications',
+  },
+
+  fda_affirmation: {
+    id: 'fda_affirmation',
+    title: 'FDA Entry Affirmation of Compliance',
+    severity: 'critical',
+    whatIsThis: 'FDA Affirmation of Compliance codes are required on the CBP entry for FDA-regulated products. These codes affirm that the imported product complies with applicable FDA requirements (registration, labeling, safety).',
+    whyItMatters: 'Missing or incorrect affirmation codes trigger automatic FDA review, which can hold your cargo for 5–30 days. For medical devices and pharmaceuticals, release without proper affirmation is a criminal violation.',
+    whatToDo: [
+      'Determine the correct FDA Affirmation of Compliance code for your product.',
+      'Include the code in the PGA message set on your entry filing.',
+      'Verify FDA facility registration is current for the manufacturer.',
+      'Upload documentation confirming compliance.',
+    ],
+    quickActions: [
+      { label: 'Upload FDA compliance', type: 'upload', docId: 'fda_affirmation' },
+      { label: 'Check FDA registration', type: 'link', href: 'https://www.fda.gov/medical-devices/device-registration-and-listing' },
+    ],
+    regulation: '21 CFR Parts 807, 820',
+    financialImpact: 'FDA detention — 5-30 day hold',
+  },
+
+  usda_permit: {
+    id: 'usda_permit',
+    title: 'USDA/APHIS Import Permit',
+    severity: 'critical',
+    whatIsThis: 'USDA/APHIS import permits are required for agricultural products, live animals, and plants to prevent the introduction of foreign pests and diseases into the United States.',
+    whyItMatters: 'Importing agricultural products without the required USDA permit results in automatic seizure and destruction of the goods. There is no option to re-export — the goods are destroyed at the importer\'s expense.',
+    whatToDo: [
+      'Apply for the appropriate USDA/APHIS permit well in advance (processing can take 2–4 weeks).',
+      'Different permits apply: PPQ 525 for plants, VS 17-129 for animals, etc.',
+      'The permit must be valid at time of arrival.',
+      'Upload the issued permit to this slot.',
+    ],
+    quickActions: [
+      { label: 'Upload permit', type: 'upload', docId: 'usda_permit' },
+      { label: 'Apply at APHIS', type: 'link', href: 'https://www.aphis.usda.gov/aphis/ourfocus/importexport' },
+    ],
+    regulation: '7 CFR 319 / 9 CFR 92-96',
+    financialImpact: 'Goods seized and destroyed',
+  },
+
+  phytosanitary: {
+    id: 'phytosanitary',
+    title: 'Phytosanitary Certificate',
+    severity: 'high',
+    whatIsThis: 'A phytosanitary certificate is issued by the plant protection organization of the exporting country. It certifies that the plants, seeds, or wood products have been inspected and are free from regulated pests.',
+    whyItMatters: 'USDA/APHIS requires phytosanitary certificates for most plant products. Without one, goods are held for inspection and potential treatment at the importer\'s expense, or refused entry.',
+    whatToDo: [
+      'Request the phytosanitary certificate from your supplier — it must be issued by the government plant protection agency of the origin country.',
+      'The certificate must be original (not a copy) and issued within 14 days of shipment.',
+      'Verify it covers the specific plants/products in the shipment.',
+      'Upload the certificate before cargo arrival.',
+    ],
+    quickActions: [
+      { label: 'Upload certificate', type: 'upload', docId: 'phytosanitary' },
+      { label: 'Request from supplier', type: 'request' },
+    ],
+    regulation: '7 CFR 319',
+    financialImpact: 'Goods held/treated/refused at importer expense',
+  },
+
+  cites_permit: {
+    id: 'cites_permit',
+    title: 'CITES Permit',
+    severity: 'critical',
+    whatIsThis: 'CITES (Convention on International Trade in Endangered Species) permits are required for the import or export of species listed under CITES Appendices I, II, or III. This includes certain wildlife, exotic leathers, timber species, and derived products.',
+    whyItMatters: 'Importing CITES-listed species without proper permits is a federal crime under the Lacey Act and Endangered Species Act. Penalties include fines up to $50,000 per violation and imprisonment. Goods are seized and forfeited.',
+    whatToDo: [
+      'Determine if your product contains CITES-listed species (check the CITES species database).',
+      'Obtain both an export permit from the origin country AND an import permit from U.S. Fish & Wildlife Service.',
+      'Shipments must enter through a CITES-designated port.',
+      'Upload all permits before shipment.',
+    ],
+    quickActions: [
+      { label: 'Upload CITES permit', type: 'upload', docId: 'cites_permit' },
+      { label: 'Check CITES species', type: 'link', href: 'https://checklist.cites.org/' },
+    ],
+    regulation: 'Lacey Act / ESA / 50 CFR 23',
+    financialImpact: 'Seizure + $50,000 fine + criminal penalties',
+  },
+
+  epa_tsca: {
+    id: 'epa_tsca',
+    title: 'EPA TSCA Certification',
+    severity: 'high',
+    whatIsThis: 'The Toxic Substances Control Act (TSCA) requires importers of chemical substances to certify that their products either comply with TSCA or are not subject to TSCA. This certification is filed with CBP at the time of entry.',
+    whyItMatters: 'Importing chemical substances without TSCA certification triggers EPA holds and potential penalties of up to $37,500 per day of violation.',
+    whatToDo: [
+      'Determine if your chemical substances are on the TSCA Inventory (positive certification) or exempt (negative certification).',
+      'Include the appropriate TSCA certification statement on or with the entry filing.',
+      'Upload documentation of compliance.',
+    ],
+    quickActions: [
+      { label: 'Upload TSCA cert', type: 'upload', docId: 'epa_tsca' },
+      { label: 'Check TSCA inventory', type: 'link', href: 'https://www.epa.gov/tsca-inventory' },
+    ],
+    regulation: '15 U.S.C. 2601 / 40 CFR 707',
+    financialImpact: '$37,500/day + EPA hold',
+  },
+
+  epa_3520: {
+    id: 'epa_3520',
+    title: 'EPA Form 3520-1 (Vehicle/Engine)',
+    severity: 'high',
+    whatIsThis: 'EPA Form 3520-1 is required for all motor vehicles and engines imported into the United States. It certifies compliance with EPA emissions standards.',
+    whyItMatters: 'Vehicles and engines cannot be entered without this form. Non-compliant vehicles must be modified, exported, or destroyed. CBP will not release the vehicle from custody without EPA clearance.',
+    whatToDo: [
+      'Complete EPA Form 3520-1 with the vehicle identification number (VIN), engine family, and emissions standard.',
+      'Determine the appropriate import code (conforming, non-conforming, test/display, etc.).',
+      'For non-conforming vehicles, arrange for an EPA-approved Independent Commercial Importer (ICI) to modify the vehicle.',
+      'Upload the completed form.',
+    ],
+    quickActions: [
+      { label: 'Upload EPA form', type: 'upload', docId: 'epa_3520' },
+      { label: 'Add note', type: 'note' },
+    ],
+    regulation: '40 CFR 85.1501',
+    financialImpact: 'Vehicle held/exported/destroyed',
+  },
+
+  fcc_declaration: {
+    id: 'fcc_declaration',
+    title: 'FCC Declaration',
+    severity: 'medium',
+    whatIsThis: 'The FCC Declaration of Conformity (DoC) confirms that electronic devices and radio frequency equipment comply with FCC technical standards for electromagnetic emissions and radio interference.',
+    whyItMatters: 'Non-compliant electronic devices can be refused entry by CBP acting on behalf of the FCC. For large shipments of consumer electronics, this can represent significant financial loss.',
+    whatToDo: [
+      'Verify your product has been tested and certified to applicable FCC standards.',
+      'Obtain the FCC DoC, test report, or FCC ID from the manufacturer.',
+      'Include the FCC compliance information in the entry filing.',
+      'Upload the declaration or test report.',
+    ],
+    quickActions: [
+      { label: 'Upload FCC declaration', type: 'upload', docId: 'fcc_declaration' },
+      { label: 'Request from manufacturer', type: 'request' },
+    ],
+    regulation: '47 CFR Part 15',
+    financialImpact: 'Products refused entry',
+  },
+
+  cpsc_cert: {
+    id: 'cpsc_cert',
+    title: 'CPSC Compliance Certificate',
+    severity: 'high',
+    whatIsThis: 'The Consumer Product Safety Commission (CPSC) requires a General Certificate of Conformity (GCC) for consumer products, or a Children\'s Product Certificate (CPC) for products designed for children 12 and under, certifying compliance with applicable safety standards.',
+    whyItMatters: 'CPSC-regulated products imported without proper certification can be detained, seized, or recalled. For children\'s products, third-party testing is mandatory and the CPC must reference specific test reports.',
+    whatToDo: [
+      'Determine which CPSC standards apply to your product (16 CFR).',
+      'For children\'s products: obtain third-party test reports from a CPSC-accepted lab.',
+      'Issue or obtain a GCC (consumer products) or CPC (children\'s products) from the manufacturer or importer.',
+      'File the certificate with CBP as part of the entry process.',
+    ],
+    quickActions: [
+      { label: 'Upload certificate', type: 'upload', docId: 'cpsc_cert' },
+      { label: 'Request from manufacturer', type: 'request' },
+    ],
+    regulation: '15 U.S.C. 2063',
+    financialImpact: 'Products detained/seized/recalled',
+  },
+
+  atf_form_6: {
+    id: 'atf_form_6',
+    title: 'ATF Form 6 — Import Permit',
+    severity: 'critical',
+    whatIsThis: 'ATF Form 6 (Application and Permit for Importation of Firearms, Ammunition and Implements of War) must be approved by the Bureau of Alcohol, Tobacco, Firearms and Explosives before importing firearms or ammunition into the United States.',
+    whyItMatters: 'Importing firearms or ammunition without an approved ATF Form 6 is a federal crime punishable by up to 10 years imprisonment and $250,000 in fines. CBP will seize the goods and refer the case to ATF for criminal investigation.',
+    whatToDo: [
+      'Submit ATF Form 6 to the ATF Firearms and Explosives Imports Branch.',
+      'Allow 4–6 weeks for processing (more for large quantities).',
+      'The permit must be approved before the goods are shipped.',
+      'Present the approved Form 6 to CBP at the port of entry.',
+    ],
+    quickActions: [
+      { label: 'Upload ATF permit', type: 'upload', docId: 'atf_form_6' },
+      { label: 'ATF forms page', type: 'link', href: 'https://www.atf.gov/firearms/import-firearms-ammunition-and-implements-war' },
+    ],
+    regulation: '27 CFR 447',
+    financialImpact: 'Seizure + criminal prosecution',
+  },
+
+  textile_visa: {
+    id: 'textile_visa',
+    title: 'Textile Visa / Quota Documentation',
+    severity: 'high',
+    whatIsThis: 'Textile visas are export endorsements issued by the government of the exporting country that certify the textiles/apparel comply with any applicable quota or trade agreement requirements. Some countries require textile visas for specific categories.',
+    whyItMatters: 'Textiles imported from certain countries without the required visa stamp will be refused entry. This results in re-export at the importer\'s expense or storage pending resolution.',
+    whatToDo: [
+      'Determine if a textile visa is required for your specific textile category and country of origin.',
+      'The visa stamp must appear on the commercial invoice from the exporting country\'s government.',
+      'Verify the textile category number matches the goods being imported.',
+      'Upload the visa-stamped invoice.',
+    ],
+    quickActions: [
+      { label: 'Upload textile visa', type: 'upload', docId: 'textile_visa' },
+      { label: 'Request from supplier', type: 'request' },
+    ],
+    regulation: '19 CFR 132',
+    financialImpact: 'Entry refused — re-export required',
+  },
+
+  sds_msds: {
+    id: 'sds_msds',
+    title: 'SDS / MSDS Safety Data Sheets',
+    severity: 'high',
+    whatIsThis: 'Safety Data Sheets (SDS, formerly MSDS) are required documents that describe the hazardous properties of chemical substances, proper handling procedures, emergency response measures, and regulatory information.',
+    whyItMatters: 'SDS are required by OSHA, DOT, and EPA for all hazardous materials. Without proper SDS, the shipment may be classified as "unknown hazardous material" — which triggers DOT violations, port refusal, and potential evacuation protocols.',
+    whatToDo: [
+      'Obtain the current 16-section SDS from the manufacturer or chemical supplier.',
+      'Verify the SDS is in English and follows the GHS (Globally Harmonized System) format.',
+      'Ensure the SDS covers the exact product and formulation being shipped.',
+      'Upload the SDS to document hazmat compliance.',
+    ],
+    quickActions: [
+      { label: 'Upload SDS', type: 'upload', docId: 'sds_msds' },
+      { label: 'Request from supplier', type: 'request' },
+    ],
+    regulation: '29 CFR 1910.1200 / 49 CFR 171',
+    financialImpact: 'DOT violations + port refusal',
+  },
+
+  denied_party_cert: {
+    id: 'denied_party_cert',
+    title: 'Denied Party Screening Certificate (Export)',
+    severity: 'critical',
+    whatIsThis: 'For U.S. exports, a denied party screening must be performed against all U.S. government restricted party lists. The screening certificate documents that all parties in the transaction have been checked and are not on any denied/restricted lists.',
+    whyItMatters: 'Exporting to a denied party is a criminal offense with penalties up to $1,000,000 per violation and 20 years imprisonment under the Export Control Reform Act (ECRA).',
+    whatToDo: [
+      'Screen all parties: consignee, end-user, intermediate consignee, and any other parties.',
+      'Check against: BIS Entity List, OFAC SDN List, State Debarred List, BIS Denied Persons, Unverified List.',
+      'Document the screening results with timestamp.',
+      'If a match is found, do not proceed — contact your export compliance officer or legal counsel.',
+    ],
+    quickActions: [
+      { label: 'Upload screening results', type: 'upload', docId: 'denied_party_cert' },
+      { label: 'Add note', type: 'note' },
+    ],
+    regulation: 'ECRA / EAR 15 CFR 730-774',
+    financialImpact: '$1,000,000 + 20 years imprisonment',
+  },
+
+  estimated_duties: {
+    id: 'estimated_duties',
+    title: 'Estimated Duties Calculation',
+    severity: 'info',
+    whatIsThis: 'This is the estimated total duties owed on this shipment, calculated using the HTS duty rate applied to the declared value. It includes normal Column 1 duties plus any applicable AD/CVD deposits, Section 301 tariffs, and other additional duties.',
+    whyItMatters: 'Accurate duty estimation is essential for cash flow planning and for verifying the entry summary is correct before filing. Underpayment results in interest; significant underpayment triggers penalties.',
+    whatToDo: [
+      'Review the duty calculation for accuracy.',
+      'Verify the HTS classification and duty rate are correct.',
+      'Check for applicable FTA preferential rates that could reduce duties.',
+      'Confirm any AD/CVD or Section 301 additional duties are included.',
+    ],
+    quickActions: [
+      { label: 'View duty calculator', type: 'navigate', href: '/compliance' },
+    ],
+    regulation: '19 U.S.C. 1505',
+  },
 };
 
 // ─── Dynamic drawer generation for any alert ───
