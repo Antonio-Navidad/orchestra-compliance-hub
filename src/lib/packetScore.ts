@@ -101,7 +101,6 @@ function getJurisdictionDocs(jurisdiction: string): Array<{ name: string; type: 
   }
   return docs;
 }
-
 function getRegulatoryDocs(hsCode?: string): Array<{ name: string; type: string; required: boolean }> {
   const docs: Array<{ name: string; type: string; required: boolean }> = [];
   if (!hsCode) return docs;
@@ -151,7 +150,6 @@ function getRegulatoryDocs(hsCode?: string): Array<{ name: string; type: string;
 
   return docs;
 }
-
 function scoreLayer(items: DocItem[]): number {
   const required = items.filter(i => i.required);
   const optional = items.filter(i => !i.required);
