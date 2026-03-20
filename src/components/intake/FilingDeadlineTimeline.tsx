@@ -21,12 +21,12 @@ interface Deadline {
 
 function getDeadlines(mode: TransportMode, origin: string, dest: string, departure: Date, arrival?: Date): Deadline[] {
   const deadlines: Deadline[] = [];
-  const destUpper = (dest || "").toUpperCase();
-  const originUpper = (origin || "").toUpperCase();
-  const isDestUS = destUpper === "US" || dest === "United States";
-  const isDestCO = destUpper === "CO" || dest === "Colombia";
-  const isOriginCN = originUpper === "CN" || origin === "China";
-  const isDestEU = ["DE", "FR", "IT", "NL", "ES", "BE"].includes(destUpper) || destUpper === "EU";
+  const destUpper = (dest || "").toUpperCase().trim();
+  const originUpper = (origin || "").toUpperCase().trim();
+  const isDestUS = destUpper === "US" || destUpper === "UNITED STATES" || destUpper.includes("UNITED STATES");
+  const isDestCO = destUpper === "CO" || destUpper === "COLOMBIA" || destUpper.includes("COLOMBIA");
+  const isOriginCN = originUpper === "CN" || originUpper === "CHINA" || originUpper.includes("CHINA");
+  const isDestEU = ["DE", "FR", "IT", "NL", "ES", "BE", "EU"].includes(destUpper);
 
   if (isDestUS) {
     if (mode === "sea") {

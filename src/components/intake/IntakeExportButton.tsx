@@ -91,7 +91,7 @@ export function IntakeExportButton({ form, docs, packetScore, className }: Intak
   };
 
   return (
-    <Button variant="outline" size="sm" onClick={handleExport} className={`font-mono text-[10px] gap-1.5 ${className ?? ""}`}>
+    <Button size="sm" onClick={handleExport} className={`font-mono text-[10px] gap-1.5 bg-risk-low text-primary-foreground hover:bg-risk-low/90 ${className ?? ""}`}>
       <Download size={12} />
       Export to Excel
     </Button>

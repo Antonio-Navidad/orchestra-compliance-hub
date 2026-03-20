@@ -28,7 +28,7 @@ import { RepeatShipmentSelector } from "@/components/intake/RepeatShipmentSelect
 import { PreSubmissionGate } from "@/components/intake/PreSubmissionGate";
 import { PacketItemDrawer } from "@/components/intake/PacketItemDrawer";
 import { PacketScoreCard } from "@/components/PacketScoreCard";
-import { MultiHSCodeField } from "@/components/intake/MultiHSCodeField";
+import { LineItemTable, type LineItem } from "@/components/intake/LineItemTable";
 import { IntakeExportButton } from "@/components/intake/IntakeExportButton";
 
 // Collapsible for packet layers
@@ -68,6 +68,8 @@ const PRIORITY_OPTIONS = [
 ];
 
 const INCOTERMS = ['EXW','FCA','FAS','FOB','CFR','CIF','CPT','CIP','DAP','DPU','DDP'];
+// Log available incoterm values on load for debugging
+console.log('[Intake] Available INCOTERM option values:', INCOTERMS);
 
 function generateShipmentId() {
   return `ORC-${String(Math.floor(Math.random() * 9000) + 1000)}`;
@@ -113,8 +115,8 @@ export default function ShipmentIntake() {
   const { t } = useLanguage();
 
   const [form, setForm] = useState({ ...INITIAL_FORM });
-  const [hsCodes, setHsCodes] = useState<string[]>([]);
-  const [aiSuggestedHS, setAiSuggestedHS] = useState<string[]>([]);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [aiSuggestedItems, setAiSuggestedItems] = useState<Array<{ hsCode: string; description?: string }>>([]);
   const [docs, setDocs] = useState<UploadedDoc[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedDocType, setSelectedDocType] = useState('commercial_invoice');
@@ -194,11 +196,14 @@ export default function ShipmentIntake() {
     // Normalize mode to lowercase to match Select option values
     if (mapped['mode']) {
       mapped['mode'] = mapped['mode'].toLowerCase() as any;
+      console.log('[Intake] Mapped mode →', mapped['mode']);
     }
 
     // Normalize incoterm to uppercase to match Select option values
     if (mapped['incoterm']) {
-      mapped['incoterm'] = mapped['incoterm'].toUpperCase();
+      const upper = mapped['incoterm'].toUpperCase();
+      mapped['incoterm'] = INCOTERMS.includes(upper) ? upper : '';
+      console.log('[Intake] Mapped incoterm →', mapped['incoterm'], '(from extracted:', fields['incoterm'], ')');
     }
 
     // Auto-detect COO eligibility for Colombia → US
@@ -212,14 +217,22 @@ export default function ShipmentIntake() {
       mapped['coo_status'] = 'potentially_eligible';
     }
 
-    // Handle HS codes — may be comma-separated or single
+    // Handle HS codes — may be comma-separated or single; populate line items
     const hsValue = mapped['hs_code'] || '';
     if (hsValue) {
       const codes = hsValue.split(/[,;]/).map((c: string) => c.trim()).filter(Boolean);
       if (codes.length > 0) {
-        setHsCodes(codes);
-        setAiSuggestedHS(codes);
-        mapped['hs_code'] = codes[0]; // Keep first as primary
+        const newItems: LineItem[] = codes.map(code => ({
+          id: crypto.randomUUID(),
+          hsCode: code,
+          description: '',
+          quantity: '',
+          uom: 'pcs',
+          unitValue: '',
+        }));
+        setLineItems(newItems);
+        setAiSuggestedItems(codes.map(c => ({ hsCode: c })));
+        mapped['hs_code'] = codes[0];
       }
     }
 
@@ -228,8 +241,8 @@ export default function ShipmentIntake() {
 
   const resetForm = () => {
     setForm({ ...INITIAL_FORM, shipment_id: generateShipmentId() });
-    setHsCodes([]);
-    setAiSuggestedHS([]);
+    setLineItems([]);
+    setAiSuggestedItems([]);
     setDocs([]);
     setExpandedLayers(new Set());
   };
@@ -488,35 +501,21 @@ export default function ShipmentIntake() {
                   <Textarea value={form.description} onChange={e => updateField('description', e.target.value)} placeholder={t("intake.commodityPlaceholder")} rows={2} />
                   <DescriptionQualityHint description={form.description} />
                 </div>
-                <div className="md:col-span-2 space-y-1.5" data-field="hs_code">
-                  <Label className="text-xs font-mono">{t("intake.hsCode")}</Label>
-                  <MultiHSCodeField
-                    hsCodes={hsCodes.length > 0 ? hsCodes : (form.hs_code ? [form.hs_code] : [])}
-                    onCodesChange={(codes) => {
-                      setHsCodes(codes);
+                <div className="md:col-span-2 space-y-1.5" data-field="line_items">
+                  <Label className="text-xs font-mono">COMMODITY LINE ITEMS</Label>
+                  <LineItemTable
+                    items={lineItems}
+                    onItemsChange={(items) => {
+                      setLineItems(items);
+                      // Sync hs_code and declared_value from line items
+                      const codes = items.map(i => i.hsCode).filter(Boolean);
                       updateField('hs_code', codes.join(', '));
+                      const total = items.reduce((s, r) => s + (parseFloat(r.quantity) || 0) * (parseFloat(r.unitValue) || 0), 0);
+                      if (total > 0) updateField('declared_value', total.toFixed(2));
                     }}
-                    declaredValue={form.declared_value}
                     currency={form.currency}
-                    aiSuggestions={aiSuggestedHS}
+                    aiSuggestions={aiSuggestedItems}
                   />
-                  {hsCodes.length <= 1 && form.hs_code && (
-                    <HSCodeValidation
-                      hsCode={form.hs_code}
-                      description={form.description}
-                      destinationCountry={form.destination_country || form.jurisdiction_code}
-                      declaredValue={form.declared_value}
-                      currency={form.currency}
-                    />
-                  )}
-                </div>
-                <div className="space-y-1.5" data-field="quantity">
-                  <Label className="text-xs font-mono">{t("intake.quantity")}</Label>
-                  <Input type="number" value={form.quantity} onChange={e => updateField('quantity', e.target.value)} placeholder="100" />
-                </div>
-                <div className="space-y-1.5" data-field="declared_value">
-                  <Label className="text-xs font-mono">{t("intake.declaredValue")}</Label>
-                  <Input type="number" value={form.declared_value} onChange={e => updateField('declared_value', e.target.value)} placeholder="50000" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-mono">{t("intake.currency")}</Label>
@@ -530,6 +529,10 @@ export default function ShipmentIntake() {
                       <SelectItem value="MXN">MXN</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-1.5" data-field="declared_value">
+                  <Label className="text-xs font-mono">{t("intake.declaredValue")} (auto-summed)</Label>
+                  <Input type="number" value={form.declared_value} onChange={e => updateField('declared_value', e.target.value)} placeholder="50000" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-mono">{t("intake.incoterm")}</Label>
