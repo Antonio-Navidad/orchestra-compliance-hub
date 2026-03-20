@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { computePacketScore } from "@/lib/packetScore";
-import { Upload, X, FileText, Sparkles, ClipboardList, ShieldCheck, FileCheck, Save, Clock } from "lucide-react";
+import { Upload, X, FileText, Sparkles, ClipboardList, ShieldCheck, FileCheck, Save, Clock, Brain } from "lucide-react";
 import type { TransportMode } from "@/types/orchestra";
 import { useLanguage } from "@/hooks/useLanguage";
 import { cn } from "@/lib/utils";
