@@ -67,7 +67,7 @@ export function DeadlineTag({ deadline, onClick }: { deadline: ShipmentDeadline;
     >
       {isUrgent && <AlertTriangle size={8} />}
       {deadline.shortLabel} {deadline.status === 'overdue'
-        ? `${Math.abs(d.daysRemaining)}d over`
+        ? `${Math.abs(deadline.daysRemaining)}d over`
         : deadline.hoursRemaining < 48
           ? `in ${deadline.hoursRemaining}h`
           : `in ${deadline.daysRemaining}d`
