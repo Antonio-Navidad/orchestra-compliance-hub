@@ -38,6 +38,7 @@ import PurposeSelector from "./pages/PurposeSelector";
 import WorkspaceHome from "./pages/WorkspaceHome";
 import NotFound from "./pages/NotFound";
 import GuidePage from "./pages/GuidePage";
+import CommandCenter from "./pages/CommandCenter";
 
 const queryClient = new QueryClient();
 
