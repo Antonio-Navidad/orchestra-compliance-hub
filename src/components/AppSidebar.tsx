@@ -68,7 +68,7 @@ export function AppSidebar() {
                       >
                         <item.icon className="h-4 w-4" />
                         {!collapsed && (
-                          <span className="text-xs font-mono flex-1">{t(item.titleKey)}</span>
+                          <span className="text-[13px] font-medium flex-1 text-sidebar-foreground/90 group-data-[active=true]:text-white/90">{t(item.titleKey)}</span>
                         )}
                         {!collapsed && NAV_TOOLTIP_KEYS[item.url] && (
                           <TooltipProvider delayDuration={200}>
