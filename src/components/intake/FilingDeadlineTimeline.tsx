@@ -25,7 +25,7 @@ function getDeadlines(mode: TransportMode, origin: string, dest: string, departu
   const originUpper = (origin || "").toUpperCase().trim();
   const isDestUS = destUpper === "US" || destUpper === "UNITED STATES" || destUpper.includes("UNITED STATES");
   const isDestCO = destUpper === "CO" || destUpper === "COLOMBIA" || destUpper.includes("COLOMBIA");
-  const isOriginCN = originUpper === "CN" || origin === "China";
+  const isOriginCN = originUpper === "CN" || originUpper === "CHINA" || originUpper.includes("CHINA");
   const isDestEU = ["DE", "FR", "IT", "NL", "ES", "BE"].includes(destUpper) || destUpper === "EU";
 
   if (isDestUS) {
