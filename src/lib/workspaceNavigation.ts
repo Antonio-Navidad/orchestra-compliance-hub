@@ -141,6 +141,7 @@ const OPERATIONS_NAV: NavGroup[] = [
     labelKey: "navGroup.controlTower",
     items: [
       { titleKey: "nav.dashboard", url: "/", icon: Activity },
+      { titleKey: "nav.commandCenter", url: "/command-center", icon: KanbanSquare },
       { titleKey: "nav.watchMode", url: "/watch-mode", icon: Radio },
       { titleKey: "nav.reviewQueue", url: "/review", icon: ClipboardList },
     ],
