@@ -743,6 +743,9 @@ export default function ShipmentIntake() {
               </div>
             </div>
 
+            {/* Export Button */}
+            <IntakeExportButton form={form} docs={docs} packetScore={packetScore} className="w-full" />
+
             {/* Quick stats */}
             <Card>
               <CardContent className="pt-4 space-y-3">
