@@ -1,5 +1,7 @@
 // Universal alert drawer content registry
-// Every alert, badge, pill, and flag resolves to a specific drawer
+// Every alert, badge, pill, flag, and deadline resolves to a specific drawer
+
+import type { ShipmentDeadline } from './deadlineEngine';
 
 export interface AlertDrawerData {
   id: string;
