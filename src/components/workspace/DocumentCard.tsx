@@ -42,6 +42,7 @@ interface Props {
   onUploadCorrected?: (docId: string) => void;
   onMarkNA?: (docId: string) => void;
   onClickAlert?: (docId: string, message: string) => void;
+  onClickCard?: (docId: string) => void;
 }
 
 const STATE_CONFIG: Record<DocCardState, { border: string; dot: typeof CheckCircle2; dotClass: string; bg: string }> = {
@@ -52,7 +53,7 @@ const STATE_CONFIG: Record<DocCardState, { border: string; dot: typeof CheckCirc
   not_applicable: { border: 'border-l-muted', dot: MinusCircle, dotClass: 'text-muted-foreground/50', bg: 'opacity-50' },
 };
 
-export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCorrected, onMarkNA, onClickAlert }: Props) {
+export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCorrected, onMarkNA, onClickAlert, onClickCard }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const cfg = STATE_CONFIG[doc.state];
@@ -107,7 +108,11 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
           "hover:bg-accent/20 active:scale-[0.998] transition-colors"
         )}
       >
-        <Icon size={14} className={cn(cfg.dotClass, "shrink-0")} />
+        <Icon
+          size={14}
+          className={cn(cfg.dotClass, "shrink-0 cursor-pointer")}
+          onClick={(e) => { e.stopPropagation(); onClickCard?.(doc.id); }}
+        />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold block truncate">{doc.name}</span>
@@ -117,7 +122,12 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
               </span>
             )}
           </div>
-          <span className="text-[10px] text-muted-foreground">{doc.statusLine}</span>
+          <button
+            onClick={(e) => { e.stopPropagation(); onClickCard?.(doc.id); }}
+            className="text-[10px] text-muted-foreground hover:text-foreground hover:underline transition-colors text-left"
+          >
+            {doc.statusLine}
+          </button>
         </div>
         {doc.state === 'processing' ? (
           <Badge className="text-[9px] bg-blue-500/10 text-blue-500 border-blue-500/20 shrink-0 animate-pulse">

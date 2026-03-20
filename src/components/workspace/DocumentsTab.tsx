@@ -5,9 +5,9 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { ScoreBanner } from "./ScoreBanner";
 import { DocumentCard, type DocumentCardData, type DocCardState } from "./DocumentCard";
-import { DocRequirementDrawer } from "./DocRequirementDrawer";
+import { AlertDrawer } from "./AlertDrawer";
 import { useDocExtraction } from "@/hooks/useDocExtraction";
-import type { DocRequirement } from "@/lib/shipmentModes";
+import { getDrawerContent, getScorePillDrawer, type AlertDrawerData } from "@/lib/alertDrawerContent";
 import type { ShipmentModeId } from "@/lib/shipmentModes";
 
 const PHASES: Array<{ key: string; label: string; docIds: string[] }> = [
@@ -131,9 +131,9 @@ export function DocumentsTab({
   declaredValue, hsCode, shipmentSubtitle, shipmentId, onViewAIAnalysis, onUploadDoc,
 }: DocumentsTabProps) {
   const [showOptional, setShowOptional] = useState(false);
-  const [alertDrawerDoc, setAlertDrawerDoc] = useState<DocRequirement | null>(null);
-  const [alertDrawerOpen, setAlertDrawerOpen] = useState(false);
   const [markedNA, setMarkedNA] = useState<Set<string>>(new Set());
+  const [alertDrawerOpen, setAlertDrawerOpen] = useState(false);
+  const [alertDrawerData, setAlertDrawerData] = useState<AlertDrawerData | null>(null);
 
   const {
     extractDocument, processingDocs, getCardEnhancements, getScore, uploadedFiles, crossRefResults,
@@ -146,15 +146,23 @@ export function DocumentsTab({
 
   const fees = calcFees(declaredValue, shipmentMode);
 
-  // Handle document upload — store locally + trigger AI extraction
+  const openAlert = useCallback((alertId: string, context?: { docName?: string; severity?: string; message?: string }) => {
+    const drawerData = getDrawerContent(alertId, {
+      ...context,
+      shipmentMode,
+      originCountry,
+      destCountry: 'United States',
+      declaredValue,
+      hsCode,
+    });
+    setAlertDrawerData(drawerData);
+    setAlertDrawerOpen(true);
+  }, [shipmentMode, originCountry, declaredValue, hsCode]);
+
   const handleDocUpload = useCallback((docId: string, files: FileList) => {
     const file = files[0];
     if (!file) return;
-
-    // Also notify parent
     onUploadDoc?.(docId, files);
-
-    // Trigger extraction
     extractDocument(docId, file);
   }, [onUploadDoc, extractDocument]);
 
@@ -174,7 +182,6 @@ export function DocumentsTab({
       continue;
     }
 
-    // Get AI enhancements for this card
     const enhancements = getCardEnhancements(docId);
     const isProcessing = processingDocs.has(docId);
     const hasUpload = uploadedDocTypes.includes(docId) || !!uploadedFiles[docId];
@@ -193,7 +200,6 @@ export function DocumentsTab({
       state = 'verified';
       statusLine = fees[docId] || 'Auto-calculated';
     } else if (hasUpload && enhancements.state) {
-      // AI has processed this document
       state = enhancements.state;
       statusLine = enhancements.statusLine || 'Uploaded · AI verified';
       if (state === 'verified') verified++;
@@ -230,20 +236,56 @@ export function DocumentsTab({
     });
   }
 
-  // Calculate score with AI awareness (critical discrepancies cap at 85%)
   const aiScore = getScore(totalRequired, Object.keys(uploadedFiles));
   const score = aiScore > 0 ? aiScore : (totalRequired > 0 ? Math.round((verified / totalRequired) * 100) : 0);
 
-  // Build status pills
+  // Build status pills — ALL CLICKABLE
   const statusPills: Array<{ label: string; type: 'green' | 'amber' | 'red'; onClick?: () => void }> = [];
-  if (verified > 0) statusPills.push({ label: `${verified} verified`, type: 'green' });
-  if (issuesFlagged > 0) statusPills.push({ label: `${issuesFlagged} issues`, type: 'amber' });
-  if (missing > 0) statusPills.push({ label: `${missing} missing`, type: 'red' });
+  if (verified > 0) {
+    statusPills.push({
+      label: `${verified} verified`,
+      type: 'green',
+      onClick: () => {
+        const d = getScorePillDrawer('verified', verified);
+        setAlertDrawerData(d);
+        setAlertDrawerOpen(true);
+      },
+    });
+  }
+  if (issuesFlagged > 0) {
+    statusPills.push({
+      label: `${issuesFlagged} issues`,
+      type: 'amber',
+      onClick: () => {
+        const d = getScorePillDrawer('issues', issuesFlagged);
+        setAlertDrawerData(d);
+        setAlertDrawerOpen(true);
+      },
+    });
+  }
+  if (missing > 0) {
+    statusPills.push({
+      label: `${missing} missing`,
+      type: 'red',
+      onClick: () => {
+        const d = getScorePillDrawer('missing', missing);
+        setAlertDrawerData(d);
+        setAlertDrawerOpen(true);
+      },
+    });
+  }
 
-  // Add cross-ref summary pills
   const criticalCrossRef = crossRefResults.filter(cr => cr.severity === 'critical').length;
   if (criticalCrossRef > 0) {
-    statusPills.push({ label: `${criticalCrossRef} critical discrepancy`, type: 'red' });
+    statusPills.push({
+      label: `${criticalCrossRef} critical discrepancy`,
+      type: 'red',
+      onClick: () => {
+        const d = getScorePillDrawer('critical_discrepancy', criticalCrossRef);
+        setAlertDrawerData(d);
+        setAlertDrawerOpen(true);
+      },
+    });
   }
 
   return (
@@ -276,9 +318,9 @@ export function DocumentsTab({
                   doc={card}
                   onUpload={handleDocUpload}
                   onMarkNA={(id) => setMarkedNA(prev => new Set(prev).add(id))}
-                  onClickAlert={(id, msg) => {
-                    // Could open alert drawer
-                  }}
+                  onRequestFromSupplier={(id) => openAlert(id, { docName: card.name })}
+                  onClickAlert={(id, msg) => openAlert(id, { docName: card.name, message: msg })}
+                  onClickCard={(id) => openAlert(id, { docName: card.name, severity: card.state === 'missing' ? 'critical' : card.state === 'issue' ? 'high' : 'info' })}
                 />
               ))}
             </div>
@@ -293,7 +335,28 @@ export function DocumentsTab({
         </Label>
       </div>
 
-      <DocRequirementDrawer open={alertDrawerOpen} onOpenChange={setAlertDrawerOpen} doc={alertDrawerDoc} />
+      <AlertDrawer
+        open={alertDrawerOpen}
+        onOpenChange={setAlertDrawerOpen}
+        data={alertDrawerData}
+        onUpload={(docId) => {
+          // Trigger file input for this doc
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.pdf,.jpg,.png,.doc,.docx,.xlsx';
+          input.onchange = (e) => {
+            const files = (e.target as HTMLInputElement).files;
+            if (files && files.length > 0) {
+              handleDocUpload(docId, files);
+              setAlertDrawerOpen(false);
+            }
+          };
+          input.click();
+        }}
+        onMarkNA={(docId) => {
+          setMarkedNA(prev => new Set(prev).add(docId));
+        }}
+      />
     </div>
   );
 }
