@@ -486,16 +486,27 @@ export default function ShipmentIntake() {
                   <Textarea value={form.description} onChange={e => updateField('description', e.target.value)} placeholder={t("intake.commodityPlaceholder")} rows={2} />
                   <DescriptionQualityHint description={form.description} />
                 </div>
-                <div className="space-y-1.5" data-field="hs_code">
+                <div className="md:col-span-2 space-y-1.5" data-field="hs_code">
                   <Label className="text-xs font-mono">{t("intake.hsCode")}</Label>
-                  <Input value={form.hs_code} onChange={e => updateField('hs_code', e.target.value)} placeholder="8471.30" className="font-mono" />
-                  <HSCodeValidation
-                    hsCode={form.hs_code}
-                    description={form.description}
-                    destinationCountry={form.destination_country || form.jurisdiction_code}
+                  <MultiHSCodeField
+                    hsCodes={hsCodes.length > 0 ? hsCodes : (form.hs_code ? [form.hs_code] : [])}
+                    onCodesChange={(codes) => {
+                      setHsCodes(codes);
+                      updateField('hs_code', codes.join(', '));
+                    }}
                     declaredValue={form.declared_value}
                     currency={form.currency}
+                    aiSuggestions={aiSuggestedHS}
                   />
+                  {hsCodes.length <= 1 && form.hs_code && (
+                    <HSCodeValidation
+                      hsCode={form.hs_code}
+                      description={form.description}
+                      destinationCountry={form.destination_country || form.jurisdiction_code}
+                      declaredValue={form.declared_value}
+                      currency={form.currency}
+                    />
+                  )}
                 </div>
                 <div className="space-y-1.5" data-field="quantity">
                   <Label className="text-xs font-mono">{t("intake.quantity")}</Label>
