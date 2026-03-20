@@ -104,6 +104,7 @@ const ROUTE_PLANNING_NAV: NavGroup[] = [
     labelKey: "navGroup.planning",
     items: [
       { titleKey: "nav.dashboard", url: "/", icon: Activity },
+      { titleKey: "nav.commandCenter", url: "/command-center", icon: KanbanSquare },
       { titleKey: "nav.creatorMode", url: "/creator-mode", icon: Eye },
       { titleKey: "nav.routeBuilder", url: "/route-builder", icon: Map },
       { titleKey: "nav.decisionTwin", url: "/decision-twin", icon: Zap },
