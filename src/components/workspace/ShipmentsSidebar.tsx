@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, ChevronDown, Ship, Plane, Truck, CheckCircle2, AlertTriangle, XCircle, Pause, Clock } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Plus, ChevronDown, Ship, Plane, Truck, CheckCircle2, AlertTriangle, XCircle, Pause, Clock, MoreHorizontal, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 import type { ShipmentDeadline } from "@/lib/deadlineEngine";
 import { getMostUrgentDeadline } from "@/lib/deadlineEngine";
 
@@ -80,6 +83,10 @@ const PAUSED_STATUSES = ['paused', 'waiting_docs', 'draft'];
 export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadlines = [], onClickDeadline }: Props) {
   const [expanded, setExpanded] = useState<Set<Section>>(new Set(['active']));
 
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  const queryClient = useQueryClient();
+
   const { data: shipments = [], isLoading } = useQuery({
     queryKey: ["shipments-sidebar-list"],
     queryFn: async () => {
@@ -90,6 +97,42 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
         .limit(200);
       if (error) throw error;
       return (data || []) as ShipmentListItem[];
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (shipmentId: string) => {
+      const { error } = await supabase
+        .from("shipments")
+        .delete()
+        .eq("shipment_id", shipmentId);
+      if (error) throw error;
+    },
+    onSuccess: (_, shipmentId) => {
+      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+      queryClient.invalidateQueries({ queryKey: ["command-shipments"] });
+      toast({ title: "Shipment deleted", description: `${shipmentId} has been permanently removed.` });
+      if (selectedId === shipmentId) onNewShipment();
+    },
+    onError: (e: any) => {
+      toast({ title: "Delete failed", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const pauseMutation = useMutation({
+    mutationFn: async (shipmentId: string) => {
+      const { error } = await supabase
+        .from("shipments")
+        .update({ status: "paused" as any })
+        .eq("shipment_id", shipmentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+      toast({ title: "Workflow paused" });
+    },
+    onError: (e: any) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
     },
   });
 
@@ -181,15 +224,49 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                       const isSelected = selectedId === s.shipment_id;
 
                       return (
-                        <button
+                        <div
                           key={s.shipment_id}
-                          onClick={() => onSelect(s.shipment_id)}
                           className={cn(
-                            "w-full text-left px-3 py-2 transition-colors",
-                            "hover:bg-accent/40 active:scale-[0.99]",
+                            "group relative w-full text-left px-3 py-2 transition-colors cursor-pointer",
+                            "hover:bg-accent/40",
                             isSelected && "bg-primary/8 border-l-2 border-primary"
                           )}
+                          onClick={() => onSelect(s.shipment_id)}
                         >
+                          {/* Three-dot menu — visible on hover only */}
+                          <div className="absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="h-5 w-5 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                  <MoreHorizontal size={12} />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-40">
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    pauseMutation.mutate(s.shipment_id);
+                                  }}
+                                  className="text-xs gap-2"
+                                >
+                                  <Pause size={12} /> Pause workflow
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteTarget(s.shipment_id);
+                                  }}
+                                  className="text-xs gap-2 text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 size={12} /> Delete shipment
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+
                           <div className="flex items-center gap-1.5">
                             {MODE_ICONS[s.mode] || <Ship size={11} />}
                             <span className="text-[12px] font-bold font-mono text-foreground">{s.shipment_id}</span>
@@ -203,7 +280,6 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                           >
                             {badge.icon} {badge.label}
                           </Badge>
-                          {/* Deadline tag — show most urgent for selected shipment */}
                           {isSelected && deadlines.length > 0 && (() => {
                             const urgent = getMostUrgentDeadline(deadlines);
                             if (!urgent || urgent.status === 'upcoming') return null;
@@ -215,8 +291,8 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                 className={cn(
                                   "text-[9px] font-semibold px-1.5 py-0 rounded inline-flex items-center gap-0.5 mt-0.5",
                                   "border transition-colors active:scale-[0.97] cursor-pointer",
-                                  isOver ? "bg-red-500/10 text-red-500 border-red-500/20" :
-                                  isUrg ? "bg-red-500/8 text-red-500 border-red-500/20" :
+                                  isOver ? "bg-destructive/10 text-destructive border-destructive/20" :
+                                  isUrg ? "bg-destructive/8 text-destructive border-destructive/20" :
                                   "bg-amber-500/10 text-amber-600 border-amber-500/20"
                                 )}
                               >
@@ -236,7 +312,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                               Last active: {new Date(s.updated_at).toLocaleDateString()}
                             </p>
                           )}
-                        </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -246,6 +322,30 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
           ))}
         </div>
       </ScrollArea>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this shipment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <span className="font-mono font-bold">{deleteTarget}</span> and all uploaded documents. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteTarget) deleteMutation.mutate(deleteTarget);
+                setDeleteTarget(null);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
