@@ -67,6 +67,7 @@ const COMPLIANCE_NAV: NavGroup[] = [
     labelKey: "navGroup.compliance",
     items: [
       { titleKey: "nav.dashboard", url: "/", icon: Activity },
+      { titleKey: "nav.commandCenter", url: "/command-center", icon: KanbanSquare },
       { titleKey: "nav.docIntel", url: "/doc-intel", icon: FileSearch },
       { titleKey: "nav.complianceEngine", url: "/compliance-engine", icon: ShieldCheck },
       { titleKey: "nav.classifyProduct", url: "/classify", icon: Search },
