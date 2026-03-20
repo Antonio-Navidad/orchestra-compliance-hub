@@ -554,7 +554,7 @@ export default function ShipmentIntake() {
                       {COO_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <COOWarning cooStatus={form.coo_status} destinationCountry={form.destination_country || form.jurisdiction_code} />
+                  <COOWarning cooStatus={form.coo_status} destinationCountry={form.destination_country || form.jurisdiction_code} originCountry={form.origin_country} declaredValue={form.declared_value} currency={form.currency} />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-mono">{t("intake.priority")}</Label>
