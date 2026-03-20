@@ -111,6 +111,8 @@ const COUNTRY_TO_PACK: Record<string, string> = {
   "kr": "KR", "southkorea": "KR", "korea": "KR", "republicofkorea": "KR",
   // India
   "in": "IN", "india": "IN",
+  // Canada
+  "ca": "CA", "canada": "CA",
 };
 
 // Map to EU national overlay codes

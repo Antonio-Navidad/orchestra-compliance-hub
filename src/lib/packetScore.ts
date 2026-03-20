@@ -86,6 +86,14 @@ function getJurisdictionDocs(jurisdiction: string): Array<{ name: string; type: 
       { name: 'Pedimento', type: 'customs_declaration', required: true },
       { name: 'USMCA Certificate', type: 'certificate_of_origin', required: false },
     );
+  } else if (jurisdiction === 'CA') {
+    docs.push(
+      { name: 'CBSA Customs Entry (CAD)', type: 'customs_declaration', required: true },
+      { name: 'PARS Document', type: 'pars_document', required: true },
+      { name: 'ACI eManifest Confirmation', type: 'aci_emanifest', required: true },
+      { name: 'CARM Registration Confirmation', type: 'carm_registration', required: false },
+      { name: 'USMCA Certificate', type: 'certificate_of_origin', required: false },
+    );
   } else {
     docs.push(
       { name: 'Import/Export Declaration', type: 'customs_declaration', required: false },
