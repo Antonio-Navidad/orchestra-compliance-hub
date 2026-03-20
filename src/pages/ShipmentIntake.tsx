@@ -828,10 +828,7 @@ export default function ShipmentIntake() {
                         shipmentId={form.shipment_id}
                         deadlines={shipmentDeadlines}
                         onClickDeadline={handleDeadlineClick}
-                        shipmentSubtitle={(() => {
-                          const { getModeSubtitle } = require('@/lib/modeDocumentDefs');
-                          return getModeSubtitle(shipmentMode, form.origin_country, form.destination_country, form.description);
-                        })()}
+                        shipmentSubtitle={getModeSubtitle(shipmentMode, form.origin_country, form.destination_country, form.description)}
                         onViewAIAnalysis={() => setActiveTab('documents')}
                         onUploadDoc={(docId, files) => {
                           Array.from(files).forEach(file => {
