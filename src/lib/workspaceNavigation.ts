@@ -185,6 +185,7 @@ const ENTERPRISE_NAV: NavGroup[] = [
     labelKey: "navGroup.management",
     items: [
       { titleKey: "nav.dashboard", url: "/", icon: Activity },
+      { titleKey: "nav.commandCenter", url: "/command-center", icon: KanbanSquare },
       { titleKey: "nav.teams", url: "/teams", icon: Users },
       { titleKey: "nav.teamChat", url: "/team-chat", icon: Users },
       { titleKey: "nav.brokerScorecard", url: "/brokers", icon: Users },
