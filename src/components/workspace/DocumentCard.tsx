@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle2, AlertTriangle, XCircle, MinusCircle, ChevronDown,
-  Upload, FileText, Mail, RefreshCw, Loader2
+  Upload, FileText, Mail, RefreshCw, Loader2, Info
 } from "lucide-react";
 
 export type DocCardState = 'verified' | 'issue' | 'missing' | 'not_applicable' | 'processing';
@@ -110,12 +110,19 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
       >
         <Icon
           size={14}
-          className={cn(cfg.dotClass, "shrink-0 cursor-pointer")}
-          onClick={(e) => { e.stopPropagation(); onClickCard?.(doc.id); }}
+          className={cn(cfg.dotClass, "shrink-0")}
         />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <span className="text-xs font-semibold block truncate">{doc.name}</span>
+            <button
+              onClick={(e) => { e.stopPropagation(); onClickCard?.(doc.id); }}
+              className="inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors p-0.5 shrink-0"
+              aria-label={`Learn about ${doc.name}`}
+              title={`What is ${doc.name}? Click to learn more.`}
+            >
+              <Info size={12} />
+            </button>
             {doc.fileName && (
               <span className="text-[9px] text-muted-foreground/60 truncate max-w-[120px]">
                 {doc.fileName}
