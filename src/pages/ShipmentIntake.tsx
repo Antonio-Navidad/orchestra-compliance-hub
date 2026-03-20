@@ -28,6 +28,7 @@ import { DeadlineBar } from "@/components/workspace/DeadlineBar";
 import { AlertDrawer } from "@/components/workspace/AlertDrawer";
 import { AIVerificationTab } from "@/components/workspace/AIVerificationTab";
 import { useDocExtraction } from "@/hooks/useDocExtraction";
+import { WorkflowLogTab, type WorkflowShipment } from "@/components/workspace/WorkflowLogTab";
 import { calculateDeadlines, getDeadlinesWithin7Days } from "@/lib/deadlineEngine";
 import { getDeadlineDrawer, type AlertDrawerData } from "@/lib/alertDrawerContent";
 
@@ -149,6 +150,42 @@ export default function ShipmentIntake() {
   }, [shipmentMode, form.planned_departure, form.estimated_arrival]);
 
   const urgentDeadlines = useMemo(() => getDeadlinesWithin7Days(shipmentDeadlines), [shipmentDeadlines]);
+
+  // Build workflow log data from current shipment
+  const workflowShipments = useMemo<WorkflowShipment[]>(() => {
+    const declVal = parseFloat(form.declared_value) || 0;
+    const mpf = Math.min(Math.max(declVal * 0.003464, 31.67), 614.35);
+    const hmf = form.mode === "sea" ? declVal * 0.00125 : 0;
+    return [{
+      shipment_id: form.shipment_id,
+      title: form.description || "Untitled shipment",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      mode: shipmentMode.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+      importer: form.consignee || "—",
+      origin_country: form.origin_country || "—",
+      port_of_entry: form.port_of_entry || "—",
+      commodity_type: form.description?.split(" ")[0] || "—",
+      hts_codes: form.hs_code || "—",
+      declared_value: declVal,
+      fta_program: form.coo_status === "potentially_eligible" ? "Pending" : "None",
+      advcd_applicable: false,
+      section_301: form.origin_country?.toLowerCase().includes("china") || false,
+      estimated_duties: 0,
+      mpf: Math.round(mpf * 100) / 100,
+      hmf: Math.round(hmf * 100) / 100,
+      isf_filed: "",
+      entry_type: "Formal",
+      cbp_hold: false,
+      pga_agencies: [],
+      docs_uploaded: docs.length,
+      docs_required: 13,
+      discrepancies: docExtraction.crossRefResults.length,
+      score: 0,
+      status: "Draft",
+      notes: "",
+    }];
+  }, [form, shipmentMode, docs.length, docExtraction.crossRefResults.length]);
 
   const handleDeadlineClick = useCallback((deadline: any) => {
     const drawerData = getDeadlineDrawer(deadline);
@@ -606,8 +643,41 @@ export default function ShipmentIntake() {
                     </div>
                   </TabsContent>
 
-                  {/* ─── Workflow Log / Compliance Tab ─── */}
+                  {/* ─── Workflow Log Tab ─── */}
                   <TabsContent value="compliance" className="mt-4 space-y-4">
+                    <WorkflowLogTab
+                      shipments={workflowShipments}
+                      docEvents={[]}
+                      aiRecs={docExtraction.crossRefResults.map(cr => ({
+                        shipment_id: form.shipment_id,
+                        severity: cr.severity,
+                        title: `${cr.document_a} ↔ ${cr.document_b}: ${cr.field_checked}`,
+                        finding: cr.finding,
+                        recommendation: cr.recommendation,
+                        financial_impact: cr.estimated_financial_impact_usd,
+                        resolved: false,
+                      }))}
+                      discrepancies={docExtraction.crossRefResults.map(cr => ({
+                        shipment_id: form.shipment_id,
+                        doc_a: cr.document_a,
+                        doc_b: cr.document_b,
+                        field: cr.field_checked,
+                        finding: cr.finding,
+                        severity: cr.severity,
+                        resolved: false,
+                        resolution_note: "",
+                      }))}
+                      currentShipmentId={form.shipment_id}
+                      onShipmentClick={(id) => {
+                        setSelectedShipmentId(id);
+                        setActiveTab('details');
+                      }}
+                      onNotesChange={(id, notes) => {
+                        // Could persist to DB
+                        console.log(`Notes for ${id}:`, notes);
+                      }}
+                    />
+
                     <ComplianceCoach shipmentContext={{
                       originCountry: form.origin_country, destinationCountry: form.destination_country,
                       mode: form.mode, hsCode: form.hs_code, description: form.description,
