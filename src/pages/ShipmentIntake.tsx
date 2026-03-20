@@ -126,6 +126,25 @@ export default function ShipmentIntake() {
   const [showGate, setShowGate] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showWizard, setShowWizard] = useState(false);
+  const [deadlineDrawerOpen, setDeadlineDrawerOpen] = useState(false);
+  const [deadlineDrawerData, setDeadlineDrawerData] = useState<AlertDrawerData | null>(null);
+
+  // Calculate deadlines for current shipment
+  const shipmentDeadlines = useMemo(() => {
+    return calculateDeadlines({
+      shipmentMode: shipmentMode,
+      vesselEtd: form.planned_departure || null,
+      vesselEta: form.estimated_arrival || null,
+    });
+  }, [shipmentMode, form.planned_departure, form.estimated_arrival]);
+
+  const urgentDeadlines = useMemo(() => getDeadlinesWithin7Days(shipmentDeadlines), [shipmentDeadlines]);
+
+  const handleDeadlineClick = useCallback((deadline: any) => {
+    const drawerData = getDeadlineDrawer(deadline);
+    setDeadlineDrawerData(drawerData);
+    setDeadlineDrawerOpen(true);
+  }, []);
 
   // Fetch existing importers for autocomplete
   const { data: existingImporters = [] } = useQuery({
