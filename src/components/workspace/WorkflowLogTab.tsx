@@ -115,7 +115,7 @@ const COLUMNS: Array<{ key: keyof WorkflowShipment; label: string; width?: strin
 ];
 
 const STATUS_OPTIONS = ["All", "Draft", "Documents Pending", "Under Review", "Ready to File", "Filed", "Customs Hold", "Cleared", "Archived"];
-const MODE_OPTIONS = ["All", "Ocean Import", "Air Import", "U.S. Export", "In-Bond / T&E"];
+const MODE_OPTIONS = ["All", "Ocean Import", "Air Import", "Land / Truck Import — Mexico", "Land / Truck Import — Canada", "Ocean Export", "Air Export", "Land / Truck Export — Mexico", "Land / Truck Export — Canada", "U.S. Export", "In-Bond / T&E"];
 
 function formatDate(d: string) {
   if (!d) return "—";
