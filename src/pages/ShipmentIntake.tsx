@@ -22,6 +22,7 @@ import { SHIPMENT_MODES, MODE_DOC_PROFILES, getApplicableConditionalDocs, type S
 import { ShipmentModeSelector } from "@/components/workspace/ShipmentModeSelector";
 import { DocChecklistPanel } from "@/components/workspace/DocChecklistPanel";
 import { ShipmentsSidebar } from "@/components/workspace/ShipmentsSidebar";
+import { NewShipmentWizard, type WizardResult } from "@/components/workspace/NewShipmentWizard";
 
 import { OnboardingBanner } from "@/components/intake/OnboardingBanner";
 import { ResetDialog } from "@/components/intake/ResetDialog";
