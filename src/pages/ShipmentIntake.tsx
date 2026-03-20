@@ -241,8 +241,8 @@ export default function ShipmentIntake() {
 
   const resetForm = () => {
     setForm({ ...INITIAL_FORM, shipment_id: generateShipmentId() });
-    setHsCodes([]);
-    setAiSuggestedHS([]);
+    setLineItems([]);
+    setAiSuggestedItems([]);
     setDocs([]);
     setExpandedLayers(new Set());
   };
