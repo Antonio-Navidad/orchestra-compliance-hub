@@ -739,6 +739,12 @@ export default function ShipmentIntake() {
         }}
         onConfirm={doCreate} onForceCreate={doCreate}
       />
+      <NewShipmentWizard
+        open={showWizard}
+        onOpenChange={setShowWizard}
+        onComplete={handleWizardComplete}
+        existingImporters={existingImporters}
+      />
     </div>
   );
 }
