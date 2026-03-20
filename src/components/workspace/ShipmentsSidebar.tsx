@@ -203,6 +203,34 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                           >
                             {badge.icon} {badge.label}
                           </Badge>
+                          {/* Deadline tag — show most urgent for selected shipment */}
+                          {isSelected && deadlines.length > 0 && (() => {
+                            const urgent = getMostUrgentDeadline(deadlines);
+                            if (!urgent || urgent.status === 'upcoming') return null;
+                            const isOver = urgent.status === 'overdue';
+                            const isUrg = urgent.status === 'urgent';
+                            return (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); onClickDeadline?.(urgent); }}
+                                className={cn(
+                                  "text-[9px] font-semibold px-1.5 py-0 rounded inline-flex items-center gap-0.5 mt-0.5",
+                                  "border transition-colors active:scale-[0.97] cursor-pointer",
+                                  isOver ? "bg-red-500/10 text-red-500 border-red-500/20" :
+                                  isUrg ? "bg-red-500/8 text-red-500 border-red-500/20" :
+                                  "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                )}
+                              >
+                                {(isOver || isUrg) && <AlertTriangle size={8} />}
+                                <Clock size={8} />
+                                {urgent.shortLabel} {isOver
+                                  ? `${Math.abs(urgent.daysRemaining)}d over`
+                                  : urgent.hoursRemaining < 48
+                                    ? `in ${urgent.hoursRemaining}h`
+                                    : `in ${urgent.daysRemaining}d`
+                                }
+                              </button>
+                            );
+                          })()}
                           {section.key === 'incomplete' && (
                             <p className="text-[9px] text-muted-foreground/60 mt-0.5">
                               Last active: {new Date(s.updated_at).toLocaleDateString()}
