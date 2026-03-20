@@ -432,11 +432,10 @@ export default function ShipmentIntake() {
                   <TabsList className="w-full justify-start bg-card border border-border rounded-lg p-1 h-auto flex-wrap">
                     <TabsTrigger value="details" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                       <ClipboardList size={12} /> Documents
-                      {detailsComplete < 3 && <Badge variant="outline" className="text-[9px] px-1 py-0 ml-1 border-amber-500/30 text-amber-500">{detailsComplete}/3</Badge>}
                     </TabsTrigger>
                     <TabsTrigger value="documents" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                       <FileText size={12} /> AI Verification
-                      {docsComplete > 0 && <Badge variant="outline" className="text-[9px] px-1 py-0 ml-1">{docsComplete}</Badge>}
+                      {docs.length > 0 && <Badge variant="outline" className="text-[9px] px-1 py-0 ml-1">{docs.length}</Badge>}
                     </TabsTrigger>
                     <TabsTrigger value="compliance" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                       <ShieldCheck size={12} /> Workflow Log
@@ -446,144 +445,24 @@ export default function ShipmentIntake() {
                     </TabsTrigger>
                   </TabsList>
 
-                  {/* ─── Details / Documents Tab ─── */}
-                  <TabsContent value="details" className="mt-4 space-y-4">
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-semibold">Shipment Information</CardTitle>
-                      </CardHeader>
-                      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium">Shipment ID *</Label>
-                          <Input value={form.shipment_id} onChange={e => updateField('shipment_id', e.target.value)} placeholder="ORC-XXX" className="font-mono" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium">Origin Country *</Label>
-                          <Input value={form.origin_country} onChange={e => updateField('origin_country', e.target.value)} placeholder="e.g. China, Colombia, CN, CO" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium">Destination Country *</Label>
-                          <Input value={form.destination_country} onChange={e => updateField('destination_country', e.target.value)} placeholder="e.g. United States, US" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium">Port of Entry</Label>
-                          <Input value={form.port_of_entry} onChange={e => updateField('port_of_entry', e.target.value)} placeholder="e.g. Port of Los Angeles" />
-                        </div>
-                        <div className="md:col-span-2 space-y-1.5">
-                          <Label className="text-xs font-medium">Commodity Description *</Label>
-                          <Textarea value={form.description} onChange={e => updateField('description', e.target.value)} placeholder="Describe the goods in detail: material, intended use, composition..." rows={3} />
-                          <DescriptionQualityHint description={form.description} />
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-semibold">Commodity Line Items</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <LineItemTable
-                          items={lineItems}
-                          onItemsChange={(items) => {
-                            setLineItems(items);
-                            const codes = items.map(i => i.hsCode).filter(Boolean);
-                            updateField('hs_code', codes.join(', '));
-                            const total = items.reduce((s, r) => s + (parseFloat(r.quantity) || 0) * (parseFloat(r.unitValue) || 0), 0);
-                            if (total > 0) updateField('declared_value', total.toFixed(2));
-                          }}
-                          currency={form.currency}
-                          aiSuggestions={aiSuggestedItems}
-                        />
-                        <div className="grid grid-cols-2 gap-4 mt-4">
-                          <div className="space-y-1.5">
-                            <Label className="text-xs font-medium">Currency</Label>
-                            <Select value={form.currency} onValueChange={v => updateField('currency', v)}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {['USD','EUR','GBP','CNY','MXN','COP','BRL','JPY','KRW'].map(c =>
-                                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                                )}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs font-medium">Total Declared Value</Label>
-                            <Input type="number" value={form.declared_value} onChange={e => updateField('declared_value', e.target.value)} placeholder="Auto-summed from line items" />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-semibold">Parties & Logistics</CardTitle>
-                      </CardHeader>
-                      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium">Shipper / Exporter</Label>
-                          <Input value={form.shipper} onChange={e => updateField('shipper', e.target.value)} placeholder="Company name" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium">Consignee / Importer</Label>
-                          <Input value={form.consignee} onChange={e => updateField('consignee', e.target.value)} placeholder="Company name" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium">Incoterm</Label>
-                          <Select value={form.incoterm} onValueChange={v => updateField('incoterm', v)}>
-                            <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-                            <SelectContent>
-                              {INCOTERMS.map(ic => <SelectItem key={ic} value={ic}>{ic}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                          <IncotermHint incoterm={form.incoterm} />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium">COO Status</Label>
-                          <Select value={form.coo_status} onValueChange={v => updateField('coo_status', v)}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {COO_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                          <COOWarning cooStatus={form.coo_status} destinationCountry={form.destination_country || form.jurisdiction_code} originCountry={form.origin_country} declaredValue={form.declared_value} currency={form.currency} />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium">Assigned Broker</Label>
-                          <Select value={form.broker_id} onValueChange={v => {
-                            const broker = brokers.find(b => b.id === v);
-                            setForm(prev => ({ ...prev, broker_id: v, assigned_broker: broker?.canonical_name || '' }));
-                          }}>
-                            <SelectTrigger><SelectValue placeholder="Select broker..." /></SelectTrigger>
-                            <SelectContent>
-                              {brokers.map(b => <SelectItem key={b.id} value={b.id}>{b.canonical_name}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium">Forwarder</Label>
-                          <Input value={form.forwarder} onChange={e => updateField('forwarder', e.target.value)} placeholder="Forwarder name" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium">Planned Departure (ETD)</Label>
-                          <Input type="date" value={form.planned_departure} onChange={e => updateField('planned_departure', e.target.value)} />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium">Estimated Arrival (ETA)</Label>
-                          <Input type="date" value={form.estimated_arrival} onChange={e => updateField('estimated_arrival', e.target.value)} />
-                        </div>
-                        {form.planned_departure && form.destination_country && (
-                          <div className="md:col-span-2">
-                            <FilingDeadlineTimeline mode={form.mode} originCountry={form.origin_country} destinationCountry={form.destination_country} plannedDeparture={form.planned_departure} estimatedArrival={form.estimated_arrival} />
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-
-                    <div className="flex justify-end">
-                      <Button onClick={() => setActiveTab('documents')} className="text-xs gap-1.5">
-                        Continue to AI Verification →
-                      </Button>
-                    </div>
+                  {/* ─── Documents Tab (Phased Document Checklist) ─── */}
+                  <TabsContent value="details" className="mt-4">
+                    <DocumentsTab
+                      shipmentMode={shipmentMode}
+                      uploadedDocTypes={uploadedDocTypes}
+                      commodityType={form.description}
+                      originCountry={form.origin_country}
+                      incoterm={form.incoterm}
+                      declaredValue={form.declared_value}
+                      hsCode={form.hs_code}
+                      shipmentSubtitle={`${modeConfig.label} · ${form.origin_country || '—'} → ${form.destination_country || '—'} · ${form.description ? form.description.slice(0, 40) : 'No commodity'} ${form.hs_code ? `HTS ${form.hs_code.split(',')[0]}` : ''}`}
+                      onViewAIAnalysis={() => setActiveTab('documents')}
+                      onUploadDoc={(docId, files) => {
+                        Array.from(files).forEach(file => {
+                          setDocs(prev => [...prev, { file, docType: docId, id: crypto.randomUUID() }]);
+                        });
+                      }}
+                    />
                   </TabsContent>
 
                   {/* ─── AI Verification Tab ─── */}
