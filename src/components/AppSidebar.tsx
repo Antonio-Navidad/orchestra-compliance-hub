@@ -38,7 +38,7 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <h1 className="text-sm font-bold tracking-tight">{t("app.title")}</h1>
+              <h1 className="text-sm font-bold tracking-tight text-sidebar-foreground/90">{t("app.title")}</h1>
               {currentPurpose && (
                 <p className="text-[9px] font-mono text-primary/70 tracking-wider truncate">
                   {currentPurpose.icon} {currentPurpose.label.toUpperCase()}
@@ -52,7 +52,7 @@ export function AppSidebar() {
       <SidebarContent className="px-1">
         {navGroups.map((group) => (
           <SidebarGroup key={group.labelKey}>
-            <SidebarGroupLabel className="text-[10px] tracking-widest font-mono text-muted-foreground/60">
+            <SidebarGroupLabel className="text-[11px] tracking-widest font-semibold text-sidebar-foreground/65">
               {t(group.labelKey)}
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -63,12 +63,12 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end={item.url === "/"}
-                        className="hover:bg-sidebar-accent/50"
-                        activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                        className="hover:bg-sidebar-accent/50 text-sidebar-foreground/65"
+                        activeClassName="bg-sidebar-accent text-sidebar-primary font-semibold"
                       >
                         <item.icon className="h-4 w-4" />
                         {!collapsed && (
-                          <span className="text-xs font-mono flex-1">{t(item.titleKey)}</span>
+                          <span className="text-[13px] font-medium flex-1 text-sidebar-foreground/90 group-data-[active=true]:text-white/90">{t(item.titleKey)}</span>
                         )}
                         {!collapsed && NAV_TOOLTIP_KEYS[item.url] && (
                           <TooltipProvider delayDuration={200}>
@@ -104,7 +104,7 @@ export function AppSidebar() {
               variant="ghost"
               size="sm"
               onClick={clearPurpose}
-              className="text-[10px] font-mono text-muted-foreground hover:text-foreground h-auto p-1 justify-start"
+              className="text-[11px] font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground/90 h-auto p-1 justify-start"
             >
               <Repeat size={10} className="mr-1" /> {t("nav.switchWorkspace")}
             </Button>
@@ -117,7 +117,7 @@ export function AppSidebar() {
                 variant="ghost"
                 size="sm"
                 onClick={signOut}
-                className="text-xs font-mono text-muted-foreground hover:text-foreground h-auto p-1 ml-auto"
+                className="text-[12px] font-medium text-sidebar-foreground/65 hover:text-sidebar-foreground/90 h-auto p-1 ml-auto"
               >
                 <LogOut size={12} className="mr-1" /> {t("nav.signOut")}
               </Button>
