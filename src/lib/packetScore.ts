@@ -103,7 +103,11 @@ function getJurisdictionDocs(jurisdiction: string): Array<{ name: string; type: 
 }
 function getRegulatoryDocs(hsCode?: string): Array<{ name: string; type: string; required: boolean }> {
   const docs: Array<{ name: string; type: string; required: boolean }> = [];
-  if (!hsCode) return docs;
+  if (!hsCode) {
+    docs.push({ name: 'Export License / Permit', type: 'export_license', required: false });
+    docs.push({ name: 'Import Permit', type: 'import_permit', required: false });
+    return docs;
+  }
 
   const ch = parseInt(hsCode.substring(0, 2));
   if (isNaN(ch)) return docs;
