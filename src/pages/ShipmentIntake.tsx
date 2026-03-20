@@ -23,6 +23,7 @@ import { ShipmentModeSelector } from "@/components/workspace/ShipmentModeSelecto
 import { DocChecklistPanel } from "@/components/workspace/DocChecklistPanel";
 import { ShipmentsSidebar } from "@/components/workspace/ShipmentsSidebar";
 import { NewShipmentWizard, type WizardResult } from "@/components/workspace/NewShipmentWizard";
+import { DocumentsTab } from "@/components/workspace/DocumentsTab";
 
 import { OnboardingBanner } from "@/components/intake/OnboardingBanner";
 import { ResetDialog } from "@/components/intake/ResetDialog";
