@@ -120,6 +120,17 @@ export default function ShipmentIntake() {
   const [showPreFill, setShowPreFill] = useState(false);
   const [showGate, setShowGate] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
+
+  // Fetch existing importers for autocomplete
+  const { data: existingImporters = [] } = useQuery({
+    queryKey: ["existing-importers"],
+    queryFn: async () => {
+      const { data } = await supabase.from("shipments").select("consignee").not("consignee", "is", null);
+      const names = [...new Set((data || []).map((r: any) => r.consignee).filter(Boolean))];
+      return names as string[];
+    },
+  });
 
   const { data: brokers = [] } = useQuery({
     queryKey: ["brokers"],
