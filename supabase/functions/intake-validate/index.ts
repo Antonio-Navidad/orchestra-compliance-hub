@@ -247,8 +247,13 @@ User Question: ${params.question}`;
 
       systemPrompt = `You are a document extraction expert for trade/customs shipping data. Extract only values clearly present in the provided raw document text.
 
+CRITICAL — Shipper and Consignee name separation:
+- For "shipper" and "consignee", extract ONLY the company name (e.g. "Textiles Andinos S.A.S."), NOT the full address block.
+- Extract the address parts as separate fields: shipper_address, shipper_city_state, shipper_country, consignee_address, consignee_city_state, consignee_country.
+- Use "shipper_name" for the company name only and "consignee_name" for the company name only.
+
 Extract any fields that appear in the text, including:
-shipper, consignee, notify_party, hs_code, declared_value, currency, port_of_loading, port_of_discharge, vessel_name, container_number, seal_number, bl_number, etd, eta, incoterm, origin_country, destination_country, import_country, export_country, place_of_receipt, place_of_delivery, transport_mode, commodity_description, quantity, gross_weight, net_weight, total_cartons, total_pieces, total_cbm, freight_charges, insurance_value, cif_value, booking_reference, purchase_order, shippers_reference, customs_entry_number.
+shipper_name, consignee_name, shipper_address, shipper_city_state, shipper_country, consignee_address, consignee_city_state, consignee_country, notify_party, hs_code, declared_value, currency, port_of_loading, port_of_discharge, vessel_name, container_number, seal_number, bl_number, etd, eta, incoterm, origin_country, destination_country, import_country, export_country, place_of_receipt, place_of_delivery, transport_mode, commodity_description, quantity, gross_weight, net_weight, total_cartons, total_pieces, total_cbm, freight_charges, insurance_value, cif_value, booking_reference, purchase_order, shippers_reference, customs_entry_number.
 
 For quantity/weight/volume fields, extract the numeric value AND the unit separately. Examples:
 - "1,306.5 kg" → value: "1306.5", unit in field context
