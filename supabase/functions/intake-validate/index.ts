@@ -1,9 +1,101 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(base64: string): Uint8Array {
+  const normalized = base64.replace(/\s/g, "");
+  const binary = atob(normalized);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function extractRawTextFromPdf(
+  LOVABLE_API_KEY: string,
+  fileBytes: Uint8Array,
+  mimeType: string,
+): Promise<string> {
+  const pdfBase64 = bytesToBase64(fileBytes);
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You extract raw text from trade documents. Return only text that appears in the document. Preserve labels, line breaks, and key table values.",
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: { url: `data:${mimeType};base64,${pdfBase64}` },
+            },
+            {
+              type: "text",
+              text: "Extract the full readable text from this PDF. Include all key shipping fields exactly as written (shipper, consignee, B/L, vessel, container, ports, values, HS codes, Incoterms, ETD, ETA). Do not summarize.",
+            },
+          ],
+        },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "pdf_text_result",
+            description: "Return raw extracted text from the PDF",
+            parameters: {
+              type: "object",
+              properties: {
+                rawText: { type: "string" },
+              },
+              required: ["rawText"],
+              additionalProperties: false,
+            },
+          },
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "pdf_text_result" } },
+    }),
+  });
+
+  if (!response.ok) {
+    const responseBody = await response.text();
+    throw new Error(`PDF text extraction failed: ${response.status} ${responseBody}`);
+  }
+
+  const data = await response.json();
+  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  if (toolCall?.function?.arguments) {
+    const parsed = JSON.parse(toolCall.function.arguments);
+    return String(parsed.rawText || "");
+  }
+
+  return String(data.choices?.[0]?.message?.content || "");
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
