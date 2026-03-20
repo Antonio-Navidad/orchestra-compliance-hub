@@ -196,11 +196,14 @@ export default function ShipmentIntake() {
     // Normalize mode to lowercase to match Select option values
     if (mapped['mode']) {
       mapped['mode'] = mapped['mode'].toLowerCase() as any;
+      console.log('[Intake] Mapped mode →', mapped['mode']);
     }
 
     // Normalize incoterm to uppercase to match Select option values
     if (mapped['incoterm']) {
-      mapped['incoterm'] = mapped['incoterm'].toUpperCase();
+      const upper = mapped['incoterm'].toUpperCase();
+      mapped['incoterm'] = INCOTERMS.includes(upper) ? upper : '';
+      console.log('[Intake] Mapped incoterm →', mapped['incoterm'], '(from extracted:', fields['incoterm'], ')');
     }
 
     // Auto-detect COO eligibility for Colombia → US
@@ -214,14 +217,22 @@ export default function ShipmentIntake() {
       mapped['coo_status'] = 'potentially_eligible';
     }
 
-    // Handle HS codes — may be comma-separated or single
+    // Handle HS codes — may be comma-separated or single; populate line items
     const hsValue = mapped['hs_code'] || '';
     if (hsValue) {
       const codes = hsValue.split(/[,;]/).map((c: string) => c.trim()).filter(Boolean);
       if (codes.length > 0) {
-        setHsCodes(codes);
-        setAiSuggestedHS(codes);
-        mapped['hs_code'] = codes[0]; // Keep first as primary
+        const newItems: LineItem[] = codes.map(code => ({
+          id: crypto.randomUUID(),
+          hsCode: code,
+          description: '',
+          quantity: '',
+          uom: 'pcs',
+          unitValue: '',
+        }));
+        setLineItems(newItems);
+        setAiSuggestedItems(codes.map(c => ({ hsCode: c })));
+        mapped['hs_code'] = codes[0];
       }
     }
 
