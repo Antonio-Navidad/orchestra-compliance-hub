@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +24,10 @@ import { DocChecklistPanel } from "@/components/workspace/DocChecklistPanel";
 import { ShipmentsSidebar } from "@/components/workspace/ShipmentsSidebar";
 import { NewShipmentWizard, type WizardResult } from "@/components/workspace/NewShipmentWizard";
 import { DocumentsTab } from "@/components/workspace/DocumentsTab";
+import { DeadlineBar } from "@/components/workspace/DeadlineBar";
+import { AlertDrawer } from "@/components/workspace/AlertDrawer";
+import { calculateDeadlines, getDeadlinesWithin7Days } from "@/lib/deadlineEngine";
+import { getDeadlineDrawer, type AlertDrawerData } from "@/lib/alertDrawerContent";
 
 import { OnboardingBanner } from "@/components/intake/OnboardingBanner";
 import { ResetDialog } from "@/components/intake/ResetDialog";
@@ -122,6 +126,25 @@ export default function ShipmentIntake() {
   const [showGate, setShowGate] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showWizard, setShowWizard] = useState(false);
+  const [deadlineDrawerOpen, setDeadlineDrawerOpen] = useState(false);
+  const [deadlineDrawerData, setDeadlineDrawerData] = useState<AlertDrawerData | null>(null);
+
+  // Calculate deadlines for current shipment
+  const shipmentDeadlines = useMemo(() => {
+    return calculateDeadlines({
+      shipmentMode: shipmentMode,
+      vesselEtd: form.planned_departure || null,
+      vesselEta: form.estimated_arrival || null,
+    });
+  }, [shipmentMode, form.planned_departure, form.estimated_arrival]);
+
+  const urgentDeadlines = useMemo(() => getDeadlinesWithin7Days(shipmentDeadlines), [shipmentDeadlines]);
+
+  const handleDeadlineClick = useCallback((deadline: any) => {
+    const drawerData = getDeadlineDrawer(deadline);
+    setDeadlineDrawerData(drawerData);
+    setDeadlineDrawerOpen(true);
+  }, []);
 
   // Fetch existing importers for autocomplete
   const { data: existingImporters = [] } = useQuery({
@@ -381,30 +404,33 @@ export default function ShipmentIntake() {
         selectedId={selectedShipmentId}
         onSelect={handleSelectShipment}
         onNewShipment={handleNewShipment}
+        deadlines={shipmentDeadlines}
+        onClickDeadline={handleDeadlineClick}
       />
 
       {/* RIGHT: Workspace */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Workspace top bar */}
-        <div className="shrink-0 border-b border-border bg-card/60 backdrop-blur-sm px-4 py-2.5 flex items-center gap-3">
-          <div className="flex-1 min-w-0 flex items-center gap-2">
-            <h1 className="text-[15px] font-bold truncate">
-              {isNewMode ? 'New Shipment' : form.shipment_id}
-            </h1>
-            <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 shrink-0">
-              {modeConfig.icon} {modeConfig.shortLabel}
-            </Badge>
-            {!isNewMode && (
-              <Badge variant="outline" className="text-[10px] shrink-0">
-                {form.direction === 'inbound' ? '↓ Import' : '↑ Export'}
+        <div className="shrink-0 border-b border-border bg-card/60 backdrop-blur-sm px-4 py-2.5 space-y-1">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0 flex items-center gap-2">
+              <h1 className="text-[15px] font-bold truncate">
+                {isNewMode ? 'New Shipment' : form.shipment_id}
+              </h1>
+              <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 shrink-0">
+                {modeConfig.icon} {modeConfig.shortLabel}
               </Badge>
-            )}
-            {lastSaved && (
-              <span className="text-[10px] text-muted-foreground/60 flex items-center gap-1 shrink-0 ml-auto">
-                <Clock size={10} /> Saved {lastSaved.toLocaleTimeString()}
-              </span>
-            )}
-          </div>
+              {!isNewMode && (
+                <Badge variant="outline" className="text-[10px] shrink-0">
+                  {form.direction === 'inbound' ? '↓ Import' : '↑ Export'}
+                </Badge>
+              )}
+              {lastSaved && (
+                <span className="text-[10px] text-muted-foreground/60 flex items-center gap-1 shrink-0 ml-auto">
+                  <Clock size={10} /> Saved {lastSaved.toLocaleTimeString()}
+                </span>
+              )}
+            </div>
           <div className="flex items-center gap-2 shrink-0">
             <RepeatShipmentSelector onSelect={applyPreFill} />
             <Button onClick={() => setShowPreFill(true)} variant="outline" size="sm" className="text-[11px] gap-1.5 border-primary/30 text-primary hover:bg-primary/10">
@@ -412,6 +438,11 @@ export default function ShipmentIntake() {
             </Button>
             <ResetDialog onReset={handleNewShipment} />
           </div>
+          </div>
+          {/* Deadline row */}
+          {urgentDeadlines.length > 0 && (
+            <DeadlineBar deadlines={urgentDeadlines} onClickDeadline={handleDeadlineClick} />
+          )}
         </div>
 
         {/* Workspace content */}
@@ -454,6 +485,8 @@ export default function ShipmentIntake() {
                       declaredValue={form.declared_value}
                       hsCode={form.hs_code}
                       shipmentId={form.shipment_id}
+                      deadlines={shipmentDeadlines}
+                      onClickDeadline={handleDeadlineClick}
                       shipmentSubtitle={`${modeConfig.label} · ${form.origin_country || '—'} → ${form.destination_country || '—'} · ${form.description ? form.description.slice(0, 40) : 'No commodity'} ${form.hs_code ? `HTS ${form.hs_code.split(',')[0]}` : ''}`}
                       onViewAIAnalysis={() => setActiveTab('documents')}
                       onUploadDoc={(docId, files) => {
@@ -611,6 +644,11 @@ export default function ShipmentIntake() {
         onOpenChange={setShowWizard}
         onComplete={handleWizardComplete}
         existingImporters={existingImporters}
+      />
+      <AlertDrawer
+        open={deadlineDrawerOpen}
+        onOpenChange={setDeadlineDrawerOpen}
+        data={deadlineDrawerData}
       />
     </div>
   );

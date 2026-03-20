@@ -5,8 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, ChevronDown, Ship, Plane, Truck, CheckCircle2, AlertTriangle, XCircle, Pause } from "lucide-react";
+import { Plus, ChevronDown, Ship, Plane, Truck, CheckCircle2, AlertTriangle, XCircle, Pause, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { ShipmentDeadline } from "@/lib/deadlineEngine";
+import { getMostUrgentDeadline } from "@/lib/deadlineEngine";
 
 export interface ShipmentListItem {
   shipment_id: string;
@@ -25,6 +27,8 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onNewShipment: () => void;
+  deadlines?: ShipmentDeadline[];
+  onClickDeadline?: (d: ShipmentDeadline) => void;
 }
 
 const MODE_ICONS: Record<string, React.ReactNode> = {
@@ -73,7 +77,7 @@ type Section = 'active' | 'incomplete' | 'completed';
 const COMPLETED_STATUSES = ['cleared', 'delivered', 'closed', 'archived'];
 const PAUSED_STATUSES = ['paused', 'waiting_docs', 'draft'];
 
-export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment }: Props) {
+export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadlines = [], onClickDeadline }: Props) {
   const [expanded, setExpanded] = useState<Set<Section>>(new Set(['active']));
 
   const { data: shipments = [], isLoading } = useQuery({
@@ -199,6 +203,34 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment }: Props)
                           >
                             {badge.icon} {badge.label}
                           </Badge>
+                          {/* Deadline tag — show most urgent for selected shipment */}
+                          {isSelected && deadlines.length > 0 && (() => {
+                            const urgent = getMostUrgentDeadline(deadlines);
+                            if (!urgent || urgent.status === 'upcoming') return null;
+                            const isOver = urgent.status === 'overdue';
+                            const isUrg = urgent.status === 'urgent';
+                            return (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); onClickDeadline?.(urgent); }}
+                                className={cn(
+                                  "text-[9px] font-semibold px-1.5 py-0 rounded inline-flex items-center gap-0.5 mt-0.5",
+                                  "border transition-colors active:scale-[0.97] cursor-pointer",
+                                  isOver ? "bg-red-500/10 text-red-500 border-red-500/20" :
+                                  isUrg ? "bg-red-500/8 text-red-500 border-red-500/20" :
+                                  "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                )}
+                              >
+                                {(isOver || isUrg) && <AlertTriangle size={8} />}
+                                <Clock size={8} />
+                                {urgent.shortLabel} {isOver
+                                  ? `${Math.abs(urgent.daysRemaining)}d over`
+                                  : urgent.hoursRemaining < 48
+                                    ? `in ${urgent.hoursRemaining}h`
+                                    : `in ${urgent.daysRemaining}d`
+                                }
+                              </button>
+                            );
+                          })()}
                           {section.key === 'incomplete' && (
                             <p className="text-[9px] text-muted-foreground/60 mt-0.5">
                               Last active: {new Date(s.updated_at).toLocaleDateString()}

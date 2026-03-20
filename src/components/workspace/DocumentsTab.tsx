@@ -81,6 +81,8 @@ interface DocumentsTabProps {
   hsCode: string;
   shipmentSubtitle: string;
   shipmentId: string;
+  deadlines?: import('@/lib/deadlineEngine').ShipmentDeadline[];
+  onClickDeadline?: (d: import('@/lib/deadlineEngine').ShipmentDeadline) => void;
   onViewAIAnalysis?: () => void;
   onUploadDoc?: (docId: string, files: FileList) => void;
 }
@@ -128,7 +130,7 @@ function calcFees(declaredValue: string, mode: ShipmentModeId): Record<string, s
 
 export function DocumentsTab({
   shipmentMode, uploadedDocTypes, commodityType, originCountry, incoterm,
-  declaredValue, hsCode, shipmentSubtitle, shipmentId, onViewAIAnalysis, onUploadDoc,
+  declaredValue, hsCode, shipmentSubtitle, shipmentId, deadlines = [], onClickDeadline, onViewAIAnalysis, onUploadDoc,
 }: DocumentsTabProps) {
   const [showOptional, setShowOptional] = useState(false);
   const [markedNA, setMarkedNA] = useState<Set<string>>(new Set());
@@ -165,6 +167,20 @@ export function DocumentsTab({
     onUploadDoc?.(docId, files);
     extractDocument(docId, file);
   }, [onUploadDoc, extractDocument]);
+
+  // Map deadline types to document IDs
+  const DEADLINE_DOC_MAP: Record<string, string> = {
+    isf_filing: 'isf_filing',
+    entry_summary_7501: 'entry_summary_7501',
+    fta_expiry: 'fta_certificate',
+    bond_renewal: 'customs_bond',
+  };
+
+  const deadlineByDocId: Record<string, typeof deadlines[0]> = {};
+  for (const d of deadlines) {
+    const docId = DEADLINE_DOC_MAP[d.type];
+    if (docId) deadlineByDocId[docId] = d;
+  }
 
   // Build document cards with AI enhancements
   const allCards: DocumentCardData[] = [];
@@ -220,6 +236,17 @@ export function DocumentsTab({
       statusLine = 'Conditional — may be required';
       missing++;
       totalRequired++;
+    }
+
+    // Append deadline countdown to status line
+    const dl = deadlineByDocId[docId];
+    if (dl && (dl.status === 'overdue' || dl.status === 'urgent' || dl.status === 'due_soon')) {
+      const dlText = dl.status === 'overdue'
+        ? ` · ⚠ OVERDUE ${Math.abs(dl.daysRemaining)}d`
+        : dl.hoursRemaining < 48
+          ? ` · ⏰ Due in ${dl.hoursRemaining}h`
+          : ` · ⏰ Due in ${dl.daysRemaining}d`;
+      statusLine += dlText;
     }
 
     allCards.push({

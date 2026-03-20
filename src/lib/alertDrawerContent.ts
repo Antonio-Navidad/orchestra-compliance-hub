@@ -1,5 +1,7 @@
 // Universal alert drawer content registry
-// Every alert, badge, pill, and flag resolves to a specific drawer
+// Every alert, badge, pill, flag, and deadline resolves to a specific drawer
+
+import type { ShipmentDeadline } from './deadlineEngine';
 
 export interface AlertDrawerData {
   id: string;
@@ -675,4 +677,167 @@ export function getScorePillDrawer(pillType: 'verified' | 'issues' | 'missing' |
         quickActions: [],
       };
   }
+}
+
+// ─── Deadline drawer generation ───
+
+export function getDeadlineDrawer(deadline: ShipmentDeadline): AlertDrawerData {
+  const formattedDue = deadline.dueDate.toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
+  const formattedTime = deadline.dueDate.toLocaleTimeString('en-US', {
+    hour: '2-digit', minute: '2-digit',
+  });
+
+  const DEADLINE_DRAWERS: Record<string, Omit<AlertDrawerData, 'id' | 'severity'>> = {
+    isf_filing: {
+      title: `ISF 10+2 Filing — Due ${formattedDue}`,
+      whatIsThis: `The Importer Security Filing (ISF) must be filed electronically with CBP at least 24 hours before the vessel departs the foreign port. Your vessel ETD is ${deadline.sourceDate?.toLocaleDateString() || 'pending'}, making the ISF deadline ${formattedDue} at ${formattedTime}.`,
+      whyItMatters: `Late filing results in an automatic $5,000 per-violation penalty. CBP can also issue a hold on your cargo at the destination port. The ISF is one of the most commonly penalized requirements — CBP issued over $100 million in ISF penalties in recent years. ${deadline.status === 'overdue' ? 'THIS DEADLINE HAS PASSED. File immediately to minimize penalty exposure.' : ''}`,
+      whatToDo: [
+        'Gather the 10 required data elements: seller, buyer, importer of record, consignee, manufacturer, ship-to party, country of origin, HTS 6-digit codes, container stuffing location, consolidator.',
+        'File through ABI/ACE or instruct your broker to file immediately.',
+        'Verify ISF bond coverage is active with your surety company.',
+        'Save the ISF confirmation number and timestamp to this shipment.',
+      ],
+      quickActions: [
+        { label: 'Upload ISF confirmation', type: 'upload', docId: 'isf_filing' },
+        { label: 'Request from broker', type: 'request' },
+        { label: 'Add note', type: 'note' },
+      ],
+      regulation: deadline.regulation,
+      financialImpact: deadline.penalty,
+    },
+
+    entry_summary_7501: {
+      title: `Entry Summary (7501) — Due ${formattedDue}`,
+      whatIsThis: `The CBP Form 7501 Entry Summary must be filed within 10 business days of cargo release (Form 3461 filing). Based on your ${deadline.sourceLabel || 'entry date'} of ${deadline.sourceDate?.toLocaleDateString() || 'pending'}, the deadline is ${formattedDue}.`,
+      whyItMatters: `Failure to file the 7501 within the 10 business day window results in liquidated damages assessed against your customs bond. The bond amount is typically $50,000 — CBP can claim the full amount. ${deadline.status === 'overdue' ? 'THIS DEADLINE HAS PASSED. Contact your broker immediately about mitigation options.' : ''}`,
+      whatToDo: [
+        'Ensure all supporting documents are verified: commercial invoice, packing list, and classification worksheet.',
+        'Calculate duties using correct HTS rates, including any AD/CVD or Section 301 additional duties.',
+        'File through ABI/ACE with duty payment via ACH.',
+        'Upload the filed 7501 confirmation to this shipment.',
+      ],
+      quickActions: [
+        { label: 'Upload 7501', type: 'upload', docId: 'entry_summary_7501' },
+        { label: 'Add note', type: 'note' },
+      ],
+      regulation: deadline.regulation,
+      financialImpact: deadline.penalty,
+    },
+
+    cf28_response: {
+      title: `CF-28 Response — Due ${formattedDue}`,
+      whatIsThis: `CBP issued a Request for Information (CF-28) on ${deadline.sourceDate?.toLocaleDateString() || 'a recent date'}. You have 30 calendar days from receipt to provide the requested information. Your deadline is ${formattedDue}.`,
+      whyItMatters: `If you do not respond within 30 days, CBP will liquidate the entry based on the information they have — which typically means the highest applicable duty rate, potentially resulting in thousands of dollars in additional duties. ${deadline.status === 'overdue' ? 'THIS DEADLINE HAS PASSED. Contact CBP immediately to request an extension.' : ''}`,
+      whatToDo: [
+        'Review the CF-28 carefully — it specifies exactly what information CBP is requesting.',
+        'Gather the requested documents, lab reports, product specifications, or other evidence.',
+        'Prepare a formal response letter referencing the CF-28 number, entry number, and each item requested.',
+        'Submit the response through your broker via ABI or directly to the requesting CBP officer.',
+      ],
+      quickActions: [
+        { label: 'Upload CF-28 response', type: 'upload' },
+        { label: 'Add note', type: 'note' },
+      ],
+      regulation: deadline.regulation,
+      financialImpact: deadline.penalty,
+    },
+
+    protest_deadline: {
+      title: `Protest Filing Deadline — Due ${formattedDue}`,
+      whatIsThis: `Your entry was liquidated on ${deadline.sourceDate?.toLocaleDateString() || 'a recent date'}. You have 180 calendar days from liquidation to file a protest (CBP Form 19) if you disagree with CBP's classification, valuation, or rate of duty determination.`,
+      whyItMatters: `After 180 days, the liquidation becomes final and cannot be challenged. If CBP assessed duties incorrectly, you permanently lose the right to recover overpaid duties. There is no extension available for this deadline. ${deadline.status === 'overdue' ? 'THIS DEADLINE HAS PASSED. You have permanently lost the right to protest this liquidation.' : ''}`,
+      whatToDo: [
+        'Review the liquidation notice and determine if the classification, value, or duty rate is incorrect.',
+        'If filing a protest, prepare CBP Form 19 with specific legal grounds for your disagreement.',
+        'Include all supporting documentation: rulings, lab reports, or precedent decisions.',
+        'File through ABI or submit directly to the port of entry.',
+      ],
+      quickActions: [
+        { label: 'Add note', type: 'note' },
+      ],
+      regulation: deadline.regulation,
+      financialImpact: deadline.penalty,
+    },
+
+    fta_expiry: {
+      title: `FTA Certificate Expiring — ${formattedDue}`,
+      whatIsThis: `Your Free Trade Agreement Certificate of Origin expires on ${formattedDue}. After expiry, you cannot use this certificate to claim preferential duty rates on new entries.`,
+      whyItMatters: `An expired FTA certificate means full Column 1 General duty rates apply. Depending on the product, this can mean 2.5%–25% additional duties. Request a renewal from your supplier before expiry to maintain duty savings.`,
+      whatToDo: [
+        'Contact your supplier or exporter and request a renewed Certificate of Origin.',
+        'Verify the new certificate covers the correct HTS codes and meets origin criteria.',
+        'Upload the renewed certificate before filing any entries after the expiry date.',
+        'For blanket certificates, request one covering the next 12-month period.',
+      ],
+      quickActions: [
+        { label: 'Upload renewed cert', type: 'upload', docId: 'fta_certificate' },
+        { label: 'Request from supplier', type: 'request' },
+      ],
+      regulation: deadline.regulation,
+      financialImpact: deadline.penalty,
+    },
+
+    bond_renewal: {
+      title: `Customs Bond Renewal — Expires ${formattedDue}`,
+      whatIsThis: `Your continuous customs bond expires on ${formattedDue}. Without an active bond, no entries can be filed and all cargo will be held at the port.`,
+      whyItMatters: `A lapsed bond halts all import operations immediately. Every shipment arriving after bond expiry will be held until a new bond is obtained — typically 1–3 business days. Demurrage and storage charges accrue during the delay.`,
+      whatToDo: [
+        'Contact your surety company at least 60 days before expiry to initiate renewal.',
+        'Standard continuous bond amount: $50,000 (may be higher for certain commodities or importers with compliance issues).',
+        'If switching surety companies, allow extra time for the new bond to be filed with CBP.',
+        'Upload the renewed bond confirmation showing new effective dates.',
+      ],
+      quickActions: [
+        { label: 'Upload bond confirmation', type: 'upload', docId: 'customs_bond' },
+        { label: 'Request from surety', type: 'request' },
+      ],
+      regulation: deadline.regulation,
+      financialImpact: deadline.penalty,
+    },
+
+    free_time: {
+      title: `Free Time Expiring — ${formattedDue}`,
+      whatIsThis: `Your carrier-allotted free time at the port expires on ${formattedDue} at ${formattedTime}. After this point, demurrage and/or detention charges begin accruing.`,
+      whyItMatters: `Demurrage rates are typically $150–$350 per container per day and increase on a tiered schedule (higher rates after day 3, 5, etc.). On a 2-container shipment, a 5-day delay can cost $2,000–$3,500 in demurrage alone, on top of any storage charges from the terminal operator.`,
+      whatToDo: [
+        'Prioritize customs clearance and delivery order pickup.',
+        'If clearance is delayed, contact the carrier to request a free time extension (some carriers grant extensions for documented customs delays).',
+        'Arrange trucking or drayage pickup immediately once released.',
+        'Consider filing for free time dispute if demurrage is charged due to carrier/terminal delays (per FMC rules).',
+      ],
+      quickActions: [
+        { label: 'Add note', type: 'note' },
+      ],
+      regulation: deadline.regulation,
+      financialImpact: deadline.penalty,
+    },
+  };
+
+  const template = DEADLINE_DRAWERS[deadline.type];
+  if (template) {
+    return {
+      ...template,
+      id: `deadline_${deadline.id}`,
+      severity: deadline.status === 'overdue' ? 'critical' : deadline.status === 'urgent' ? 'critical' : deadline.status === 'due_soon' ? 'high' : 'medium',
+    };
+  }
+
+  // Fallback
+  return {
+    id: `deadline_${deadline.id}`,
+    title: `${deadline.label} — Due ${formattedDue}`,
+    severity: deadline.status === 'overdue' ? 'critical' : 'high',
+    whatIsThis: `This is a federal compliance deadline for your shipment. The deadline is ${formattedDue}.`,
+    whyItMatters: deadline.consequence,
+    whatToDo: [
+      'Review the specific requirement and take action before the deadline.',
+      'Contact your broker or compliance team if you need assistance.',
+    ],
+    quickActions: [{ label: 'Add note', type: 'note' }],
+    regulation: deadline.regulation,
+    financialImpact: deadline.penalty,
+  };
 }
