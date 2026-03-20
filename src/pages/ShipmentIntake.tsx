@@ -409,25 +409,26 @@ export default function ShipmentIntake() {
       {/* RIGHT: Workspace */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Workspace top bar */}
-        <div className="shrink-0 border-b border-border bg-card/60 backdrop-blur-sm px-4 py-2.5 flex items-center gap-3">
-          <div className="flex-1 min-w-0 flex items-center gap-2">
-            <h1 className="text-[15px] font-bold truncate">
-              {isNewMode ? 'New Shipment' : form.shipment_id}
-            </h1>
-            <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 shrink-0">
-              {modeConfig.icon} {modeConfig.shortLabel}
-            </Badge>
-            {!isNewMode && (
-              <Badge variant="outline" className="text-[10px] shrink-0">
-                {form.direction === 'inbound' ? '↓ Import' : '↑ Export'}
+        <div className="shrink-0 border-b border-border bg-card/60 backdrop-blur-sm px-4 py-2.5 space-y-1">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0 flex items-center gap-2">
+              <h1 className="text-[15px] font-bold truncate">
+                {isNewMode ? 'New Shipment' : form.shipment_id}
+              </h1>
+              <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 shrink-0">
+                {modeConfig.icon} {modeConfig.shortLabel}
               </Badge>
-            )}
-            {lastSaved && (
-              <span className="text-[10px] text-muted-foreground/60 flex items-center gap-1 shrink-0 ml-auto">
-                <Clock size={10} /> Saved {lastSaved.toLocaleTimeString()}
-              </span>
-            )}
-          </div>
+              {!isNewMode && (
+                <Badge variant="outline" className="text-[10px] shrink-0">
+                  {form.direction === 'inbound' ? '↓ Import' : '↑ Export'}
+                </Badge>
+              )}
+              {lastSaved && (
+                <span className="text-[10px] text-muted-foreground/60 flex items-center gap-1 shrink-0 ml-auto">
+                  <Clock size={10} /> Saved {lastSaved.toLocaleTimeString()}
+                </span>
+              )}
+            </div>
           <div className="flex items-center gap-2 shrink-0">
             <RepeatShipmentSelector onSelect={applyPreFill} />
             <Button onClick={() => setShowPreFill(true)} variant="outline" size="sm" className="text-[11px] gap-1.5 border-primary/30 text-primary hover:bg-primary/10">
