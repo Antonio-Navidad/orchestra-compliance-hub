@@ -53,7 +53,7 @@ const STATE_CONFIG: Record<DocCardState, { border: string; dot: typeof CheckCirc
   not_applicable: { border: 'border-l-muted', dot: MinusCircle, dotClass: 'text-muted-foreground/50', bg: 'opacity-50' },
 };
 
-export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCorrected, onMarkNA, onClickAlert }: Props) {
+export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCorrected, onMarkNA, onClickAlert, onClickCard }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const cfg = STATE_CONFIG[doc.state];
