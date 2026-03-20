@@ -52,7 +52,7 @@ export function AppSidebar() {
       <SidebarContent className="px-1">
         {navGroups.map((group) => (
           <SidebarGroup key={group.labelKey}>
-            <SidebarGroupLabel className="text-[10px] tracking-widest font-mono text-muted-foreground/60">
+            <SidebarGroupLabel className="text-[11px] tracking-widest font-semibold text-sidebar-foreground/65">
               {t(group.labelKey)}
             </SidebarGroupLabel>
             <SidebarGroupContent>
