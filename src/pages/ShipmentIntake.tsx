@@ -68,6 +68,8 @@ const PRIORITY_OPTIONS = [
 ];
 
 const INCOTERMS = ['EXW','FCA','FAS','FOB','CFR','CIF','CPT','CIP','DAP','DPU','DDP'];
+// Log available incoterm values on load for debugging
+console.log('[Intake] Available INCOTERM option values:', INCOTERMS);
 
 function generateShipmentId() {
   return `ORC-${String(Math.floor(Math.random() * 9000) + 1000)}`;
