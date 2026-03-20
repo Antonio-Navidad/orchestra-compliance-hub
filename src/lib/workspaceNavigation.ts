@@ -177,7 +177,7 @@ const ENTERPRISE_NAV: NavGroup[] = [
   {
     labelKey: "navGroup.quickActions",
     items: [
-      { titleKey: "nav.newShipment", url: "/intake", icon: Plus },
+      { titleKey: "nav.shipments", url: "/intake", icon: Package },
       { titleKey: "nav.newRoute", url: "/creator-mode", icon: Route },
     ],
   },
