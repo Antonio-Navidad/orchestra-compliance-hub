@@ -140,7 +140,7 @@ export function useSmartPacketIntake(shipmentId?: string) {
         if (data.total_value) next.declaredValue = String(data.total_value);
         if (data.currency) next.currency = data.currency;
         if (data.incoterms) next.incoterms = data.incoterms;
-        if (data.related_parties) next.relatedParty = data.related_parties;
+        if (typeof data.related_parties === "boolean") next.relatedParty = data.related_parties;
         // FTA detection from invoice declaration/certification text
         if (data.fta_program) next.ftaDetected = data.fta_program;
         if (data.line_items?.length) {
@@ -149,11 +149,11 @@ export function useSmartPacketIntake(shipmentId?: string) {
             .filter(Boolean);
           if (codes.length) next.htsCodes = [...new Set([...next.htsCodes, ...codes])];
         }
-        // Mode inference from incoterms + port
-        if (!next.shipmentMode && data.incoterms && data.port_of_discharge) {
+        // Mode inference from incoterms (CIF/CFR/FOB → ocean)
+        if (!next.shipmentMode && data.incoterms) {
           const terms = (data.incoterms || "").toUpperCase();
           if (terms.includes("CIF") || terms.includes("CFR") || terms.includes("FOB")) {
-            next.shipmentMode = "ocean";
+            next.shipmentMode = "Ocean Import";
           }
         }
       }
