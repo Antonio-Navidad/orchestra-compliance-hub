@@ -247,7 +247,17 @@ export function DocumentsTab({
           Smart Packet Intake — Drop all documents at once
         </button>
       )}
-      <ScoreBanner
+
+      {/* Smart Packet Intake completion banner */}
+      {libraryDocCount > 0 && (
+        <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5">
+          <FileCheck size={16} className="text-primary shrink-0" />
+          <span className="text-xs font-semibold text-foreground">
+            Smart Packet Intake complete · {libraryVerifiedCount} document{libraryVerifiedCount !== 1 ? 's' : ''} verified · {missing} remaining
+          </span>
+        </div>
+      )}
+
         score={score}
         totalRequired={totalRequired}
         verified={verified}
