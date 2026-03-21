@@ -41,6 +41,7 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
   // Load documents from document_library for this shipment on mount / shipmentId change
   const loadFromLibrary = useCallback(async () => {
     if (!shipmentId || shipmentId === 'draft' || libraryLoaded) return;
+    console.log("[loadFromLibrary] Loading docs for shipmentId:", shipmentId);
     try {
       const { data } = await supabase
         .from("document_library")
