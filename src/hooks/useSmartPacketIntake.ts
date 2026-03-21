@@ -141,11 +141,20 @@ export function useSmartPacketIntake(shipmentId?: string) {
         if (data.currency) next.currency = data.currency;
         if (data.incoterms) next.incoterms = data.incoterms;
         if (data.related_parties) next.relatedParty = data.related_parties;
+        // FTA detection from invoice declaration/certification text
+        if (data.fta_program) next.ftaDetected = data.fta_program;
         if (data.line_items?.length) {
           const codes = data.line_items
             .map((li: any) => li.hts_6digit)
             .filter(Boolean);
           if (codes.length) next.htsCodes = [...new Set([...next.htsCodes, ...codes])];
+        }
+        // Mode inference from incoterms + port
+        if (!next.shipmentMode && data.incoterms && data.port_of_discharge) {
+          const terms = (data.incoterms || "").toUpperCase();
+          if (terms.includes("CIF") || terms.includes("CFR") || terms.includes("FOB")) {
+            next.shipmentMode = "ocean";
+          }
         }
       }
       if (docType === "bill_of_lading" || docType.includes("lading")) {
@@ -169,8 +178,10 @@ export function useSmartPacketIntake(shipmentId?: string) {
       if (docType === "pars_document" || docType === "aci_emanifest") {
         next.shipmentMode = "land_canada";
       }
-      if (docType === "certificate_of_origin" || docType === "usmca_certification") {
+      if (docType === "certificate_of_origin" || docType === "usmca_certification" || docType === "korus_certificate") {
         if (data.fta_program) next.ftaDetected = data.fta_program;
+        if (docType === "usmca_certification") next.ftaDetected = next.ftaDetected || "USMCA";
+        if (docType === "korus_certificate") next.ftaDetected = next.ftaDetected || "KORUS FTA";
         if (data.country_of_origin) next.countryOfOrigin = next.countryOfOrigin || data.country_of_origin;
       }
       if (docType === "packing_list") {
