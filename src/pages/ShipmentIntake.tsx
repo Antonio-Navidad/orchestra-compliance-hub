@@ -47,6 +47,8 @@ import { RepeatShipmentSelector } from "@/components/intake/RepeatShipmentSelect
 import { PreSubmissionGate } from "@/components/intake/PreSubmissionGate";
 import { LineItemTable, type LineItem } from "@/components/intake/LineItemTable";
 import { IntakeExportButton } from "@/components/intake/IntakeExportButton";
+import { SmartPacketIntake, SmartPacketIntakeButton } from "@/components/workspace/SmartPacketIntake";
+import type { ShipmentProfileData } from "@/hooks/useSmartPacketIntake";
 
 const DOC_TYPES = [
   { value: 'commercial_invoice', label: 'Commercial Invoice' },
