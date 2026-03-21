@@ -140,6 +140,7 @@ export default function ShipmentIntake() {
   const [deadlineDrawerData, setDeadlineDrawerData] = useState<AlertDrawerData | null>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [pausedDate, setPausedDate] = useState<string | null>(null);
+  const [showPacketIntake, setShowPacketIntake] = useState(false);
 
   // Hold management state
   const [activeHold, setActiveHold] = useState<ShipmentHold | null>(null);
