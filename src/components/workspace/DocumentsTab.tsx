@@ -258,6 +258,7 @@ export function DocumentsTab({
         </div>
       )}
 
+      <ScoreBanner
         score={score}
         totalRequired={totalRequired}
         verified={verified}
