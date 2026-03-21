@@ -111,15 +111,26 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
   const [draftReady, setDraftReady] = useState(!!existingShipmentId);
   const extractedRef = useRef<Record<string, any>>({});
 
-  // Create draft shipment on mount (if no existing shipment)
-  const createDraft = useCallback(async () => {
-    if (draftShipmentId || !user) return draftShipmentId;
+  const ensureDraftShipment = useCallback(async (sid: string) => {
+    if (!sid) return null;
 
-    const id = `DFT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    const { data: existing, error: lookupError } = await supabase
+      .from("shipments")
+      .select("shipment_id")
+      .eq("shipment_id", sid)
+      .maybeSingle();
 
-    console.log("[createDraft] Creating draft shipment:", id, "user:", user.id);
-    const { error } = await supabase.from("shipments").insert({
-      shipment_id: id,
+    if (lookupError) {
+      console.error("[ensureDraftShipment] Lookup failed:", { sid, error: lookupError });
+      return null;
+    }
+
+    if (existing?.shipment_id) {
+      return sid;
+    }
+
+    const { error: insertError } = await supabase.from("shipments").insert({
+      shipment_id: sid,
       description: "Draft — Smart Packet Intake",
       mode: "sea",
       status: "draft" as any,
@@ -130,27 +141,49 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
       risk_notes: null,
     } as any);
 
-    if (error) {
-      console.error("[createDraft] Failed to create draft shipment:", error);
+    if (insertError) {
+      console.error("[ensureDraftShipment] Insert failed:", { sid, error: insertError });
       return null;
     }
 
-    console.log("[createDraft] Draft shipment created successfully:", id);
-    setDraftShipmentId(id);
+    console.log("[ensureDraftShipment] Inserted missing draft shipment:", sid);
+    return sid;
+  }, []);
+
+  // Create draft shipment on mount (if no existing shipment)
+  const createDraft = useCallback(async () => {
+    const preferredId = draftShipmentId || existingShipmentId;
+    const id = preferredId || `ORC-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+
+    console.log("[createDraft] Ensuring draft shipment exists:", {
+      id,
+      hasUser: !!user,
+      userId: user?.id ?? null,
+    });
+
+    const ensuredId = await ensureDraftShipment(id);
+    if (!ensuredId) {
+      console.error("[createDraft] Failed to ensure draft shipment:", id);
+      return null;
+    }
+
+    console.log("[createDraft] Draft shipment ready:", ensuredId);
+    setDraftShipmentId(ensuredId);
     setDraftReady(true);
     queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
-    return id;
-  }, [draftShipmentId, user, queryClient]);
+    return ensuredId;
+  }, [draftShipmentId, existingShipmentId, user, queryClient, ensureDraftShipment]);
 
   // Save file to document library linked to draft shipment
   const saveFileToLibrary = useCallback(async (
     pf: PacketFile, docType: string, extractedData: Record<string, any> | null, sid: string
   ) => {
-    if (!user) {
+    const activeUser = user ?? (await supabase.auth.getUser()).data.user ?? null;
+    if (!activeUser) {
       console.error("[saveFileToLibrary] No user — skipping save for", docType);
       return;
     }
-    const filePath = `${user.id}/${sid}/${Date.now()}_${pf.file.name}`;
+    const filePath = `${activeUser.id}/${sid}/${Date.now()}_${pf.file.name}`;
 
     const { error: storageError } = await supabase.storage.from("document-library").upload(filePath, pf.file, { upsert: true });
     if (storageError) {
@@ -158,7 +191,7 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
     }
 
     const { error: insertError } = await supabase.from("document_library").insert({
-      user_id: user.id,
+      user_id: activeUser.id,
       file_name: pf.file.name,
       file_path: filePath,
       file_size_bytes: pf.file.size,
@@ -266,7 +299,13 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
       "ocean": "sea", "Ocean Import": "sea", "air": "air", "Air Import": "air",
       "land": "land", "land_canada": "land",
     };
-    await supabase.from("shipments").update({
+    const ensuredId = await ensureDraftShipment(sid);
+    if (!ensuredId) {
+      console.error("[syncDraftProfile] Cannot sync — draft missing:", sid);
+      return;
+    }
+
+    const { error } = await supabase.from("shipments").update({
       description: profile.importerOfRecord ? `${profile.importerOfRecord} — ${profile.countryOfOrigin || ""}`.trim() : "Draft — Smart Packet Intake",
       consignee: profile.importerOfRecord || "",
       hs_code: profile.htsCodes[0] || "",
@@ -275,7 +314,11 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
       origin_country: profile.countryOfOrigin || null,
       packet_score: score || null,
     } as any).eq("shipment_id", sid);
-  }, [score]);
+
+    if (error) {
+      console.error("[syncDraftProfile] Update failed:", { sid, error });
+    }
+  }, [score, ensureDraftShipment]);
 
   const processFile = useCallback(async (pf: PacketFile, sid: string) => {
     // Step 1: Upload to storage
@@ -421,11 +464,10 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
   }, [profileData]);
 
   const startProcessing = useCallback(async (queuedFiles: PacketFile[]) => {
-    // Ensure draft exists
-    let sid = draftShipmentId;
+    const sid = await createDraft();
     if (!sid) {
-      sid = await createDraft();
-      if (!sid) return;
+      console.error("[startProcessing] Aborting — no draft shipment id");
+      return;
     }
 
     const promises = queuedFiles.map(pf => processFile(pf, sid!).catch(err => {
@@ -461,6 +503,12 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
     const sid = draftShipmentId;
     if (!sid) return null;
 
+    const ensuredId = await ensureDraftShipment(sid);
+    if (!ensuredId) {
+      console.error("[activateDraft] Cannot activate — draft missing:", sid);
+      return null;
+    }
+
     const modeMap: Record<string, string> = {
       "ocean": "sea", "Ocean Import": "sea", "air": "air", "Air Import": "air",
       "land": "land", "land_canada": "land",
@@ -469,7 +517,7 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
     const docCount = files.filter(f => f.status === "extracted" || f.status === "extracted_warnings").length;
     const remaining = files.filter(f => f.status === "unidentified" || f.status === "error").length;
 
-    await supabase.from("shipments").update({
+    const { error } = await supabase.from("shipments").update({
       status: "active" as any,
       description: profileData.importerOfRecord
         ? `${profileData.importerOfRecord} — ${profileData.countryOfOrigin || ""}`.trim()
@@ -482,6 +530,11 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
       packet_score: score || null,
     } as any).eq("shipment_id", sid);
 
+    if (error) {
+      console.error("[activateDraft] Update failed:", { sid, error });
+      return null;
+    }
+
     queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
 
     toast({
@@ -490,14 +543,20 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
     });
 
     return sid;
-  }, [draftShipmentId, profileData, score, files, queryClient]);
+  }, [draftShipmentId, profileData, score, files, queryClient, ensureDraftShipment]);
 
   // Pause draft → keep as paused
   const pauseDraft = useCallback(async (): Promise<string | null> => {
     const sid = draftShipmentId;
     if (!sid) return null;
 
-    await supabase.from("shipments").update({
+    const ensuredId = await ensureDraftShipment(sid);
+    if (!ensuredId) {
+      console.error("[pauseDraft] Cannot pause — draft missing:", sid);
+      return null;
+    }
+
+    const { error } = await supabase.from("shipments").update({
       status: "paused" as any,
       description: profileData.importerOfRecord
         ? `${profileData.importerOfRecord} — ${profileData.countryOfOrigin || ""}`.trim()
@@ -508,6 +567,11 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
       packet_score: score || null,
     } as any).eq("shipment_id", sid);
 
+    if (error) {
+      console.error("[pauseDraft] Update failed:", { sid, error });
+      return null;
+    }
+
     queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
 
     toast({
@@ -516,7 +580,7 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
     });
 
     return sid;
-  }, [draftShipmentId, profileData, score, queryClient]);
+  }, [draftShipmentId, profileData, score, queryClient, ensureDraftShipment]);
 
   const removeFile = useCallback((id: string) => {
     setFiles(prev => prev.filter(f => f.id !== id));
