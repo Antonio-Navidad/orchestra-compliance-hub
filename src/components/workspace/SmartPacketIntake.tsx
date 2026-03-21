@@ -279,12 +279,12 @@ function ProcessingScreen({
               { label: "Gross Weight", value: profileData.grossWeight },
             ].map((field, i) => (
               <div key={i} className={cn(
-                "flex items-center justify-between py-1.5 border-b border-border/50 transition-all",
+                "flex items-start justify-between gap-2 py-1.5 border-b border-border/50 transition-all",
                 field.value ? "animate-in fade-in duration-500" : ""
               )}>
-                <span className="text-[11px] text-muted-foreground">{field.label}</span>
+                <span className="text-[11px] text-muted-foreground shrink-0">{field.label}</span>
                 {field.value ? (
-                  <span className="text-[11px] font-medium text-foreground max-w-[55%] text-right truncate">{field.value}</span>
+                  <span className="text-[11px] font-medium text-foreground text-right break-words min-w-0" title={field.value}>{field.value}</span>
                 ) : (
                   <span className="text-[10px] text-muted-foreground/50 italic">—</span>
                 )}

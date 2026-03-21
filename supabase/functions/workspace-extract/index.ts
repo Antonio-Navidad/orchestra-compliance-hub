@@ -16,6 +16,7 @@ const EXTRACTION_SCHEMAS: Record<string, object> = {
       currency: { type: "string" }, total_value: { type: "number" },
       incoterms: { type: "string" }, country_of_origin: { type: "string" },
       related_parties: { type: "boolean" },
+      fta_program: { type: "string", description: "Any FTA mentioned anywhere in the document — check declaration text, certification language, footer notes, stamps, and any references to USMCA, KORUS, CAFTA-DR, CPTPP, or other free trade agreements" },
       line_items: { type: "array", items: { type: "object", properties: {
         description: { type: "string" }, quantity: { type: "number" },
         unit_price: { type: "number" }, total: { type: "number" },
