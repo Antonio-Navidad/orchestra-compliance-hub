@@ -83,6 +83,9 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
     setLibraryLoaded(true);
   }, [shipmentId, libraryLoaded]);
 
+  // Reset library loaded flag when shipmentId changes
+  useEffect(() => { setLibraryLoaded(false); }, [shipmentId]);
+
   // Auto-load on shipmentId change
   useEffect(() => { loadFromLibrary(); }, [loadFromLibrary]);
 
