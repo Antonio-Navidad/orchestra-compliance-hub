@@ -242,31 +242,36 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
               </div>
 
               {/* 4. Shipment Mode */}
-              <div className="space-y-1.5">
+              <div className="space-y-3">
                 <Label className="text-xs font-semibold">Shipment Mode</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {MODE_CARDS.map(m => {
-                    const active = shipmentMode === m.id;
-                    return (
-                      <button
-                        key={m.id}
-                        onClick={() => setShipmentMode(m.id)}
-                        className={cn(
-                          "relative flex flex-col items-start gap-1.5 rounded-lg border p-3 text-left transition-all",
-                          "hover:border-primary/40 hover:shadow-sm active:scale-[0.98]",
-                          active ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-card"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className={cn("transition-colors", active ? "text-primary" : "text-muted-foreground")}>{m.icon}</span>
-                          <span className={cn("text-[13px] font-semibold", active ? "text-primary" : "text-foreground")}>{m.label}</span>
-                        </div>
-                        <p className="text-[10px] leading-snug text-muted-foreground">{m.detail}</p>
-                        {active && <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary" />}
-                      </button>
-                    );
-                  })}
-                </div>
+                {MODE_GROUPS.map(group => (
+                  <div key={group.title} className="space-y-1.5">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{group.title}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {group.cards.map(m => {
+                        const active = shipmentMode === m.id;
+                        return (
+                          <button
+                            key={m.id}
+                            onClick={() => setShipmentMode(m.id)}
+                            className={cn(
+                              "relative flex flex-col items-start gap-1 rounded-lg border p-2.5 text-left transition-all",
+                              "hover:border-primary/40 hover:shadow-sm active:scale-[0.98]",
+                              active ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-card"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className={cn("transition-colors", active ? "text-primary" : "text-muted-foreground")}>{m.icon}</span>
+                              <span className={cn("text-[12px] font-semibold", active ? "text-primary" : "text-foreground")}>{m.label}</span>
+                            </div>
+                            <p className="text-[10px] leading-snug text-muted-foreground">{m.detail}</p>
+                            {active && <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
 
               {/* 5. Importer of Record */}
