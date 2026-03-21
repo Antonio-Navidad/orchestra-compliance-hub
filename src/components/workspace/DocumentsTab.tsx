@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo } from "react";
-import { FileCheck } from "lucide-react";
+import { FileCheck, Sparkles, AlertTriangle, CheckCircle2, ShieldCheck } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { ScoreBanner } from "./ScoreBanner";
 import { DocumentCard, type DocumentCardData, type DocCardState } from "./DocumentCard";
 import { AlertDrawer } from "./AlertDrawer";
