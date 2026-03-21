@@ -97,7 +97,7 @@ function inferTags(mode: ShipmentModeChoice, commodity: string, origin: string):
   if (c.includes("chemical") || c.includes("hazmat")) tags.push({ label: "Dangerous Goods Declaration required", color: "bg-red-500/10 text-red-600 border-red-500/20" });
   if (c.includes("medical") || c.includes("pharma")) tags.push({ label: "FDA 510(k) or registration may apply", color: "bg-amber-500/10 text-amber-600 border-amber-500/20" });
   if (c.includes("wildlife") || c.includes("exotic")) tags.push({ label: "CITES permit — required for endangered species", color: "bg-red-500/10 text-red-600 border-red-500/20" });
-  if (mode === "us_export") tags.push({ label: "Denied Party Screening — mandatory before export", color: "bg-red-500/10 text-red-600 border-red-500/20" });
+  if (["ocean_export", "air_export", "land_mexico_export", "land_canada_export"].some(m => mode === m)) tags.push({ label: "Denied Party Screening — mandatory before export", color: "bg-red-500/10 text-red-600 border-red-500/20" });
 
   return tags;
 }
