@@ -84,7 +84,7 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
   }, [shipmentId, libraryLoaded]);
 
   // Auto-load on shipmentId change
-  useState(() => { loadFromLibrary(); });
+  useEffect(() => { loadFromLibrary(); }, [loadFromLibrary]);
 
   const extractDocument = useCallback(async (docId: string, file: File) => {
     setProcessingDocs(prev => new Set(prev).add(docId));
