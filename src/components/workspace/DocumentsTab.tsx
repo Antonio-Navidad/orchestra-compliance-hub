@@ -59,13 +59,17 @@ export function DocumentsTab({
   const [alertDrawerData, setAlertDrawerData] = useState<AlertDrawerData | null>(null);
 
   const {
-    extractDocument, processingDocs, getCardEnhancements, getScore, uploadedFiles, crossRefResults,
+    extractDocument, processingDocs, getCardEnhancements, getScore, uploadedFiles, crossRefResults, extractedDocs,
   } = useDocExtraction({
     shipmentMode,
     commodityType,
     countryOfOrigin: originCountry,
     shipmentId: shipmentId || 'draft',
   });
+
+  // Count docs loaded from library (Smart Packet Intake)
+  const libraryDocCount = Object.keys(extractedDocs).length;
+  const libraryVerifiedCount = Object.values(extractedDocs).filter(d => d.fieldDetails.length > 0).length;
 
   // ─── Mode-specific phases and document definitions ───
   const { phases: PHASES, docs: ALL_DOCS } = useMemo(
