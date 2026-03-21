@@ -269,7 +269,7 @@ function ProcessingScreen({
               { label: "Mode Detected", value: profileData.shipmentMode },
               { label: "Incoterms", value: profileData.incoterms },
               { label: "FTA Detected", value: profileData.ftaDetected },
-              { label: "Related Party", value: profileData.relatedParty ? "Yes — Transfer pricing docs needed" : "" },
+              { label: "Related Party", value: profileData.relatedParty ? "Yes — Transfer pricing docs needed" : (profileData.importerOfRecord ? "No — arm's length" : "") },
               { label: "Port of Loading", value: profileData.portOfLoading },
               { label: "Port of Discharge", value: profileData.portOfDischarge },
               { label: "B/L Number", value: profileData.blNumber },
