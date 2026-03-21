@@ -72,6 +72,70 @@ export function DocumentsTab({
   const libraryDocCount = Object.keys(extractedDocs).length;
   const libraryVerifiedCount = Object.values(extractedDocs).filter(d => d.fieldDetails.length > 0).length;
 
+  // Build evidence pills from extracted data
+  const intakeEvidence = useMemo(() => {
+    if (libraryDocCount === 0) return { pills: [], totalFields: 0 };
+    const pills: Array<{ label: string; type: 'green' | 'amber' }> = [];
+    let totalFields = 0;
+
+    for (const doc of Object.values(extractedDocs)) {
+      totalFields += doc.fieldDetails.length;
+      const data = doc.extractedData || {};
+
+      if (data.buyer_name && !pills.some(p => p.label.includes('Importer'))) {
+        pills.push({ label: `✓ Importer: ${data.buyer_name}`, type: 'green' });
+      }
+      if (data.country_of_origin && !pills.some(p => p.label.includes('Origin'))) {
+        pills.push({ label: `✓ Origin: ${data.country_of_origin}`, type: 'green' });
+      }
+      if (data.fta_program && !pills.some(p => p.label.includes('FTA'))) {
+        pills.push({ label: `✓ FTA: ${data.fta_program}`, type: 'green' });
+      }
+      if (data.incoterms && !pills.some(p => p.label.includes('Incoterms'))) {
+        const incVal = typeof data.incoterms === 'string' ? data.incoterms : '';
+        if (incVal.toUpperCase().includes('CIF') || incVal.toUpperCase().includes('CFR')) {
+          pills.push({ label: '⚠ Freight invoice required — CIF terms detected', type: 'amber' });
+        }
+      }
+      if (data.line_items && Array.isArray(data.line_items) && data.line_items.length > 0) {
+        const hsCount = data.line_items.filter((li: any) => li.hs_code).length;
+        if (hsCount > 0 && !pills.some(p => p.label.includes('HTS'))) {
+          pills.push({ label: `✓ ${hsCount} HTS code${hsCount !== 1 ? 's' : ''} captured`, type: 'green' });
+        }
+      }
+    }
+    return { pills, totalFields };
+  }, [extractedDocs, libraryDocCount]);
+
+  // AI recommended next docs
+  const aiRecommendations = useMemo(() => {
+    if (libraryDocCount === 0) return [];
+    const uploadedTypes = new Set(Object.keys(extractedDocs));
+    const recs: Array<{ docName: string; reason: string }> = [];
+
+    const hasInvoice = uploadedTypes.has('commercial_invoice');
+    const invoiceData = extractedDocs['commercial_invoice']?.extractedData || {};
+
+    if (hasInvoice && !uploadedTypes.has('packing_list')) {
+      recs.push({ docName: 'Packing List', reason: 'AI will cross-check weights and line item descriptions against your invoice' });
+    }
+    if (hasInvoice && !uploadedTypes.has('bill_of_lading') && !uploadedTypes.has('air_waybill')) {
+      recs.push({ docName: 'Bill of Lading', reason: 'AI will verify consignee name, container number, and port of discharge' });
+    }
+    if (invoiceData.fta_program && !uploadedTypes.has('korus_certificate') && !uploadedTypes.has('usmca_certification') && !uploadedTypes.has('certificate_of_origin')) {
+      recs.push({ docName: `${invoiceData.fta_program} Certificate of Origin`, reason: 'FTA detected in invoice but no certificate uploaded yet — duty savings at risk' });
+    }
+    const incoStr = typeof invoiceData.incoterms === 'string' ? invoiceData.incoterms.toUpperCase() : '';
+    if (incoStr.includes('CIF') && !uploadedTypes.has('freight_invoice')) {
+      recs.push({ docName: 'Freight Invoice', reason: 'CIF incoterms require freight value for accurate duty calculation on CBP Form 7501' });
+    }
+    if (hasInvoice && !uploadedTypes.has('isf_confirmation') && shipmentMode === 'ocean_import') {
+      recs.push({ docName: 'ISF 10+2 Filing', reason: 'Required for ocean imports — $5,000 penalty for non-filing' });
+    }
+
+    return recs.slice(0, 4);
+  }, [extractedDocs, libraryDocCount, shipmentMode]);
+
   // ─── Mode-specific phases and document definitions ───
   const { phases: PHASES, docs: ALL_DOCS } = useMemo(
     () => getModeDocumentConfig(shipmentMode, originCountry),
