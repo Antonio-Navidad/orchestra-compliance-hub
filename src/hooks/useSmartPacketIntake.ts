@@ -1,5 +1,8 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "./useAuth";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
 
 export type PacketFileStatus =
   | "queued"
@@ -28,7 +31,8 @@ export interface PacketFile {
   blOrAwbNumber: string | null;
   reasoning: string | null;
   error: string | null;
-  shipmentGroup: string | null; // for multi-shipment detection
+  shipmentGroup: string | null;
+  savedToLibrary: boolean;
 }
 
 export interface CrossRefFinding {
@@ -87,20 +91,79 @@ export function isFileAccepted(file: File): boolean {
 
 let fileCounter = 0;
 
-export function useSmartPacketIntake(shipmentId?: string) {
+const DEFAULT_PROFILE: ShipmentProfileData = {
+  importerOfRecord: "", exporterSeller: "", countryOfOrigin: "",
+  declaredValue: "", currency: "USD", htsCodes: [], shipmentMode: "",
+  incoterms: "", ftaDetected: "", relatedParty: false,
+  portOfLoading: "", portOfDischarge: "", blNumber: "",
+  vesselName: "", containerNumbers: [], totalPackages: "", grossWeight: "",
+};
+
+export function useSmartPacketIntake(existingShipmentId?: string) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [files, setFiles] = useState<PacketFile[]>([]);
   const [crossRefResults, setCrossRefResults] = useState<CrossRefFinding[]>([]);
   const [detectedShipments, setDetectedShipments] = useState<DetectedShipment[]>([]);
-  const [profileData, setProfileData] = useState<ShipmentProfileData>({
-    importerOfRecord: "", exporterSeller: "", countryOfOrigin: "",
-    declaredValue: "", currency: "USD", htsCodes: [], shipmentMode: "",
-    incoterms: "", ftaDetected: "", relatedParty: false,
-    portOfLoading: "", portOfDischarge: "", blNumber: "",
-    vesselName: "", containerNumbers: [], totalPackages: "", grossWeight: "",
-  });
-  const [isComplete, setIsComplete] = useState(false);
+  const [profileData, setProfileData] = useState<ShipmentProfileData>({ ...DEFAULT_PROFILE });
   const [score, setScore] = useState(0);
+  const [draftShipmentId, setDraftShipmentId] = useState<string | null>(existingShipmentId || null);
+  const [draftReady, setDraftReady] = useState(!!existingShipmentId);
   const extractedRef = useRef<Record<string, any>>({});
+
+  // Create draft shipment on mount (if no existing shipment)
+  const createDraft = useCallback(async () => {
+    if (draftShipmentId || !user) return draftShipmentId;
+
+    const id = `DFT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+    const { error } = await supabase.from("shipments").insert({
+      shipment_id: id,
+      description: "Draft — Smart Packet Intake",
+      mode: "sea",
+      status: "draft" as any,
+      risk_score: 0,
+      declared_value: 0,
+      consignee: "",
+      hs_code: "",
+      risk_notes: null,
+    } as any);
+
+    if (error) {
+      console.error("Failed to create draft shipment:", error);
+      return null;
+    }
+
+    setDraftShipmentId(id);
+    setDraftReady(true);
+    queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+    return id;
+  }, [draftShipmentId, user, queryClient]);
+
+  // Save file to document library linked to draft shipment
+  const saveFileToLibrary = useCallback(async (
+    pf: PacketFile, docType: string, extractedData: Record<string, any> | null, sid: string
+  ) => {
+    if (!user) return;
+    const filePath = `${user.id}/${sid}/${Date.now()}_${pf.file.name}`;
+
+    await supabase.storage.from("document-library").upload(filePath, pf.file, { upsert: true });
+
+    await supabase.from("document_library").insert({
+      user_id: user.id,
+      file_name: pf.file.name,
+      file_path: filePath,
+      file_size_bytes: pf.file.size,
+      mime_type: pf.file.type,
+      document_type: docType,
+      shipment_id: sid,
+      extraction_status: extractedData ? "complete" : "pending",
+      extracted_fields: extractedData || {},
+      tags: [],
+    } as any);
+
+    setFiles(prev => prev.map(f => f.id === pf.id ? { ...f, savedToLibrary: true } : f));
+  }, [user]);
 
   const addFiles = useCallback((newFiles: File[]) => {
     const packetFiles: PacketFile[] = newFiles.map(f => ({
@@ -120,6 +183,7 @@ export function useSmartPacketIntake(shipmentId?: string) {
       reasoning: null,
       error: isFileAccepted(f) ? null : "Unsupported format",
       shipmentGroup: null,
+      savedToLibrary: false,
     }));
 
     setFiles(prev => [...prev, ...packetFiles]);
@@ -141,15 +205,11 @@ export function useSmartPacketIntake(shipmentId?: string) {
         if (data.currency) next.currency = data.currency;
         if (data.incoterms) next.incoterms = data.incoterms;
         if (typeof data.related_parties === "boolean") next.relatedParty = data.related_parties;
-        // FTA detection from invoice declaration/certification text
         if (data.fta_program) next.ftaDetected = data.fta_program;
         if (data.line_items?.length) {
-          const codes = data.line_items
-            .map((li: any) => li.hts_6digit)
-            .filter(Boolean);
+          const codes = data.line_items.map((li: any) => li.hts_6digit).filter(Boolean);
           if (codes.length) next.htsCodes = [...new Set([...next.htsCodes, ...codes])];
         }
-        // Mode inference from incoterms (CIF/CFR/FOB → ocean)
         if (!next.shipmentMode && data.incoterms) {
           const terms = (data.incoterms || "").toUpperCase();
           if (terms.includes("CIF") || terms.includes("CFR") || terms.includes("FOB")) {
@@ -169,15 +229,9 @@ export function useSmartPacketIntake(shipmentId?: string) {
         if (data.total_packages) next.totalPackages = String(data.total_packages);
         if (data.gross_weight_kg) next.grossWeight = `${data.gross_weight_kg} kg`;
       }
-      if (docType === "air_waybill") {
-        next.shipmentMode = "air";
-      }
-      if (docType === "paps_document" || docType === "truck_bol_carrier_manifest") {
-        next.shipmentMode = "land";
-      }
-      if (docType === "pars_document" || docType === "aci_emanifest") {
-        next.shipmentMode = "land_canada";
-      }
+      if (docType === "air_waybill") next.shipmentMode = "air";
+      if (docType === "paps_document" || docType === "truck_bol_carrier_manifest") next.shipmentMode = "land";
+      if (docType === "pars_document" || docType === "aci_emanifest") next.shipmentMode = "land_canada";
       if (docType === "certificate_of_origin" || docType === "usmca_certification" || docType === "korus_certificate") {
         if (data.fta_program) next.ftaDetected = data.fta_program;
         if (docType === "usmca_certification") next.ftaDetected = next.ftaDetected || "USMCA";
@@ -192,10 +246,25 @@ export function useSmartPacketIntake(shipmentId?: string) {
     });
   }, []);
 
-  const processFile = useCallback(async (pf: PacketFile) => {
-    const sid = shipmentId || "draft";
+  // Update the draft shipment record with profile data
+  const syncDraftProfile = useCallback(async (sid: string, profile: ShipmentProfileData) => {
+    const modeMap: Record<string, string> = {
+      "ocean": "sea", "Ocean Import": "sea", "air": "air", "Air Import": "air",
+      "land": "land", "land_canada": "land",
+    };
+    await supabase.from("shipments").update({
+      description: profile.importerOfRecord ? `${profile.importerOfRecord} — ${profile.countryOfOrigin || ""}`.trim() : "Draft — Smart Packet Intake",
+      consignee: profile.importerOfRecord || "",
+      hs_code: profile.htsCodes[0] || "",
+      declared_value: parseFloat(profile.declaredValue) || 0,
+      mode: (modeMap[profile.shipmentMode] || "sea") as any,
+      origin_country: profile.countryOfOrigin || null,
+      packet_score: score || null,
+    } as any).eq("shipment_id", sid);
+  }, [score]);
 
-    // Step 1: Upload
+  const processFile = useCallback(async (pf: PacketFile, sid: string) => {
+    // Step 1: Upload to storage
     updateFile(pf.id, { status: "uploading" });
     const filePath = `${sid}/packet/${pf.file.name}`;
     await supabase.storage.from("shipment-documents").upload(filePath, pf.file, { upsert: true });
@@ -219,8 +288,7 @@ export function useSmartPacketIntake(shipmentId?: string) {
 
     if (confidence < 0.50 || docType === "unknown") {
       updateFile(pf.id, {
-        status: "unidentified",
-        confidence,
+        status: "unidentified", confidence,
         reasoning: idResult.reasoning,
         modeInference: idResult.shipment_mode_inference,
         importerName: idResult.importer_name,
@@ -231,9 +299,7 @@ export function useSmartPacketIntake(shipmentId?: string) {
 
     if (confidence < 0.70) {
       updateFile(pf.id, {
-        status: "awaiting_confirmation",
-        documentType: docType,
-        confidence,
+        status: "awaiting_confirmation", documentType: docType, confidence,
         reasoning: idResult.reasoning,
         modeInference: idResult.shipment_mode_inference,
         importerName: idResult.importer_name,
@@ -243,16 +309,14 @@ export function useSmartPacketIntake(shipmentId?: string) {
       return;
     }
 
-    // High confidence — proceed to extraction
-    await extractFile(pf.id, pf.file, docType, idResult);
-  }, [shipmentId]);
+    await extractFile(pf.id, pf.file, docType, idResult, sid);
+  }, []);
 
   const extractFile = useCallback(async (
-    fileId: string, file: File, docType: string, idResult?: any,
+    fileId: string, file: File, docType: string, idResult?: any, sid?: string,
   ) => {
     updateFile(fileId, {
-      status: "extracting",
-      documentType: docType,
+      status: "extracting", documentType: docType,
       confidence: idResult?.confidence || 0.8,
       modeInference: idResult?.shipment_mode_inference,
       importerName: idResult?.importer_name,
@@ -285,59 +349,79 @@ export function useSmartPacketIntake(shipmentId?: string) {
         pgaFlags: data.pga_flags || [],
       });
 
-      // Update profile from extracted data
       updateProfileFromExtraction(docType, data.extracted_data || {});
-
-      // Store for cross-ref
       extractedRef.current[docType] = data.extracted_data || {};
 
-      // Update score
       setScore(prev => {
         const total = Object.keys(extractedRef.current).length;
         return Math.min(Math.round((total / Math.max(total + 3, 8)) * 100), 95);
       });
+
+      // Persist to document library immediately
+      const shipmentIdForSave = sid || draftShipmentId;
+      if (shipmentIdForSave) {
+        const pf = files.find(f => f.id === fileId) || { id: fileId, file, savedToLibrary: false } as any;
+        if (!pf.savedToLibrary) {
+          saveFileToLibrary(pf, docType, data.extracted_data || {}, shipmentIdForSave);
+        }
+      }
+
+      // Sync profile to draft
+      if (draftShipmentId) {
+        // Use setTimeout to let profileData update first
+        setTimeout(() => {
+          setProfileData(current => {
+            syncDraftProfile(draftShipmentId, current);
+            return current;
+          });
+        }, 500);
+      }
     } catch (err: any) {
       updateFile(fileId, { status: "error", error: err.message || "Extraction failed" });
     }
-  }, [profileData.shipmentMode, profileData.countryOfOrigin, updateProfileFromExtraction]);
+  }, [profileData.shipmentMode, profileData.countryOfOrigin, updateProfileFromExtraction, draftShipmentId, saveFileToLibrary, syncDraftProfile, files]);
 
   const confirmDocType = useCallback(async (fileId: string, confirmedType: string) => {
     const pf = files.find(f => f.id === fileId);
     if (!pf) return;
-    await extractFile(fileId, pf.file, confirmedType);
-  }, [files, extractFile]);
+    await extractFile(fileId, pf.file, confirmedType, undefined, draftShipmentId || undefined);
+  }, [files, extractFile, draftShipmentId]);
 
   const assignDocType = useCallback(async (fileId: string, assignedType: string) => {
     const pf = files.find(f => f.id === fileId);
     if (!pf) return;
-    await extractFile(fileId, pf.file, assignedType);
-  }, [files, extractFile]);
+    await extractFile(fileId, pf.file, assignedType, undefined, draftShipmentId || undefined);
+  }, [files, extractFile, draftShipmentId]);
+
+  const runCrossRef = useCallback(async () => {
+    if (Object.keys(extractedRef.current).length < 2) return;
+    try {
+      const documents = Object.entries(extractedRef.current).map(([type, data]) => ({
+        document_type: type, extracted_data: data,
+      }));
+      const { data } = await supabase.functions.invoke("workspace-crossref", {
+        body: { documents, shipmentMode: profileData.shipmentMode, commodityType: "", countryOfOrigin: profileData.countryOfOrigin },
+      });
+      if (data?.discrepancies) setCrossRefResults(data.discrepancies);
+    } catch {}
+  }, [profileData]);
 
   const startProcessing = useCallback(async (queuedFiles: PacketFile[]) => {
-    // Process all files in parallel
-    const promises = queuedFiles.map(pf => processFile(pf).catch(err => {
+    // Ensure draft exists
+    let sid = draftShipmentId;
+    if (!sid) {
+      sid = await createDraft();
+      if (!sid) return;
+    }
+
+    const promises = queuedFiles.map(pf => processFile(pf, sid!).catch(err => {
       updateFile(pf.id, { status: "error", error: err.message || "Processing failed" });
     }));
     await Promise.allSettled(promises);
 
-    // Run cross-reference after all files done
-    if (Object.keys(extractedRef.current).length >= 2) {
-      try {
-        const documents = Object.entries(extractedRef.current).map(([type, data]) => ({
-          document_type: type,
-          extracted_data: data,
-        }));
-        const { data } = await supabase.functions.invoke("workspace-crossref", {
-          body: { documents, shipmentMode: profileData.shipmentMode, commodityType: "", countryOfOrigin: profileData.countryOfOrigin },
-        });
-        if (data?.discrepancies) setCrossRefResults(data.discrepancies);
-      } catch {}
-    }
-
-    // Multi-shipment detection
+    await runCrossRef();
     detectMultipleShipments();
-    setIsComplete(true);
-  }, [processFile, profileData]);
+  }, [processFile, createDraft, draftShipmentId, runCrossRef]);
 
   const detectMultipleShipments = useCallback(() => {
     const importers = new Map<string, string[]>();
@@ -348,22 +432,77 @@ export function useSmartPacketIntake(shipmentId?: string) {
         importers.get(key)!.push(f.id);
       }
     });
-
     if (importers.size > 1) {
       const shipments: DetectedShipment[] = [];
       let i = 0;
       importers.forEach((fileIds, name) => {
-        shipments.push({
-          id: `shipment_${++i}`,
-          importerName: name,
-          commodity: "",
-          origin: "",
-          fileIds,
-        });
+        shipments.push({ id: `shipment_${++i}`, importerName: name, commodity: "", origin: "", fileIds });
       });
       setDetectedShipments(shipments);
     }
   }, [files]);
+
+  // Activate draft → move to active status
+  const activateDraft = useCallback(async (): Promise<string | null> => {
+    const sid = draftShipmentId;
+    if (!sid) return null;
+
+    const modeMap: Record<string, string> = {
+      "ocean": "sea", "Ocean Import": "sea", "air": "air", "Air Import": "air",
+      "land": "land", "land_canada": "land",
+    };
+
+    const docCount = files.filter(f => f.status === "extracted" || f.status === "extracted_warnings").length;
+    const remaining = files.filter(f => f.status === "unidentified" || f.status === "error").length;
+
+    await supabase.from("shipments").update({
+      status: "new" as any,
+      description: profileData.importerOfRecord
+        ? `${profileData.importerOfRecord} — ${profileData.countryOfOrigin || ""}`.trim()
+        : "New Shipment",
+      consignee: profileData.importerOfRecord || "",
+      hs_code: profileData.htsCodes[0] || "",
+      declared_value: parseFloat(profileData.declaredValue) || 0,
+      mode: (modeMap[profileData.shipmentMode] || "sea") as any,
+      origin_country: profileData.countryOfOrigin || null,
+      packet_score: score || null,
+    } as any).eq("shipment_id", sid);
+
+    queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+
+    toast({
+      title: `Shipment ${sid} created`,
+      description: `${docCount} documents verified · ${remaining} remaining`,
+    });
+
+    return sid;
+  }, [draftShipmentId, profileData, score, files, queryClient]);
+
+  // Pause draft → keep as paused
+  const pauseDraft = useCallback(async (): Promise<string | null> => {
+    const sid = draftShipmentId;
+    if (!sid) return null;
+
+    await supabase.from("shipments").update({
+      status: "paused" as any,
+      description: profileData.importerOfRecord
+        ? `${profileData.importerOfRecord} — ${profileData.countryOfOrigin || ""}`.trim()
+        : "Draft — resume intake",
+      consignee: profileData.importerOfRecord || "",
+      hs_code: profileData.htsCodes[0] || "",
+      declared_value: parseFloat(profileData.declaredValue) || 0,
+      packet_score: score || null,
+    } as any).eq("shipment_id", sid);
+
+    queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+
+    toast({
+      title: "Draft saved",
+      description: "Resume anytime from your shipments list",
+    });
+
+    return sid;
+  }, [draftShipmentId, profileData, score, queryClient]);
 
   const removeFile = useCallback((id: string) => {
     setFiles(prev => prev.filter(f => f.id !== id));
@@ -373,16 +512,11 @@ export function useSmartPacketIntake(shipmentId?: string) {
     setFiles([]);
     setCrossRefResults([]);
     setDetectedShipments([]);
-    setIsComplete(false);
     setScore(0);
     extractedRef.current = {};
-    setProfileData({
-      importerOfRecord: "", exporterSeller: "", countryOfOrigin: "",
-      declaredValue: "", currency: "USD", htsCodes: [], shipmentMode: "",
-      incoterms: "", ftaDetected: "", relatedParty: false,
-      portOfLoading: "", portOfDischarge: "", blNumber: "",
-      vesselName: "", containerNumbers: [], totalPackages: "", grossWeight: "",
-    });
+    setProfileData({ ...DEFAULT_PROFILE });
+    setDraftShipmentId(null);
+    setDraftReady(false);
   }, []);
 
   const stats = {
@@ -398,6 +532,8 @@ export function useSmartPacketIntake(shipmentId?: string) {
     files, addFiles, removeFile, startProcessing,
     confirmDocType, assignDocType,
     crossRefResults, detectedShipments, profileData,
-    isComplete, score, stats, reset,
+    score, stats, reset,
+    draftShipmentId, draftReady, createDraft,
+    activateDraft, pauseDraft,
   };
 }
