@@ -303,7 +303,7 @@ export function DocumentsTab({
   return (
     <div className="space-y-4">
       {/* Smart Packet Intake button */}
-      {onOpenPacketIntake && libraryDocCount === 0 && (
+      {onOpenPacketIntake && (
         <button
           onClick={onOpenPacketIntake}
           className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all text-sm font-semibold text-primary"

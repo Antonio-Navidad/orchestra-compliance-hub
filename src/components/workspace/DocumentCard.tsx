@@ -166,11 +166,11 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
                 Drop <strong>{doc.name}</strong> here or{" "}
                 <label className="text-primary cursor-pointer hover:underline">
                   click to upload
-                  <input type="file" className="hidden" onChange={handleFileInput} accept=".pdf,.jpg,.png,.doc,.docx,.xlsx" />
+                  <input type="file" className="hidden" onChange={handleFileInput} accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif,.docx,.xlsx" />
                 </label>
               </p>
               <p className="text-[10px] text-muted-foreground/60 mt-1">
-                AI will extract and verify all key data points using Claude
+                AI will extract and cross-reference all data fields
               </p>
             </div>
           ) : (

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS idx_document_library_shipment_doctype ON public.document_library (shipment_id, document_type) WHERE shipment_id IS NOT NULL AND document_type IS NOT NULL;

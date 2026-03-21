@@ -129,6 +129,31 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
 
       toast.success(`${docId.replace(/_/g, " ")} extracted successfully`);
 
+      // Save to document_library for persistence
+      if (shipmentId && shipmentId !== 'draft') {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          // Delete existing row for this shipment+docType, then insert fresh
+          await supabase.from("document_library")
+            .delete()
+            .eq("shipment_id", shipmentId)
+            .eq("document_type", docId);
+          await supabase.from("document_library").insert({
+            shipment_id: shipmentId,
+            document_type: docId,
+            file_name: file.name,
+            file_path: filePath,
+            mime_type: file.type || "application/pdf",
+            file_size_bytes: file.size,
+            extraction_status: "complete",
+            extracted_fields: data.extracted_data || {},
+            user_id: user?.id || null,
+          });
+        } catch (libErr) {
+          console.error("[extractDocument] Failed to save to document_library:", libErr);
+        }
+      }
+
       // Trigger cross-reference if we have 2+ extracted docs
       const allExtracted = { ...extractedDocsRef.current, [docId]: extracted };
       if (Object.keys(allExtracted).length >= 2) {
