@@ -3532,6 +3532,9 @@ export type Database = {
         | "filed"
         | "closed_avoided"
         | "closed_incident"
+        | "draft"
+        | "active"
+        | "paused"
       subscription_tier: "free" | "gold" | "black"
       transport_mode: "air" | "sea" | "land"
     }
@@ -3727,6 +3730,9 @@ export const Constants = {
         "filed",
         "closed_avoided",
         "closed_incident",
+        "draft",
+        "active",
+        "paused",
       ],
       subscription_tier: ["free", "gold", "black"],
       transport_mode: ["air", "sea", "land"],
