@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { FileCheck } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ScoreBanner } from "./ScoreBanner";
