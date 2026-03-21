@@ -1053,6 +1053,7 @@ export default function ShipmentIntake() {
         onOpenChange={setShowWizard}
         onComplete={handleWizardComplete}
         existingImporters={existingImporters}
+        onOpenPacketIntake={() => { setShowWizard(false); setShowPacketIntake(true); }}
       />
       <SmartPacketIntake
         open={showPacketIntake}
