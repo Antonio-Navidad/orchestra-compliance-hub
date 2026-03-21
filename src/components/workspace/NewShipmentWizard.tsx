@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Ship, Plane, PackageOpen, RefreshCcw, ArrowRight, ArrowLeft, Upload, Sparkles, AlertTriangle } from "lucide-react";
+import { Ship, Plane, PackageOpen, RefreshCcw, ArrowRight, ArrowLeft, Upload, Sparkles, AlertTriangle, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /* ── Types ── */
