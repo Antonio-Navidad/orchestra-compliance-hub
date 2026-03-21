@@ -144,12 +144,18 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
   const saveFileToLibrary = useCallback(async (
     pf: PacketFile, docType: string, extractedData: Record<string, any> | null, sid: string
   ) => {
-    if (!user) return;
+    if (!user) {
+      console.error("[saveFileToLibrary] No user — skipping save for", docType);
+      return;
+    }
     const filePath = `${user.id}/${sid}/${Date.now()}_${pf.file.name}`;
 
-    await supabase.storage.from("document-library").upload(filePath, pf.file, { upsert: true });
+    const { error: storageError } = await supabase.storage.from("document-library").upload(filePath, pf.file, { upsert: true });
+    if (storageError) {
+      console.error("[saveFileToLibrary] Storage upload failed:", storageError);
+    }
 
-    await supabase.from("document_library").insert({
+    const { error: insertError } = await supabase.from("document_library").insert({
       user_id: user.id,
       file_name: pf.file.name,
       file_path: filePath,
@@ -162,6 +168,12 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
       tags: [],
     } as any);
 
+    if (insertError) {
+      console.error("[saveFileToLibrary] DB insert failed:", insertError);
+      return;
+    }
+
+    console.log("[saveFileToLibrary] Saved", docType, "to shipment", sid);
     setFiles(prev => prev.map(f => f.id === pf.id ? { ...f, savedToLibrary: true } : f));
   }, [user]);
 
