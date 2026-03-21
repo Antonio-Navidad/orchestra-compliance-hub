@@ -133,7 +133,12 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       if (shipmentId && shipmentId !== 'draft') {
         try {
           const { data: { user } } = await supabase.auth.getUser();
-          await supabase.from("document_library").upsert({
+          // Delete existing row for this shipment+docType, then insert fresh
+          await supabase.from("document_library")
+            .delete()
+            .eq("shipment_id", shipmentId)
+            .eq("document_type", docId);
+          await supabase.from("document_library").insert({
             shipment_id: shipmentId,
             document_type: docId,
             file_name: file.name,
@@ -143,7 +148,7 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
             extraction_status: "complete",
             extracted_fields: data.extracted_data || {},
             user_id: user?.id || null,
-          }, { onConflict: "shipment_id,document_type" });
+          });
         } catch (libErr) {
           console.error("[extractDocument] Failed to save to document_library:", libErr);
         }
