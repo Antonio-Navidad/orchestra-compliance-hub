@@ -790,10 +790,12 @@ export default function ShipmentIntake() {
                   </div>
                 )}
 
-                {/* Mode selector */}
-                <div className="mb-4">
-                  <ShipmentModeSelector selected={shipmentMode} onSelect={handleModeChange} />
-                </div>
+                {/* Mode selector — only for new shipments */}
+                {isNewMode && (
+                  <div className="mb-4">
+                    <ShipmentModeSelector selected={shipmentMode} onSelect={handleModeChange} />
+                  </div>
+                )}
 
                 {/* Main workspace */}
                 <div>
