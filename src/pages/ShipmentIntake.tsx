@@ -121,6 +121,7 @@ export default function ShipmentIntake() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
 
   const [selectedShipmentId, setSelectedShipmentId] = useState<string | null>(null);
   const [isNewMode, setIsNewMode] = useState(true);
