@@ -838,6 +838,7 @@ export default function ShipmentIntake() {
                             setDocs(prev => [...prev, { file, docType: docId, id: crypto.randomUUID() }]);
                           });
                         }}
+                        onOpenPacketIntake={() => setShowPacketIntake(true)}
                       />
                     </TabsContent>
 
