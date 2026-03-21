@@ -70,8 +70,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
@@ -95,7 +95,6 @@ serve(async (req) => {
       throw new Error("Unsupported file type. Accepted: PDF, JPG, PNG, XLSX, DOCX");
     }
 
-    // Determine the schema to request based on document type
     const schemaKey = Object.keys(EXTRACTION_SCHEMAS).find(k => documentType.includes(k));
     const extractionSchema = schemaKey ? EXTRACTION_SCHEMAS[schemaKey] : null;
 
@@ -107,73 +106,85 @@ ${extractionSchema ? `Use this exact schema for the extracted_data field:\n${JSO
 
 Additionally, for each field you extract, provide a confidence score (0-100) and note where in the document the value was found.`;
 
-    // Build Claude API message content
-    const content: any[] = [];
-
-    if (isPdf || isImage) {
-      content.push({
-        type: isPdf ? "document" : "image",
-        source: { type: "base64", media_type: mimeType, data: base64 },
-        ...(isPdf ? { citations: { enabled: true } } : {}),
-      });
-    } else {
-      // For XLSX/DOCX, send as base64 document
-      content.push({
-        type: "document",
-        source: { type: "base64", media_type: mimeType, data: base64 },
-      });
-    }
-
-    content.push({
-      type: "text",
-      text: `Extract all customs-relevant data from this ${documentType.replace(/_/g, ' ')}. Return a JSON object with these top-level keys:
+    const userText = `Extract all customs-relevant data from this ${documentType.replace(/_/g, ' ')}. Return a JSON object with these top-level keys:
 - "extracted_data": the structured data matching the document type schema
 - "field_details": array of { "field": string, "value": any, "confidence": number (0-100), "source_location": string }
 - "document_type_detected": string — what type of document this actually appears to be
 - "warnings": array of strings — any issues with readability, missing sections, or concerns
-- "pga_flags": array of { "agency": string, "requirement": string, "mandatory": boolean, "reason": string } — if this is a commercial invoice, identify PGA requirements based on commodities and HTS codes found`,
-    });
+- "pga_flags": array of { "agency": string, "requirement": string, "mandatory": boolean, "reason": string } — if this is a commercial invoice, identify PGA requirements based on commodities and HTS codes found`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    // Build messages for Lovable AI Gateway (OpenAI-compatible format)
+    const userContent: any[] = [];
+
+    if (isPdf || isImage) {
+      // For images, use the OpenAI vision format
+      if (isImage) {
+        userContent.push({
+          type: "image_url",
+          image_url: { url: `data:${mimeType};base64,${base64}` },
+        });
+      } else {
+        // For PDFs, include as text description since gateway uses OpenAI format
+        userContent.push({
+          type: "image_url",
+          image_url: { url: `data:${mimeType};base64,${base64}` },
+        });
+      }
+    } else {
+      // For XLSX/DOCX, describe as base64-encoded document
+      userContent.push({
+        type: "text",
+        text: `[Base64-encoded ${file.name} document attached. MIME type: ${mimeType}]`,
+      });
+    }
+
+    userContent.push({ type: "text", text: userText });
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
+        ],
         max_tokens: 8192,
-        system: systemPrompt,
-        messages: [{ role: "user", content }],
       }),
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error("Claude API error:", response.status, errText);
+      console.error("AI Gateway error:", response.status, errText);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(`Claude API error: ${response.status}`);
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add funds in Settings > Workspace > Usage." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      throw new Error(`AI Gateway error: ${response.status}`);
     }
 
-    const claudeResponse = await response.json();
-    const textBlock = claudeResponse.content?.find((b: any) => b.type === "text");
-    if (!textBlock?.text) throw new Error("Claude returned empty response");
+    const aiResponse = await response.json();
+    const messageContent = aiResponse.choices?.[0]?.message?.content;
+    if (!messageContent) throw new Error("AI returned empty response");
 
-    // Parse the JSON from Claude's response
+    // Parse the JSON from AI response
     let result: any;
     try {
-      // Try to extract JSON from the response (Claude may wrap in markdown)
-      const jsonMatch = textBlock.text.match(/```json\s*([\s\S]*?)\s*```/) ||
-                        textBlock.text.match(/```\s*([\s\S]*?)\s*```/);
-      const jsonStr = jsonMatch ? jsonMatch[1] : textBlock.text;
+      const jsonMatch = messageContent.match(/```json\s*([\s\S]*?)\s*```/) ||
+                        messageContent.match(/```\s*([\s\S]*?)\s*```/);
+      const jsonStr = jsonMatch ? jsonMatch[1] : messageContent;
       result = JSON.parse(jsonStr.trim());
     } catch {
-      console.error("Failed to parse Claude response as JSON:", textBlock.text.substring(0, 500));
+      console.error("Failed to parse AI response as JSON:", messageContent.substring(0, 500));
       throw new Error("AI returned invalid JSON. Please try re-uploading.");
     }
 
@@ -194,7 +205,7 @@ Additionally, for each field you extract, provide a confidence score (0-100) and
       .insert({
         extracted_fields: result.extracted_data || fieldMap,
         field_confidence: confidenceMap,
-        extraction_model: "claude-sonnet-4-6",
+        extraction_model: "gemini-2.5-flash",
         raw_text: result.document_type_detected || null,
         parse_warnings: result.warnings || [],
       })
