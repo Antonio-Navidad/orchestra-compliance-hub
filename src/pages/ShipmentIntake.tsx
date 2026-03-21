@@ -1061,11 +1061,14 @@ export default function ShipmentIntake() {
         open={showPacketIntake}
         onOpenChange={setShowPacketIntake}
         shipmentId={form.shipment_id}
-        onComplete={(profileData: ShipmentProfileData, sid?: string) => {
+        onComplete={async (profileData: ShipmentProfileData, sid?: string) => {
           if (sid) {
-            // Navigate to the activated shipment workspace
+            // Force refetch sidebar so the new shipment appears
+            await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
+            // Small delay to let sidebar state settle
+            await new Promise(resolve => setTimeout(resolve, 250));
             handleSelectShipment(sid);
-            setActiveTab('documents');
+            setActiveTab('details');
           } else {
             setForm(prev => ({
               ...prev,
@@ -1077,7 +1080,7 @@ export default function ShipmentIntake() {
               hs_code: profileData.htsCodes[0] || prev.hs_code,
               incoterm: profileData.incoterms || prev.incoterm,
             }));
-            if (profileData.shipmentMode === "ocean") handleModeChange("ocean_import");
+            if (profileData.shipmentMode === "ocean" || profileData.shipmentMode === "Ocean Import") handleModeChange("ocean_import");
             else if (profileData.shipmentMode === "air") handleModeChange("air_import");
             else if (profileData.shipmentMode === "land") handleModeChange("land_import_mexico");
             else if (profileData.shipmentMode === "land_canada") handleModeChange("land_import_canada");
