@@ -456,7 +456,7 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
     const remaining = files.filter(f => f.status === "unidentified" || f.status === "error").length;
 
     await supabase.from("shipments").update({
-      status: "new" as any,
+      status: "active" as any,
       description: profileData.importerOfRecord
         ? `${profileData.importerOfRecord} — ${profileData.countryOfOrigin || ""}`.trim()
         : "New Shipment",
