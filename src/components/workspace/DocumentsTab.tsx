@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { FileCheck } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ScoreBanner } from "./ScoreBanner";
@@ -58,13 +59,17 @@ export function DocumentsTab({
   const [alertDrawerData, setAlertDrawerData] = useState<AlertDrawerData | null>(null);
 
   const {
-    extractDocument, processingDocs, getCardEnhancements, getScore, uploadedFiles, crossRefResults,
+    extractDocument, processingDocs, getCardEnhancements, getScore, uploadedFiles, crossRefResults, extractedDocs,
   } = useDocExtraction({
     shipmentMode,
     commodityType,
     countryOfOrigin: originCountry,
     shipmentId: shipmentId || 'draft',
   });
+
+  // Count docs loaded from library (Smart Packet Intake)
+  const libraryDocCount = Object.keys(extractedDocs).length;
+  const libraryVerifiedCount = Object.values(extractedDocs).filter(d => d.fieldDetails.length > 0).length;
 
   // ─── Mode-specific phases and document definitions ───
   const { phases: PHASES, docs: ALL_DOCS } = useMemo(
@@ -242,6 +247,17 @@ export function DocumentsTab({
           Smart Packet Intake — Drop all documents at once
         </button>
       )}
+
+      {/* Smart Packet Intake completion banner */}
+      {libraryDocCount > 0 && (
+        <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5">
+          <FileCheck size={16} className="text-primary shrink-0" />
+          <span className="text-xs font-semibold text-foreground">
+            Smart Packet Intake complete · {libraryVerifiedCount} document{libraryVerifiedCount !== 1 ? 's' : ''} verified · {missing} remaining
+          </span>
+        </div>
+      )}
+
       <ScoreBanner
         score={score}
         totalRequired={totalRequired}
