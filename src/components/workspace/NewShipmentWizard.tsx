@@ -27,13 +27,35 @@ export interface WizardResult {
   achSetup: boolean;
 }
 
-type ShipmentModeChoice = "ocean_import" | "air_import" | "us_export" | "inbond_te";
+type ShipmentModeChoice = "ocean_import" | "air_import" | "land_mexico_import" | "land_canada_import" | "ocean_export" | "air_export" | "land_mexico_export" | "land_canada_export" | "inbond_te";
 
-const MODE_CARDS: { id: ShipmentModeChoice; label: string; icon: React.ReactNode; detail: string }[] = [
-  { id: "ocean_import", label: "Ocean Import", icon: <Ship size={20} />, detail: "14 docs required + ISF mandatory" },
-  { id: "air_import", label: "Air Import", icon: <Plane size={20} />, detail: "11 docs required, no ISF" },
-  { id: "us_export", label: "U.S. Export", icon: <PackageOpen size={20} />, detail: "EEI/AES + 8 docs, denied party screening required" },
-  { id: "inbond_te", label: "In-Bond / T&E", icon: <RefreshCcw size={20} />, detail: "CBP Form 7512 workflow" },
+interface ModeCard { id: ShipmentModeChoice; label: string; icon: React.ReactNode; detail: string }
+
+const MODE_GROUPS: { title: string; cards: ModeCard[] }[] = [
+  {
+    title: "Importing into the U.S.",
+    cards: [
+      { id: "ocean_import", label: "Ocean Import", icon: <Ship size={18} />, detail: "14 docs + ISF mandatory" },
+      { id: "air_import", label: "Air Import", icon: <Plane size={18} />, detail: "11 docs, no ISF" },
+      { id: "land_mexico_import", label: "Land — Mexico Import", icon: <Truck size={18} />, detail: "PAPS + Pedimento + Carta Porte" },
+      { id: "land_canada_import", label: "Land — Canada Import", icon: <Truck size={18} />, detail: "PARS + ACI eManifest" },
+    ],
+  },
+  {
+    title: "Exporting from the U.S.",
+    cards: [
+      { id: "ocean_export", label: "Ocean Export", icon: <Ship size={18} />, detail: "EEI/AES + ocean docs" },
+      { id: "air_export", label: "Air Export", icon: <Plane size={18} />, detail: "EEI/AES + air docs" },
+      { id: "land_mexico_export", label: "Land — Mexico Export", icon: <Truck size={18} />, detail: "EEI/AES + Pedimento coordination" },
+      { id: "land_canada_export", label: "Land — Canada Export", icon: <Truck size={18} />, detail: "No EEI + CARM coordination" },
+    ],
+  },
+  {
+    title: "Other",
+    cards: [
+      { id: "inbond_te", label: "In-Bond / T&E", icon: <RefreshCcw size={18} />, detail: "CBP Form 7512 workflow" },
+    ],
+  },
 ];
 
 const COMMODITY_TYPES = [
