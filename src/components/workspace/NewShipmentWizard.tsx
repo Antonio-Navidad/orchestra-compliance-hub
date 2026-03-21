@@ -99,9 +99,10 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   onComplete: (result: WizardResult) => void;
   existingImporters?: string[];
+  onOpenPacketIntake?: () => void;
 }
 
-export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImporters = [] }: Props) {
+export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImporters = [], onOpenPacketIntake }: Props) {
   const [step, setStep] = useState(1);
   // Step 1
   const [title, setTitle] = useState("");
@@ -317,6 +318,24 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
                   <p className="text-[11px] text-muted-foreground italic">Fill in more fields to see auto-detected requirements.</p>
                 )}
               </div>
+
+              {/* ── Smart Packet Intake Drop Zone ── */}
+              {onOpenPacketIntake && (
+                <div className="mt-2 pt-4 border-t border-border">
+                  <button
+                    type="button"
+                    onClick={() => { onOpenChange(false); onOpenPacketIntake(); }}
+                    className="w-full flex flex-col items-center gap-2 py-5 px-4 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all cursor-pointer"
+                  >
+                    <Upload size={22} className="text-primary" />
+                    <span className="text-xs font-semibold text-primary">Already have your document packet?</span>
+                    <span className="text-[10px] text-muted-foreground text-center max-w-sm">
+                      Drop all files and AI will identify the shipment type, extract all data, and build your complete checklist automatically.
+                    </span>
+                  </button>
+                  <p className="text-center text-[10px] text-muted-foreground mt-2">Or skip and fill manually ↓</p>
+                </div>
+              )}
             </>
           )}
 

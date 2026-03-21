@@ -47,6 +47,8 @@ import { RepeatShipmentSelector } from "@/components/intake/RepeatShipmentSelect
 import { PreSubmissionGate } from "@/components/intake/PreSubmissionGate";
 import { LineItemTable, type LineItem } from "@/components/intake/LineItemTable";
 import { IntakeExportButton } from "@/components/intake/IntakeExportButton";
+import { SmartPacketIntake, SmartPacketIntakeButton } from "@/components/workspace/SmartPacketIntake";
+import type { ShipmentProfileData } from "@/hooks/useSmartPacketIntake";
 
 const DOC_TYPES = [
   { value: 'commercial_invoice', label: 'Commercial Invoice' },
@@ -138,6 +140,7 @@ export default function ShipmentIntake() {
   const [deadlineDrawerData, setDeadlineDrawerData] = useState<AlertDrawerData | null>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [pausedDate, setPausedDate] = useState<string | null>(null);
+  const [showPacketIntake, setShowPacketIntake] = useState(false);
 
   // Hold management state
   const [activeHold, setActiveHold] = useState<ShipmentHold | null>(null);
@@ -835,6 +838,7 @@ export default function ShipmentIntake() {
                             setDocs(prev => [...prev, { file, docType: docId, id: crypto.randomUUID() }]);
                           });
                         }}
+                        onOpenPacketIntake={() => setShowPacketIntake(true)}
                       />
                     </TabsContent>
 
@@ -1049,6 +1053,29 @@ export default function ShipmentIntake() {
         onOpenChange={setShowWizard}
         onComplete={handleWizardComplete}
         existingImporters={existingImporters}
+        onOpenPacketIntake={() => { setShowWizard(false); setShowPacketIntake(true); }}
+      />
+      <SmartPacketIntake
+        open={showPacketIntake}
+        onOpenChange={setShowPacketIntake}
+        shipmentId={form.shipment_id}
+        onComplete={(profileData: ShipmentProfileData) => {
+          setForm(prev => ({
+            ...prev,
+            consignee: profileData.importerOfRecord || prev.consignee,
+            shipper: profileData.exporterSeller || prev.shipper,
+            origin_country: profileData.countryOfOrigin || prev.origin_country,
+            declared_value: profileData.declaredValue || prev.declared_value,
+            currency: profileData.currency || prev.currency,
+            hs_code: profileData.htsCodes[0] || prev.hs_code,
+            incoterm: profileData.incoterms || prev.incoterm,
+          }));
+          if (profileData.shipmentMode === "ocean") handleModeChange("ocean_import");
+          else if (profileData.shipmentMode === "air") handleModeChange("air_import");
+          else if (profileData.shipmentMode === "land") handleModeChange("land_import_mexico");
+          else if (profileData.shipmentMode === "land_canada") handleModeChange("land_import_canada");
+          toast({ title: "Smart Packet Intake complete", description: "Shipment profile populated from uploaded documents" });
+        }}
       />
       <AlertDrawer
         open={deadlineDrawerOpen}
