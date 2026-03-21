@@ -41,12 +41,14 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
   // Load documents from document_library for this shipment on mount / shipmentId change
   const loadFromLibrary = useCallback(async () => {
     if (!shipmentId || shipmentId === 'draft' || libraryLoaded) return;
+    console.log("[loadFromLibrary] Loading docs for shipmentId:", shipmentId);
     try {
       const { data } = await supabase
         .from("document_library")
         .select("document_type, extracted_fields, extraction_status, file_name")
         .eq("shipment_id", shipmentId);
       if (data && data.length > 0) {
+        console.log("[loadFromLibrary] Found", data.length, "docs in library");
         const newDocs: Record<string, ExtractedDocData> = {};
         const newFiles: Record<string, File> = {};
         for (const row of data) {

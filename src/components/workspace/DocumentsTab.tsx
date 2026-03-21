@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo } from "react";
-import { FileCheck } from "lucide-react";
+import { FileCheck, Sparkles, AlertTriangle, CheckCircle2, ShieldCheck } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { ScoreBanner } from "./ScoreBanner";
 import { DocumentCard, type DocumentCardData, type DocCardState } from "./DocumentCard";
 import { AlertDrawer } from "./AlertDrawer";
@@ -70,6 +71,70 @@ export function DocumentsTab({
   // Count docs loaded from library (Smart Packet Intake)
   const libraryDocCount = Object.keys(extractedDocs).length;
   const libraryVerifiedCount = Object.values(extractedDocs).filter(d => d.fieldDetails.length > 0).length;
+
+  // Build evidence pills from extracted data
+  const intakeEvidence = useMemo(() => {
+    if (libraryDocCount === 0) return { pills: [], totalFields: 0 };
+    const pills: Array<{ label: string; type: 'green' | 'amber' }> = [];
+    let totalFields = 0;
+
+    for (const doc of Object.values(extractedDocs)) {
+      totalFields += doc.fieldDetails.length;
+      const data = doc.extractedData || {};
+
+      if (data.buyer_name && !pills.some(p => p.label.includes('Importer'))) {
+        pills.push({ label: `✓ Importer: ${data.buyer_name}`, type: 'green' });
+      }
+      if (data.country_of_origin && !pills.some(p => p.label.includes('Origin'))) {
+        pills.push({ label: `✓ Origin: ${data.country_of_origin}`, type: 'green' });
+      }
+      if (data.fta_program && !pills.some(p => p.label.includes('FTA'))) {
+        pills.push({ label: `✓ FTA: ${data.fta_program}`, type: 'green' });
+      }
+      if (data.incoterms && !pills.some(p => p.label.includes('Incoterms'))) {
+        const incVal = typeof data.incoterms === 'string' ? data.incoterms : '';
+        if (incVal.toUpperCase().includes('CIF') || incVal.toUpperCase().includes('CFR')) {
+          pills.push({ label: '⚠ Freight invoice required — CIF terms detected', type: 'amber' });
+        }
+      }
+      if (data.line_items && Array.isArray(data.line_items) && data.line_items.length > 0) {
+        const hsCount = data.line_items.filter((li: any) => li.hs_code).length;
+        if (hsCount > 0 && !pills.some(p => p.label.includes('HTS'))) {
+          pills.push({ label: `✓ ${hsCount} HTS code${hsCount !== 1 ? 's' : ''} captured`, type: 'green' });
+        }
+      }
+    }
+    return { pills, totalFields };
+  }, [extractedDocs, libraryDocCount]);
+
+  // AI recommended next docs
+  const aiRecommendations = useMemo(() => {
+    if (libraryDocCount === 0) return [];
+    const uploadedTypes = new Set(Object.keys(extractedDocs));
+    const recs: Array<{ docName: string; reason: string }> = [];
+
+    const hasInvoice = uploadedTypes.has('commercial_invoice');
+    const invoiceData = extractedDocs['commercial_invoice']?.extractedData || {};
+
+    if (hasInvoice && !uploadedTypes.has('packing_list')) {
+      recs.push({ docName: 'Packing List', reason: 'AI will cross-check weights and line item descriptions against your invoice' });
+    }
+    if (hasInvoice && !uploadedTypes.has('bill_of_lading') && !uploadedTypes.has('air_waybill')) {
+      recs.push({ docName: 'Bill of Lading', reason: 'AI will verify consignee name, container number, and port of discharge' });
+    }
+    if (invoiceData.fta_program && !uploadedTypes.has('korus_certificate') && !uploadedTypes.has('usmca_certification') && !uploadedTypes.has('certificate_of_origin')) {
+      recs.push({ docName: `${invoiceData.fta_program} Certificate of Origin`, reason: 'FTA detected in invoice but no certificate uploaded yet — duty savings at risk' });
+    }
+    const incoStr = typeof invoiceData.incoterms === 'string' ? invoiceData.incoterms.toUpperCase() : '';
+    if (incoStr.includes('CIF') && !uploadedTypes.has('freight_invoice')) {
+      recs.push({ docName: 'Freight Invoice', reason: 'CIF incoterms require freight value for accurate duty calculation on CBP Form 7501' });
+    }
+    if (hasInvoice && !uploadedTypes.has('isf_confirmation') && shipmentMode === 'ocean_import') {
+      recs.push({ docName: 'ISF 10+2 Filing', reason: 'Required for ocean imports — $5,000 penalty for non-filing' });
+    }
+
+    return recs.slice(0, 4);
+  }, [extractedDocs, libraryDocCount, shipmentMode]);
 
   // ─── Mode-specific phases and document definitions ───
   const { phases: PHASES, docs: ALL_DOCS } = useMemo(
@@ -238,7 +303,7 @@ export function DocumentsTab({
   return (
     <div className="space-y-4">
       {/* Smart Packet Intake button */}
-      {onOpenPacketIntake && (
+      {onOpenPacketIntake && libraryDocCount === 0 && (
         <button
           onClick={onOpenPacketIntake}
           className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all text-sm font-semibold text-primary"
@@ -248,13 +313,62 @@ export function DocumentsTab({
         </button>
       )}
 
-      {/* Smart Packet Intake completion banner */}
+      {/* PART 3 — Intake Evidence Banner */}
       {libraryDocCount > 0 && (
-        <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5">
-          <FileCheck size={16} className="text-primary shrink-0" />
-          <span className="text-xs font-semibold text-foreground">
-            Smart Packet Intake complete · {libraryVerifiedCount} document{libraryVerifiedCount !== 1 ? 's' : ''} verified · {missing} remaining
-          </span>
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Sparkles size={18} className="text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-bold text-foreground">
+                Smart Packet Intake complete — {libraryVerifiedCount} document{libraryVerifiedCount !== 1 ? 's' : ''} verified by AI
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                AI extracted {intakeEvidence.totalFields} fields and built a compliance baseline for this shipment.
+                Drop the remaining documents below to complete your filing packet.
+              </p>
+            </div>
+          </div>
+          {intakeEvidence.pills.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pl-11">
+              {intakeEvidence.pills.map((pill, i) => (
+                <Badge
+                  key={i}
+                  variant="outline"
+                  className={pill.type === 'green'
+                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px]'
+                    : 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[10px]'
+                  }
+                >
+                  {pill.label}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* PART 4 — AI Recommended Next Docs */}
+      {aiRecommendations.length > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
+            <span className="text-xs font-bold text-amber-700 dark:text-amber-300">
+              AI recommends uploading these next for cross-reference verification:
+            </span>
+          </div>
+          <div className="space-y-1.5 pl-5">
+            {aiRecommendations.map((rec, i) => (
+              <div key={i} className="flex items-start gap-2 text-xs">
+                <AlertTriangle size={12} className="text-amber-500 shrink-0 mt-0.5" />
+                <span className="text-foreground">
+                  <span className="font-semibold">{rec.docName}</span>
+                  <span className="text-muted-foreground"> — {rec.reason}</span>
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
