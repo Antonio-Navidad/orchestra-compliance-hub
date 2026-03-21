@@ -117,7 +117,12 @@ interface UploadedDoc {
   id: string;
 }
 
+// Wrapper to stabilize hook order during HMR
 export default function ShipmentIntake() {
+  return <ShipmentIntakeInner key="shipment-intake-stable" />;
+}
+
+function ShipmentIntakeInner() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
