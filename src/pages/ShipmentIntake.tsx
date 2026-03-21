@@ -1066,6 +1066,8 @@ export default function ShipmentIntake() {
           if (sid) {
             // Force refetch sidebar so the new shipment appears
             await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
+            const sidebarData = queryClient.getQueryData(["shipments-sidebar-list"]);
+            console.log("[SmartPacketIntake:onComplete] sidebar query key:", ["shipments-sidebar-list"], "shipment:", sid, "data:", sidebarData);
             // Small delay to let sidebar state settle
             await new Promise(resolve => setTimeout(resolve, 250));
             handleSelectShipment(sid);
