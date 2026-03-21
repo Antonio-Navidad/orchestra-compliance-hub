@@ -1059,7 +1059,7 @@ export default function ShipmentIntake() {
         open={showPacketIntake}
         onOpenChange={setShowPacketIntake}
         shipmentId={form.shipment_id}
-        onComplete={(profileData: ShipmentProfileData) => {
+        onComplete={(profileData: ShipmentProfileData, _sid?: string) => {
           setForm(prev => ({
             ...prev,
             consignee: profileData.importerOfRecord || prev.consignee,
