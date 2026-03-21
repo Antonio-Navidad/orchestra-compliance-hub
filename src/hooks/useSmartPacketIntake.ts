@@ -117,6 +117,7 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
 
     const id = `DFT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
+    console.log("[createDraft] Creating draft shipment:", id, "user:", user.id);
     const { error } = await supabase.from("shipments").insert({
       shipment_id: id,
       description: "Draft — Smart Packet Intake",
@@ -130,10 +131,11 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
     } as any);
 
     if (error) {
-      console.error("Failed to create draft shipment:", error);
+      console.error("[createDraft] Failed to create draft shipment:", error);
       return null;
     }
 
+    console.log("[createDraft] Draft shipment created successfully:", id);
     setDraftShipmentId(id);
     setDraftReady(true);
     queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
