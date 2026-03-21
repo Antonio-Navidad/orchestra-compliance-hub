@@ -102,7 +102,7 @@ interface Props {
   onOpenPacketIntake?: () => void;
 }
 
-export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImporters = [] }: Props) {
+export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImporters = [], onOpenPacketIntake }: Props) {
   const [step, setStep] = useState(1);
   // Step 1
   const [title, setTitle] = useState("");
