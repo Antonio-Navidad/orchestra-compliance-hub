@@ -23,6 +23,7 @@ interface DocumentsTabProps {
   onClickDeadline?: (d: import('@/lib/deadlineEngine').ShipmentDeadline) => void;
   onViewAIAnalysis?: () => void;
   onUploadDoc?: (docId: string, files: FileList) => void;
+  onOpenPacketIntake?: () => void;
 }
 
 function calcFees(declaredValue: string, mode: ShipmentModeId): Record<string, string> {
