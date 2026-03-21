@@ -1061,7 +1061,7 @@ export default function ShipmentIntake() {
       <SmartPacketIntake
         open={showPacketIntake}
         onOpenChange={setShowPacketIntake}
-        shipmentId={form.shipment_id}
+        shipmentId={selectedShipmentId || form.shipment_id}
         onComplete={async (profileData: ShipmentProfileData, sid?: string) => {
           if (sid) {
             // Force refetch sidebar so the new shipment appears
