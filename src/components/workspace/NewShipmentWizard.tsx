@@ -103,7 +103,8 @@ function inferTags(mode: ShipmentModeChoice, commodity: string, origin: string):
 }
 
 function estimateDocCount(mode: ShipmentModeChoice, commodity: string): { required: number; conditional: number } {
-  let base = mode === "ocean_import" ? 14 : mode === "air_import" ? 11 : mode === "us_export" ? 9 : 7;
+  const isExport = ["ocean_export", "air_export", "land_mexico_export", "land_canada_export"].includes(mode);
+  let base = mode === "ocean_import" ? 14 : mode === "air_import" ? 11 : isExport ? 9 : mode === "land_mexico_import" ? 16 : mode === "land_canada_import" ? 13 : 7;
   let cond = 0;
   const c = commodity.toLowerCase();
   if (c.includes("food")) cond += 2;
