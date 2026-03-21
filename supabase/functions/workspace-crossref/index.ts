@@ -5,7 +5,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Define which document pairs to cross-reference
 const CROSS_REF_PAIRS: Array<{ a: string; b: string; checks: string }> = [
   { a: "commercial_invoice", b: "packing_list", checks: "declared value, total weight, carton count, line item descriptions" },
   { a: "commercial_invoice", b: "bill_of_lading", checks: "consignee name, cargo description, notify party" },
@@ -19,8 +18,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const { documents, shipmentMode, commodityType, countryOfOrigin } = await req.json();
 
@@ -30,7 +29,6 @@ serve(async (req) => {
       });
     }
 
-    // Determine which cross-reference pairs apply
     const docTypes = documents.map((d: any) => d.document_type);
     const applicablePairs = CROSS_REF_PAIRS.filter(
       p => docTypes.includes(p.a) && docTypes.includes(p.b)
@@ -42,7 +40,6 @@ serve(async (req) => {
       });
     }
 
-    // Build prompt with all document data
     const docSummaries = documents.map((d: any) =>
       `=== ${d.document_type.toUpperCase().replace(/_/g, ' ')} ===\n${JSON.stringify(d.extracted_data, null, 2)}`
     ).join("\n\n");
@@ -51,20 +48,17 @@ serve(async (req) => {
       p => `- ${p.a.replace(/_/g, ' ')} ↔ ${p.b.replace(/_/g, ' ')}: check ${p.checks}`
     ).join("\n");
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 4096,
-        system: `You are a senior licensed customs broker performing document cross-reference verification. You are meticulous about identifying discrepancies that could cause CBP holds, penalties, or entry rejections. Be specific about financial impact.`,
-        messages: [{
-          role: "user",
-          content: `Compare the following extracted data sets from a ${shipmentMode || ''} customs shipment of ${commodityType || 'goods'} from ${countryOfOrigin || 'unknown origin'}.
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: "You are a senior licensed customs broker performing document cross-reference verification. You are meticulous about identifying discrepancies that could cause CBP holds, penalties, or entry rejections. Be specific about financial impact." },
+          { role: "user", content: `Compare the following extracted data sets from a ${shipmentMode || ''} customs shipment of ${commodityType || 'goods'} from ${countryOfOrigin || 'unknown origin'}.
 
 DOCUMENTS:
 ${docSummaries}
@@ -83,30 +77,41 @@ Identify any discrepancies, mismatches, or missing information. Return ONLY a JS
   "estimated_financial_impact_usd": number or 0
 }]
 
-If no discrepancies found, return an empty array [].`,
-        }],
+If no discrepancies found, return an empty array [].` },
+        ],
+        max_tokens: 4096,
       }),
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error("Claude API error:", response.status, errText);
-      throw new Error(`Claude API error: ${response.status}`);
+      console.error("AI Gateway error:", response.status, errText);
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded", discrepancies: [] }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "AI credits exhausted", discrepancies: [] }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      throw new Error(`AI Gateway error: ${response.status}`);
     }
 
-    const claudeResponse = await response.json();
-    const textBlock = claudeResponse.content?.find((b: any) => b.type === "text");
-    if (!textBlock?.text) throw new Error("Claude returned empty response");
+    const aiResponse = await response.json();
+    const messageContent = aiResponse.choices?.[0]?.message?.content;
+    if (!messageContent) throw new Error("AI returned empty response");
 
     let discrepancies: any[];
     try {
-      const jsonMatch = textBlock.text.match(/```json\s*([\s\S]*?)\s*```/) ||
-                        textBlock.text.match(/```\s*([\s\S]*?)\s*```/);
-      const jsonStr = jsonMatch ? jsonMatch[1] : textBlock.text;
+      const jsonMatch = messageContent.match(/```json\s*([\s\S]*?)\s*```/) ||
+                        messageContent.match(/```\s*([\s\S]*?)\s*```/);
+      const jsonStr = jsonMatch ? jsonMatch[1] : messageContent;
       discrepancies = JSON.parse(jsonStr.trim());
       if (!Array.isArray(discrepancies)) discrepancies = [];
     } catch {
-      console.error("Failed to parse crossref response:", textBlock.text.substring(0, 300));
+      console.error("Failed to parse crossref response:", messageContent.substring(0, 300));
       discrepancies = [];
     }
 
