@@ -363,6 +363,60 @@ export type Database = {
           },
         ]
       }
+      crossref_results: {
+        Row: {
+          created_at: string
+          document_a_type: string
+          document_b_type: string
+          estimated_financial_impact_usd: number | null
+          field_checked: string
+          finding: string
+          id: string
+          recommendation: string | null
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          shipment_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_a_type: string
+          document_b_type: string
+          estimated_financial_impact_usd?: number | null
+          field_checked: string
+          finding: string
+          id?: string
+          recommendation?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          shipment_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_a_type?: string
+          document_b_type?: string
+          estimated_financial_impact_usd?: number | null
+          field_checked?: string
+          finding?: string
+          id?: string
+          recommendation?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          shipment_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       decision_approvals: {
         Row: {
           action: string
