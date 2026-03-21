@@ -48,6 +48,7 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
         .select("document_type, extracted_fields, extraction_status, file_name")
         .eq("shipment_id", shipmentId);
       if (data && data.length > 0) {
+        console.log("[loadFromLibrary] Found", data.length, "docs in library");
         const newDocs: Record<string, ExtractedDocData> = {};
         const newFiles: Record<string, File> = {};
         for (const row of data) {
