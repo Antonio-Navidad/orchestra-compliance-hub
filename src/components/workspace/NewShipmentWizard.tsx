@@ -195,7 +195,59 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
                 />
               </div>
 
-              {/* 2. Importer of Record */}
+              {/* 2. Smart Packet Intake — HERO drop zone */}
+              {onOpenPacketIntake && (
+                <button
+                  type="button"
+                  onClick={() => { onOpenChange(false); onOpenPacketIntake(); }}
+                  className="w-full flex flex-col items-center gap-3 py-8 px-6 rounded-xl border-2 border-dashed border-primary bg-primary/5 hover:bg-primary/10 hover:border-primary hover:shadow-md transition-all cursor-pointer"
+                >
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Upload size={24} className="text-primary" />
+                  </div>
+                  <span className="text-sm font-bold text-primary">Drop your document packet and AI will fill everything else</span>
+                  <span className="text-xs text-muted-foreground text-center max-w-md leading-relaxed">
+                    AI identifies shipment mode, extracts importer details, commodity, origin, HTS codes, and builds your complete checklist automatically.
+                  </span>
+                </button>
+              )}
+
+              {/* 3. Divider */}
+              <div className="flex items-center gap-3 py-1">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-[11px] text-muted-foreground font-medium">or fill in manually</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+
+              {/* 4. Shipment Mode */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Shipment Mode</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {MODE_CARDS.map(m => {
+                    const active = shipmentMode === m.id;
+                    return (
+                      <button
+                        key={m.id}
+                        onClick={() => setShipmentMode(m.id)}
+                        className={cn(
+                          "relative flex flex-col items-start gap-1.5 rounded-lg border p-3 text-left transition-all",
+                          "hover:border-primary/40 hover:shadow-sm active:scale-[0.98]",
+                          active ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-card"
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={cn("transition-colors", active ? "text-primary" : "text-muted-foreground")}>{m.icon}</span>
+                          <span className={cn("text-[13px] font-semibold", active ? "text-primary" : "text-foreground")}>{m.label}</span>
+                        </div>
+                        <p className="text-[10px] leading-snug text-muted-foreground">{m.detail}</p>
+                        {active && <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 5. Importer of Record */}
               <div className="space-y-1.5 relative">
                 <Label className="text-xs font-semibold">Importer of Record</Label>
                 <Input
@@ -234,35 +286,7 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
                 )}
               </div>
 
-              {/* 3. Shipment Mode — 2×2 cards */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Shipment Mode</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {MODE_CARDS.map(m => {
-                    const active = shipmentMode === m.id;
-                    return (
-                      <button
-                        key={m.id}
-                        onClick={() => setShipmentMode(m.id)}
-                        className={cn(
-                          "relative flex flex-col items-start gap-1.5 rounded-lg border p-3 text-left transition-all",
-                          "hover:border-primary/40 hover:shadow-sm active:scale-[0.98]",
-                          active ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-card"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className={cn("transition-colors", active ? "text-primary" : "text-muted-foreground")}>{m.icon}</span>
-                          <span className={cn("text-[13px] font-semibold", active ? "text-primary" : "text-foreground")}>{m.label}</span>
-                        </div>
-                        <p className="text-[10px] leading-snug text-muted-foreground">{m.detail}</p>
-                        {active && <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 4. Commodity Type */}
+              {/* 6. Commodity Type */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Commodity Type</Label>
                 <Select value={commodityType} onValueChange={setCommodityType}>
@@ -273,7 +297,7 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
                 </Select>
               </div>
 
-              {/* 5. Country of Origin */}
+              {/* 7. Country of Origin */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Country of Origin</Label>
                 <Input
@@ -284,7 +308,7 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
                 />
               </div>
 
-              {/* 6. Port of Entry */}
+              {/* 8. Port of Entry */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Port of Entry / Destination</Label>
                 <Input
@@ -295,7 +319,7 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
                 />
               </div>
 
-              {/* ── Live AI Preview ── */}
+              {/* 9. Live AI Preview */}
               <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <Sparkles size={14} className="text-primary" />
@@ -318,24 +342,6 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
                   <p className="text-[11px] text-muted-foreground italic">Fill in more fields to see auto-detected requirements.</p>
                 )}
               </div>
-
-              {/* ── Smart Packet Intake Drop Zone ── */}
-              {onOpenPacketIntake && (
-                <div className="mt-2 pt-4 border-t border-border">
-                  <button
-                    type="button"
-                    onClick={() => { onOpenChange(false); onOpenPacketIntake(); }}
-                    className="w-full flex flex-col items-center gap-2 py-5 px-4 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all cursor-pointer"
-                  >
-                    <Upload size={22} className="text-primary" />
-                    <span className="text-xs font-semibold text-primary">Already have your document packet?</span>
-                    <span className="text-[10px] text-muted-foreground text-center max-w-sm">
-                      Drop all files and AI will identify the shipment type, extract all data, and build your complete checklist automatically.
-                    </span>
-                  </button>
-                  <p className="text-center text-[10px] text-muted-foreground mt-2">Or skip and fill manually ↓</p>
-                </div>
-              )}
             </>
           )}
 
