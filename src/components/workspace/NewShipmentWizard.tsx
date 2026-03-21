@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Ship, Plane, PackageOpen, RefreshCcw, ArrowRight, ArrowLeft, Upload, Sparkles, AlertTriangle } from "lucide-react";
+import { Ship, Plane, PackageOpen, RefreshCcw, ArrowRight, ArrowLeft, Upload, Sparkles, AlertTriangle, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /* ── Types ── */
@@ -27,13 +27,35 @@ export interface WizardResult {
   achSetup: boolean;
 }
 
-type ShipmentModeChoice = "ocean_import" | "air_import" | "us_export" | "inbond_te";
+type ShipmentModeChoice = "ocean_import" | "air_import" | "land_mexico_import" | "land_canada_import" | "ocean_export" | "air_export" | "land_mexico_export" | "land_canada_export" | "inbond_te";
 
-const MODE_CARDS: { id: ShipmentModeChoice; label: string; icon: React.ReactNode; detail: string }[] = [
-  { id: "ocean_import", label: "Ocean Import", icon: <Ship size={20} />, detail: "14 docs required + ISF mandatory" },
-  { id: "air_import", label: "Air Import", icon: <Plane size={20} />, detail: "11 docs required, no ISF" },
-  { id: "us_export", label: "U.S. Export", icon: <PackageOpen size={20} />, detail: "EEI/AES + 8 docs, denied party screening required" },
-  { id: "inbond_te", label: "In-Bond / T&E", icon: <RefreshCcw size={20} />, detail: "CBP Form 7512 workflow" },
+interface ModeCard { id: ShipmentModeChoice; label: string; icon: React.ReactNode; detail: string }
+
+const MODE_GROUPS: { title: string; cards: ModeCard[] }[] = [
+  {
+    title: "Importing into the U.S.",
+    cards: [
+      { id: "ocean_import", label: "Ocean Import", icon: <Ship size={18} />, detail: "14 docs + ISF mandatory" },
+      { id: "air_import", label: "Air Import", icon: <Plane size={18} />, detail: "11 docs, no ISF" },
+      { id: "land_mexico_import", label: "Land — Mexico Import", icon: <Truck size={18} />, detail: "PAPS + Pedimento + Carta Porte" },
+      { id: "land_canada_import", label: "Land — Canada Import", icon: <Truck size={18} />, detail: "PARS + ACI eManifest" },
+    ],
+  },
+  {
+    title: "Exporting from the U.S.",
+    cards: [
+      { id: "ocean_export", label: "Ocean Export", icon: <Ship size={18} />, detail: "EEI/AES + ocean docs" },
+      { id: "air_export", label: "Air Export", icon: <Plane size={18} />, detail: "EEI/AES + air docs" },
+      { id: "land_mexico_export", label: "Land — Mexico Export", icon: <Truck size={18} />, detail: "EEI/AES + Pedimento coordination" },
+      { id: "land_canada_export", label: "Land — Canada Export", icon: <Truck size={18} />, detail: "No EEI + CARM coordination" },
+    ],
+  },
+  {
+    title: "Other",
+    cards: [
+      { id: "inbond_te", label: "In-Bond / T&E", icon: <RefreshCcw size={18} />, detail: "CBP Form 7512 workflow" },
+    ],
+  },
 ];
 
 const COMMODITY_TYPES = [
@@ -75,13 +97,14 @@ function inferTags(mode: ShipmentModeChoice, commodity: string, origin: string):
   if (c.includes("chemical") || c.includes("hazmat")) tags.push({ label: "Dangerous Goods Declaration required", color: "bg-red-500/10 text-red-600 border-red-500/20" });
   if (c.includes("medical") || c.includes("pharma")) tags.push({ label: "FDA 510(k) or registration may apply", color: "bg-amber-500/10 text-amber-600 border-amber-500/20" });
   if (c.includes("wildlife") || c.includes("exotic")) tags.push({ label: "CITES permit — required for endangered species", color: "bg-red-500/10 text-red-600 border-red-500/20" });
-  if (mode === "us_export") tags.push({ label: "Denied Party Screening — mandatory before export", color: "bg-red-500/10 text-red-600 border-red-500/20" });
+  if (["ocean_export", "air_export", "land_mexico_export", "land_canada_export"].some(m => mode === m)) tags.push({ label: "Denied Party Screening — mandatory before export", color: "bg-red-500/10 text-red-600 border-red-500/20" });
 
   return tags;
 }
 
 function estimateDocCount(mode: ShipmentModeChoice, commodity: string): { required: number; conditional: number } {
-  let base = mode === "ocean_import" ? 14 : mode === "air_import" ? 11 : mode === "us_export" ? 9 : 7;
+  const isExport = ["ocean_export", "air_export", "land_mexico_export", "land_canada_export"].includes(mode);
+  let base = mode === "ocean_import" ? 14 : mode === "air_import" ? 11 : isExport ? 9 : mode === "land_mexico_import" ? 16 : mode === "land_canada_import" ? 13 : 7;
   let cond = 0;
   const c = commodity.toLowerCase();
   if (c.includes("food")) cond += 2;
@@ -220,31 +243,36 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
               </div>
 
               {/* 4. Shipment Mode */}
-              <div className="space-y-1.5">
+              <div className="space-y-3">
                 <Label className="text-xs font-semibold">Shipment Mode</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {MODE_CARDS.map(m => {
-                    const active = shipmentMode === m.id;
-                    return (
-                      <button
-                        key={m.id}
-                        onClick={() => setShipmentMode(m.id)}
-                        className={cn(
-                          "relative flex flex-col items-start gap-1.5 rounded-lg border p-3 text-left transition-all",
-                          "hover:border-primary/40 hover:shadow-sm active:scale-[0.98]",
-                          active ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-card"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className={cn("transition-colors", active ? "text-primary" : "text-muted-foreground")}>{m.icon}</span>
-                          <span className={cn("text-[13px] font-semibold", active ? "text-primary" : "text-foreground")}>{m.label}</span>
-                        </div>
-                        <p className="text-[10px] leading-snug text-muted-foreground">{m.detail}</p>
-                        {active && <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary" />}
-                      </button>
-                    );
-                  })}
-                </div>
+                {MODE_GROUPS.map(group => (
+                  <div key={group.title} className="space-y-1.5">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{group.title}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {group.cards.map(m => {
+                        const active = shipmentMode === m.id;
+                        return (
+                          <button
+                            key={m.id}
+                            onClick={() => setShipmentMode(m.id)}
+                            className={cn(
+                              "relative flex flex-col items-start gap-1 rounded-lg border p-2.5 text-left transition-all",
+                              "hover:border-primary/40 hover:shadow-sm active:scale-[0.98]",
+                              active ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-card"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className={cn("transition-colors", active ? "text-primary" : "text-muted-foreground")}>{m.icon}</span>
+                              <span className={cn("text-[12px] font-semibold", active ? "text-primary" : "text-foreground")}>{m.label}</span>
+                            </div>
+                            <p className="text-[10px] leading-snug text-muted-foreground">{m.detail}</p>
+                            {active && <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
 
               {/* 5. Importer of Record */}

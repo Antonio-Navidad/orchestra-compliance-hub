@@ -430,7 +430,7 @@ export default function ShipmentIntake() {
       consignee: result.importerOfRecord,
       origin_country: result.countryOfOrigin,
       port_of_entry: result.portOfEntry,
-      destination_country: result.shipmentMode === 'us_export' ? '' : 'United States',
+      destination_country: ['ocean_export', 'air_export', 'land_mexico_export', 'land_canada_export'].includes(result.shipmentMode) ? '' : 'United States',
     }));
 
     toast({
