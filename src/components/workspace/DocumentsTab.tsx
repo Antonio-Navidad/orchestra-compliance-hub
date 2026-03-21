@@ -50,7 +50,7 @@ function calcFees(declaredValue: string, mode: ShipmentModeId): Record<string, s
 
 export function DocumentsTab({
   shipmentMode, uploadedDocTypes, commodityType, originCountry, incoterm,
-  declaredValue, hsCode, shipmentSubtitle, shipmentId, deadlines = [], onClickDeadline, onViewAIAnalysis, onUploadDoc,
+  declaredValue, hsCode, shipmentSubtitle, shipmentId, deadlines = [], onClickDeadline, onViewAIAnalysis, onUploadDoc, onOpenPacketIntake,
 }: DocumentsTabProps) {
   const [showOptional, setShowOptional] = useState(false);
   const [markedNA, setMarkedNA] = useState<Set<string>>(new Set());
