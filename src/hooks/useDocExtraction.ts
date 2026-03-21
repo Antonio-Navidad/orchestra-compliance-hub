@@ -34,8 +34,57 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
   const [crossRefResults, setCrossRefResults] = useState<CrossRefResult[]>([]);
   const [processingDocs, setProcessingDocs] = useState<Set<string>>(new Set());
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const [libraryLoaded, setLibraryLoaded] = useState(false);
   const extractedDocsRef = useRef(extractedDocs);
   extractedDocsRef.current = extractedDocs;
+
+  // Load documents from document_library for this shipment on mount / shipmentId change
+  const loadFromLibrary = useCallback(async () => {
+    if (!shipmentId || shipmentId === 'draft' || libraryLoaded) return;
+    try {
+      const { data } = await supabase
+        .from("document_library")
+        .select("document_type, extracted_fields, extraction_status, file_name")
+        .eq("shipment_id", shipmentId);
+      if (data && data.length > 0) {
+        const newDocs: Record<string, ExtractedDocData> = {};
+        const newFiles: Record<string, File> = {};
+        for (const row of data) {
+          const docType = row.document_type;
+          if (!docType) continue;
+          const fields = (row.extracted_fields || {}) as Record<string, any>;
+          const fieldDetails = Object.entries(fields).map(([key, val]) => ({
+            field: key,
+            value: val,
+            confidence: 95,
+            source_location: "Smart Packet Intake",
+          }));
+          newDocs[docType] = {
+            docId: docType,
+            documentType: docType,
+            extractedData: fields,
+            fieldDetails,
+            warnings: [],
+            pgaFlags: [],
+          };
+          // Create a placeholder File so uploadedFiles registers the doc as uploaded
+          if (row.file_name) {
+            newFiles[docType] = new File([], row.file_name, { type: "application/pdf" });
+          }
+        }
+        if (Object.keys(newDocs).length > 0) {
+          setExtractedDocs(prev => ({ ...prev, ...newDocs }));
+          setUploadedFiles(prev => ({ ...prev, ...newFiles }));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load document library:", err);
+    }
+    setLibraryLoaded(true);
+  }, [shipmentId, libraryLoaded]);
+
+  // Auto-load on shipmentId change
+  useState(() => { loadFromLibrary(); });
 
   const extractDocument = useCallback(async (docId: string, file: File) => {
     setProcessingDocs(prev => new Set(prev).add(docId));

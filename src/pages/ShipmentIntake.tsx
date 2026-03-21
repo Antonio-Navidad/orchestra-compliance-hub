@@ -1059,22 +1059,27 @@ export default function ShipmentIntake() {
         open={showPacketIntake}
         onOpenChange={setShowPacketIntake}
         shipmentId={form.shipment_id}
-        onComplete={(profileData: ShipmentProfileData, _sid?: string) => {
-          setForm(prev => ({
-            ...prev,
-            consignee: profileData.importerOfRecord || prev.consignee,
-            shipper: profileData.exporterSeller || prev.shipper,
-            origin_country: profileData.countryOfOrigin || prev.origin_country,
-            declared_value: profileData.declaredValue || prev.declared_value,
-            currency: profileData.currency || prev.currency,
-            hs_code: profileData.htsCodes[0] || prev.hs_code,
-            incoterm: profileData.incoterms || prev.incoterm,
-          }));
-          if (profileData.shipmentMode === "ocean") handleModeChange("ocean_import");
-          else if (profileData.shipmentMode === "air") handleModeChange("air_import");
-          else if (profileData.shipmentMode === "land") handleModeChange("land_import_mexico");
-          else if (profileData.shipmentMode === "land_canada") handleModeChange("land_import_canada");
-          toast({ title: "Smart Packet Intake complete", description: "Shipment profile populated from uploaded documents" });
+        onComplete={(profileData: ShipmentProfileData, sid?: string) => {
+          if (sid) {
+            // Navigate to the activated shipment workspace
+            handleSelectShipment(sid);
+            setActiveTab('documents');
+          } else {
+            setForm(prev => ({
+              ...prev,
+              consignee: profileData.importerOfRecord || prev.consignee,
+              shipper: profileData.exporterSeller || prev.shipper,
+              origin_country: profileData.countryOfOrigin || prev.origin_country,
+              declared_value: profileData.declaredValue || prev.declared_value,
+              currency: profileData.currency || prev.currency,
+              hs_code: profileData.htsCodes[0] || prev.hs_code,
+              incoterm: profileData.incoterms || prev.incoterm,
+            }));
+            if (profileData.shipmentMode === "ocean") handleModeChange("ocean_import");
+            else if (profileData.shipmentMode === "air") handleModeChange("air_import");
+            else if (profileData.shipmentMode === "land") handleModeChange("land_import_mexico");
+            else if (profileData.shipmentMode === "land_canada") handleModeChange("land_import_canada");
+          }
         }}
       />
       <AlertDrawer
