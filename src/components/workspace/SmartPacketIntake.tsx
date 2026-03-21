@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Upload, FileText, Image, FileSpreadsheet, File, X, Check, AlertTriangle,
-  Loader2, Search, Settings, CheckCircle2, XCircle, ChevronRight, Download, ArrowRight,
+  Loader2, Search, Settings, CheckCircle2, XCircle, ChevronRight, Download, ArrowRight, Pause,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -18,6 +18,7 @@ import {
   type CrossRefFinding,
   type ShipmentProfileData,
 } from "@/hooks/useSmartPacketIntake";
+import { useNavigate } from "react-router-dom";
 
 const DOC_TYPE_LABELS: Record<string, string> = {
   commercial_invoice: "Commercial Invoice",
@@ -89,7 +90,7 @@ function getStatusDisplay(status: PacketFileStatus, docType: string | null): { i
 }
 
 /* ── Drop Zone ── */
-function PacketDropZone({ onDrop, variant = "full" }: { onDrop: (files: File[]) => void; variant?: "full" | "compact" }) {
+function PacketDropZone({ onDrop, variant = "full" }: { onDrop: (files: File[]) => void; variant?: "full" | "compact" | "inline" }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -105,6 +106,25 @@ function PacketDropZone({ onDrop, variant = "full" }: { onDrop: (files: File[]) 
     if (selected.length > 0) onDrop(selected);
     e.target.value = "";
   }, [onDrop]);
+
+  if (variant === "inline") {
+    return (
+      <div
+        className={cn(
+          "border-2 border-dashed rounded-lg p-3 text-center cursor-pointer transition-all",
+          isDragOver ? "border-primary bg-primary/10" : "border-border/50 hover:border-primary/40 hover:bg-primary/5"
+        )}
+        onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
+        onDragLeave={() => setIsDragOver(false)}
+        onDrop={handleDrop}
+        onClick={() => inputRef.current?.click()}
+      >
+        <Upload className="mx-auto mb-1 text-muted-foreground" size={16} />
+        <p className="text-[10px] font-medium text-muted-foreground">Drop more documents</p>
+        <input ref={inputRef} type="file" multiple className="hidden" accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif,.docx,.xlsx,.msg,.eml" onChange={handleFileSelect} />
+      </div>
+    );
+  }
 
   if (variant === "compact") {
     return (
@@ -153,10 +173,10 @@ function PacketDropZone({ onDrop, variant = "full" }: { onDrop: (files: File[]) 
   );
 }
 
-/* ── Processing Screen ── */
+/* ── Processing Screen with persistent drop zone ── */
 function ProcessingScreen({
   files, crossRefResults, profileData, score, stats,
-  onConfirm, onAssign, onRemove,
+  onConfirm, onAssign, onRemove, onAddMore,
 }: {
   files: PacketFile[];
   crossRefResults: CrossRefFinding[];
@@ -166,6 +186,7 @@ function ProcessingScreen({
   onConfirm: (id: string, type: string) => void;
   onAssign: (id: string, type: string) => void;
   onRemove: (id: string) => void;
+  onAddMore: (files: File[]) => void;
 }) {
   const processingCount = files.filter(f => ["queued", "uploading", "identifying", "extracting"].includes(f.status)).length;
   const progress = stats.total > 0 ? Math.round(((stats.total - processingCount) / stats.total) * 100) : 0;
@@ -179,7 +200,7 @@ function ProcessingScreen({
             <div className="flex items-center gap-2">
               <Settings size={14} className={cn(stats.processing ? "animate-spin text-primary" : "text-emerald-500")} />
               <span className="text-sm font-semibold">
-                {stats.processing ? "Processing..." : "Complete"}
+                {stats.processing ? "Processing..." : "Ready"}
               </span>
             </div>
             <div className="flex gap-3 text-xs text-muted-foreground">
@@ -197,7 +218,7 @@ function ProcessingScreen({
 
       {/* 3-column layout */}
       <div className="flex-1 grid grid-cols-3 divide-x divide-border overflow-hidden">
-        {/* LEFT — File list */}
+        {/* LEFT — File list + persistent drop zone */}
         <ScrollArea className="h-full">
           <div className="p-3 space-y-1">
             <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Files ({files.length})</h4>
@@ -212,6 +233,9 @@ function ProcessingScreen({
                       {icon}
                       <span className="text-[10px]">{text}</span>
                     </div>
+                    {pf.savedToLibrary && (
+                      <span className="text-[9px] text-emerald-600">✓ Saved to shipment</span>
+                    )}
                     {pf.status === "awaiting_confirmation" && (
                       <div className="flex gap-1 mt-1">
                         <Button size="sm" variant="outline" className="h-5 text-[9px] px-2" onClick={() => onConfirm(pf.id, pf.documentType!)}>
@@ -247,6 +271,10 @@ function ProcessingScreen({
                 </div>
               );
             })}
+            {/* Always-visible drop zone at bottom */}
+            <div className="mt-3">
+              <PacketDropZone onDrop={onAddMore} variant="inline" />
+            </div>
           </div>
         </ScrollArea>
 
@@ -353,120 +381,6 @@ function ProcessingScreen({
   );
 }
 
-/* ── Completion Summary ── */
-function CompletionSummary({
-  files, crossRefResults, profileData, score, stats,
-  onGoToWorkspace, onDownloadReport,
-}: {
-  files: PacketFile[];
-  crossRefResults: CrossRefFinding[];
-  profileData: ShipmentProfileData;
-  score: number;
-  stats: { total: number; identified: number; fieldsExtracted: number; crossChecks: number; issues: number };
-  onGoToWorkspace: () => void;
-  onDownloadReport: () => void;
-}) {
-  const successFiles = files.filter(f => f.status === "extracted" || f.status === "extracted_warnings");
-  const issueFiles = files.filter(f => f.status === "extracted_warnings");
-  const failedFiles = files.filter(f => f.status === "unidentified" || f.status === "error");
-  const criticalFindings = crossRefResults.filter(cr => cr.severity === "critical" || cr.severity === "high");
-
-  return (
-    <div className="p-6 space-y-6 max-w-2xl mx-auto">
-      <div className="text-center">
-        <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-3">
-          <CheckCircle2 className="text-emerald-500" size={28} />
-        </div>
-        <h2 className="text-xl font-bold">Smart Packet Intake Complete</h2>
-      </div>
-
-      {/* Stats row */}
-      <div className="grid grid-cols-4 gap-3">
-        {[
-          { label: "Documents", value: stats.identified },
-          { label: "Fields Extracted", value: stats.fieldsExtracted },
-          { label: "Cross-Checks", value: stats.crossChecks },
-          { label: "Score", value: `${score}%` },
-        ].map((s, i) => (
-          <div key={i} className="text-center p-3 rounded-lg border border-border bg-card">
-            <div className="text-lg font-bold text-primary">{s.value}</div>
-            <div className="text-[10px] text-muted-foreground">{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Successful documents */}
-      {successFiles.length > 0 && (
-        <div className="space-y-1.5">
-          <h4 className="text-xs font-bold text-emerald-600">Documents Successfully Processed</h4>
-          {successFiles.map(f => (
-            <div key={f.id} className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-              <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
-              <span className="text-xs flex-1">
-                <strong>{DOC_TYPE_LABELS[f.documentType || ""] || f.documentType}</strong>
-                {f.extractedData?.invoice_number && ` — ${f.extractedData.invoice_number}`}
-                {f.extractedData?.bl_number && ` — ${f.extractedData.bl_number}`}
-                {f.extractedData?.total_value && ` — ${f.extractedData.currency || "USD"} ${Number(f.extractedData.total_value).toLocaleString()}`}
-              </span>
-              <span className="text-[10px] text-muted-foreground">{Math.round(f.confidence * 100)}%</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Issues found */}
-      {(criticalFindings.length > 0 || issueFiles.length > 0) && (
-        <div className="space-y-1.5">
-          <h4 className="text-xs font-bold text-amber-600">Issues Found</h4>
-          {criticalFindings.map((cr, i) => (
-            <div key={i} className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/5 border border-amber-500/20">
-              <AlertTriangle size={14} className={cr.severity === "critical" ? "text-red-500 shrink-0 mt-0.5" : "text-amber-500 shrink-0 mt-0.5"} />
-              <div className="text-xs">
-                <strong>{DOC_TYPE_LABELS[cr.document_a] || cr.document_a} ↔ {DOC_TYPE_LABELS[cr.document_b] || cr.document_b}:</strong>{" "}
-                {cr.finding}
-                {cr.estimated_financial_impact_usd > 0 && (
-                  <span className="text-red-600 font-medium"> (est. ${cr.estimated_financial_impact_usd.toLocaleString()})</span>
-                )}
-              </div>
-            </div>
-          ))}
-          {issueFiles.map(f => (
-            <div key={f.id} className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/5 border border-amber-500/20">
-              <AlertTriangle size={14} className="text-amber-500 shrink-0 mt-0.5" />
-              <span className="text-xs">
-                <strong>{DOC_TYPE_LABELS[f.documentType || ""]}</strong> — {f.warnings.join("; ")}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Failed/unidentified */}
-      {failedFiles.length > 0 && (
-        <div className="space-y-1.5">
-          <h4 className="text-xs font-bold text-red-600">Manual Review Needed</h4>
-          {failedFiles.map(f => (
-            <div key={f.id} className="flex items-center gap-2 p-2 rounded-lg bg-red-500/5 border border-red-500/20">
-              <XCircle size={14} className="text-red-500 shrink-0" />
-              <span className="text-xs">{f.file.name} — {f.error || "Could not identify"}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex gap-3 pt-2">
-        <Button onClick={onGoToWorkspace} className="flex-1 gap-2">
-          Go to workspace — review issues <ArrowRight size={14} />
-        </Button>
-        <Button variant="outline" onClick={onDownloadReport} className="gap-2">
-          <Download size={14} /> Download report
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 /* ── Multi-Shipment Dialog ── */
 function MultiShipmentDialog({
   shipments, onCreateSeparate, onAssignAll, onManualSort,
@@ -517,54 +431,64 @@ interface SmartPacketIntakeProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   shipmentId?: string;
-  onComplete?: (profileData: ShipmentProfileData) => void;
+  onComplete?: (profileData: ShipmentProfileData, shipmentId: string) => void;
 }
 
 export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }: SmartPacketIntakeProps) {
+  const navigate = useNavigate();
   const {
     files, addFiles, removeFile, startProcessing,
     confirmDocType, assignDocType,
     crossRefResults, detectedShipments, profileData,
-    isComplete, score, stats, reset,
+    score, stats, reset,
+    draftShipmentId, createDraft, activateDraft, pauseDraft,
   } = useSmartPacketIntake(shipmentId);
 
-  const [phase, setPhase] = useState<"drop" | "processing" | "multi_shipment" | "summary">("drop");
+  const [phase, setPhase] = useState<"drop" | "processing" | "multi_shipment">("drop");
 
-  const handleDrop = useCallback((droppedFiles: File[]) => {
+  const hasProcessedFiles = files.some(f =>
+    ["extracted", "extracted_warnings", "awaiting_confirmation", "unidentified"].includes(f.status)
+  );
+
+  const handleDrop = useCallback(async (droppedFiles: File[]) => {
     const queued = addFiles(droppedFiles);
     if (queued.length > 0) {
       setPhase("processing");
-      startProcessing(queued).then(() => {
-        // After processing, check for multi-shipment or go to summary
-      });
+      await startProcessing(queued);
     }
   }, [addFiles, startProcessing]);
 
-  const handleAddMoreFiles = useCallback((droppedFiles: File[]) => {
+  const handleAddMoreFiles = useCallback(async (droppedFiles: File[]) => {
     const queued = addFiles(droppedFiles);
     if (queued.length > 0) {
-      startProcessing(queued);
+      await startProcessing(queued);
     }
   }, [addFiles, startProcessing]);
 
-  // Check completion
-  const allDone = files.length > 0 && !stats.processing;
+  const handleOpenWorkspace = useCallback(async () => {
+    const sid = await activateDraft();
+    if (sid) {
+      if (onComplete) onComplete(profileData, sid);
+      onOpenChange(false);
+      setPhase("drop");
+      reset();
+    }
+  }, [activateDraft, onComplete, onOpenChange, profileData, reset]);
 
-  const handleGoToWorkspace = useCallback(() => {
-    if (onComplete) onComplete(profileData);
+  const handleSaveAndClose = useCallback(async () => {
+    await pauseDraft();
     onOpenChange(false);
     setPhase("drop");
     reset();
-  }, [onComplete, onOpenChange, profileData, reset]);
+  }, [pauseDraft, onOpenChange, reset]);
 
   const handleDownloadReport = useCallback(() => {
-    // Generate a simple text report
     const lines: string[] = [
       "═══════════════════════════════════════",
       "SMART PACKET INTAKE REPORT",
       "═══════════════════════════════════════",
       `Date: ${new Date().toLocaleString()}`,
-      `Shipment ID: ${shipmentId || "Draft"}`,
+      `Shipment ID: ${draftShipmentId || "Draft"}`,
       "",
       "── SHIPMENT SUMMARY ──",
       `Importer: ${profileData.importerOfRecord || "N/A"}`,
@@ -595,15 +519,21 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
     a.download = `Orchestra_Intake_Report_${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [files, crossRefResults, profileData, score, shipmentId]);
+  }, [files, crossRefResults, profileData, score, draftShipmentId]);
 
+  // On close without action — draft is already saved via Step 2
   const handleClose = useCallback(() => {
     onOpenChange(false);
+    // Don't reset — draft and files persist in DB
+    // If there are files, the draft stays as paused in sidebar
+    if (files.length > 0 && draftShipmentId) {
+      pauseDraft();
+    }
     setTimeout(() => {
       setPhase("drop");
       reset();
     }, 300);
-  }, [onOpenChange, reset]);
+  }, [onOpenChange, files, draftShipmentId, pauseDraft, reset]);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -618,18 +548,23 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
               <h2 className="text-sm font-bold">Smart Packet Intake</h2>
               <p className="text-[10px] text-muted-foreground">
                 {phase === "drop" ? "Drop your document packet to begin" :
-                 phase === "processing" ? `Processing ${files.length} files...` :
-                 "Intake complete"}
+                 stats.processing ? `Processing ${files.length} files...` :
+                 `${stats.identified} documents ready`}
               </p>
             </div>
           </div>
-          {files.length > 0 && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>{files.length} files</span>
-              <span>·</span>
-              <span>{(files.reduce((sum, f) => sum + f.file.size, 0) / (1024 * 1024)).toFixed(1)} MB</span>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {files.length > 0 && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>{files.length} files</span>
+                <span>·</span>
+                <span>{(files.reduce((sum, f) => sum + f.file.size, 0) / (1024 * 1024)).toFixed(1)} MB</span>
+              </div>
+            )}
+            {draftShipmentId && (
+              <Badge variant="outline" className="text-[9px] font-mono">{draftShipmentId}</Badge>
+            )}
+          </div>
         </div>
 
         {/* Content */}
@@ -646,58 +581,65 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
           )}
 
           {phase === "processing" && (
-            <div className="h-full flex flex-col">
-              <ProcessingScreen
-                files={files}
-                crossRefResults={crossRefResults}
-                profileData={profileData}
-                score={score}
-                stats={stats}
-                onConfirm={confirmDocType}
-                onAssign={assignDocType}
-                onRemove={removeFile}
-              />
-              {allDone && (
-                <div className="px-4 py-3 border-t border-border bg-card/50 flex items-center justify-between shrink-0">
-                  <PacketDropZone onDrop={handleAddMoreFiles} variant="compact" />
-                  <Button onClick={() => setPhase("summary")} className="gap-2 ml-4">
-                    View Summary <ChevronRight size={14} />
-                  </Button>
-                </div>
-              )}
-            </div>
+            <ProcessingScreen
+              files={files}
+              crossRefResults={crossRefResults}
+              profileData={profileData}
+              score={score}
+              stats={stats}
+              onConfirm={confirmDocType}
+              onAssign={assignDocType}
+              onRemove={removeFile}
+              onAddMore={handleAddMoreFiles}
+            />
           )}
 
           {phase === "multi_shipment" && detectedShipments.length > 1 && (
             <MultiShipmentDialog
               shipments={detectedShipments}
-              onCreateSeparate={() => setPhase("summary")}
-              onAssignAll={() => setPhase("summary")}
+              onCreateSeparate={() => setPhase("processing")}
+              onAssignAll={() => setPhase("processing")}
               onManualSort={() => setPhase("processing")}
             />
           )}
-
-          {phase === "summary" && (
-            <ScrollArea className="h-full">
-              <CompletionSummary
-                files={files}
-                crossRefResults={crossRefResults}
-                profileData={profileData}
-                score={score}
-                stats={stats}
-                onGoToWorkspace={handleGoToWorkspace}
-                onDownloadReport={handleDownloadReport}
-              />
-            </ScrollArea>
-          )}
         </div>
 
-        {/* Footer disclaimer */}
-        <div className="px-5 py-2 border-t border-border bg-muted/30 shrink-0">
-          <p className="text-[9px] text-muted-foreground text-center">
-            Analysis powered by AI. All extracted data should be verified against original documents before filing.
-            The broker retains final filing responsibility as the importer's legal representative.
-          </p>
+        {/* Footer — persistent action buttons */}
+        <div className="px-5 py-3 border-t border-border bg-card/50 shrink-0">
+          {hasProcessedFiles ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleDownloadReport} className="gap-1.5 text-xs">
+                  <Download size={12} /> Download report
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSaveAndClose}
+                  className="gap-1.5 text-xs"
+                >
+                  <Pause size={12} />
+                  Save & come back later
+                </Button>
+                <Button
+                  onClick={handleOpenWorkspace}
+                  size="sm"
+                  className="gap-1.5 text-xs font-semibold"
+                  disabled={stats.processing}
+                >
+                  Open Shipment Workspace
+                  <ArrowRight size={14} />
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-[9px] text-muted-foreground text-center">
+              Analysis powered by AI. All extracted data should be verified against original documents before filing.
+              The broker retains final filing responsibility as the importer's legal representative.
+            </p>
+          )}
         </div>
       </DialogContent>
     </Dialog>
