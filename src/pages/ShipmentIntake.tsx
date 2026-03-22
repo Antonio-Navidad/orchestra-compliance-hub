@@ -1083,6 +1083,7 @@ function ShipmentIntakeInner() {
           } else if (sid) {
             // New shipment created via intake
             await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
+            setDocRefreshKey(prev => prev + 1);
             await new Promise(resolve => setTimeout(resolve, 250));
             handleSelectShipment(sid);
             setActiveTab('details');
