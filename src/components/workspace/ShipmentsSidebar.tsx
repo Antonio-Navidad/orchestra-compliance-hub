@@ -228,7 +228,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
   };
 
   return (
-    <div className="w-[240px] min-w-[240px] shrink-0 border-r border-border bg-card/50 flex flex-col h-full">
+    <div className="w-[280px] min-w-[280px] shrink-0 border-r border-border bg-card/50 flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-3 border-b border-border">
         <h2 className="text-sm font-bold text-foreground">Shipments</h2>
