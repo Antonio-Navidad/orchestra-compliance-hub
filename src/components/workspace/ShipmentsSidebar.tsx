@@ -16,9 +16,6 @@ import {
   XCircle,
   Pause,
   Clock,
-  Trash2,
-  Pencil,
-  MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
