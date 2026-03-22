@@ -92,7 +92,7 @@ const PAUSED_STATUSES = ["paused", "waiting_docs", "draft"];
 export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadlines = [], onClickDeadline }: Props) {
   const [expanded, setExpanded] = useState<Set<Section>>(new Set(["active"]));
 
-  const queryClient = useQueryClient();
+  
 
   const { data: shipments = [], isLoading } = useQuery({
     queryKey: ["shipments-sidebar-list"],
