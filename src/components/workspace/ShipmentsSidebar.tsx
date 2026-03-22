@@ -8,7 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, ChevronDown, Ship, Plane, Truck, CheckCircle2, AlertTriangle, XCircle, Pause, Clock, MoreHorizontal, Trash2, Pencil } from "lucide-react";
+import { Plus, ChevronDown, Ship, Plane, Truck, CheckCircle2, AlertTriangle, XCircle, Pause, Clock, Trash2, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import type { ShipmentDeadline } from "@/lib/deadlineEngine";
