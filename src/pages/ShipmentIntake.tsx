@@ -1073,8 +1073,9 @@ function ShipmentIntakeInner() {
         shipmentId={selectedShipmentId || form.shipment_id}
         onComplete={async (profileData: ShipmentProfileData, sid?: string) => {
           if (sid && sid === selectedShipmentId) {
-            // Existing shipment — docs were added, just refresh
+            // Existing shipment — docs were added, refresh data
             await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
+            setDocRefreshKey(prev => prev + 1);
             toast({ title: `Documents added to ${sid}`, description: "Cross-reference checks updated" });
             handleSelectShipment(sid);
             setActiveTab('details');
