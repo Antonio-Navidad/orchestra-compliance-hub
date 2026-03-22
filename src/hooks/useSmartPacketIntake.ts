@@ -174,6 +174,59 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
     return ensuredId;
   }, [draftShipmentId, existingShipmentId, user, queryClient, ensureDraftShipment]);
 
+  // Run cross-reference after saving a document if 2+ verified docs exist
+  const runCrossRefAfterSave = useCallback(async (sid: string) => {
+    try {
+      const { data: allDocs } = await supabase
+        .from("document_library")
+        .select("document_type, extracted_fields")
+        .eq("shipment_id", sid)
+        .eq("extraction_status", "complete");
+
+      if (!allDocs || allDocs.length < 2) return;
+
+      const documents = allDocs
+        .filter((d: any) => d.document_type && d.extracted_fields)
+        .map((d: any) => ({ document_type: d.document_type, extracted_data: d.extracted_fields }));
+
+      if (documents.length < 2) return;
+
+      console.log("[runCrossRefAfterSave] Comparing", documents.length, "docs for shipment", sid);
+
+      const { data, error } = await supabase.functions.invoke("workspace-crossref", {
+        body: { documents, shipmentMode: profileData.shipmentMode, commodityType: "", countryOfOrigin: profileData.countryOfOrigin },
+      });
+
+      if (error) { console.error("[runCrossRefAfterSave] Edge function error:", error); return; }
+
+      const discrepancies: any[] = data?.discrepancies || [];
+      const activeUser = user ?? (await supabase.auth.getUser()).data.user ?? null;
+
+      // Clear old results and insert new ones
+      await supabase.from("crossref_results").delete().eq("shipment_id", sid);
+
+      if (discrepancies.length > 0) {
+        const rows = discrepancies.map((d: any) => ({
+          shipment_id: sid,
+          document_a_type: d.document_a,
+          document_b_type: d.document_b,
+          field_checked: d.field_checked,
+          severity: d.severity,
+          finding: d.finding,
+          recommendation: d.recommendation || "",
+          estimated_financial_impact_usd: d.estimated_financial_impact_usd || 0,
+          user_id: activeUser?.id || null,
+        }));
+        await supabase.from("crossref_results").insert(rows);
+        console.log("[runCrossRefAfterSave] Stored", rows.length, "crossref findings");
+      }
+
+      setCrossRefResults(discrepancies);
+    } catch (err) {
+      console.error("[runCrossRefAfterSave] Failed:", err);
+    }
+  }, [profileData.shipmentMode, profileData.countryOfOrigin, user]);
+
   // Save file to document library linked to draft shipment
   const saveFileToLibrary = useCallback(async (
     pf: PacketFile, docType: string, extractedData: Record<string, any> | null, sid: string
@@ -210,7 +263,10 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
 
     console.log("[saveFileToLibrary] Saved", docType, "to shipment", sid);
     setFiles(prev => prev.map(f => f.id === pf.id ? { ...f, savedToLibrary: true } : f));
-  }, [user]);
+
+    // Trigger cross-reference after save
+    runCrossRefAfterSave(sid);
+  }, [user, runCrossRefAfterSave]);
 
   const addFiles = useCallback((newFiles: File[]) => {
     const packetFiles: PacketFile[] = newFiles.map(f => ({
