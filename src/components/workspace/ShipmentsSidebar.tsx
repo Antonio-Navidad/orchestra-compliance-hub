@@ -138,8 +138,41 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
       toast({ title: "Error", description: e.message, variant: "destructive" });
     },
   });
+  const renameMutation = useMutation({
+    mutationFn: async ({ shipmentId, newDesc }: { shipmentId: string; newDesc: string }) => {
+      const { error } = await supabase
+        .from("shipments")
+        .update({ description: newDesc } as any)
+        .eq("shipment_id", shipmentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+      toast({ title: "Shipment renamed" });
+      setRenamingId(null);
+    },
+    onError: (e: any) => {
+      toast({ title: "Rename failed", description: e.message, variant: "destructive" });
+    },
+  });
 
-  const toggle = (section: Section) => {
+  useEffect(() => {
+    if (renamingId && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [renamingId]);
+
+  const commitRename = (shipmentId: string) => {
+    const trimmed = renameValue.trim();
+    if (trimmed && trimmed.length > 0) {
+      renameMutation.mutate({ shipmentId, newDesc: trimmed });
+    } else {
+      setRenamingId(null);
+    }
+  };
+
+
     setExpanded(prev => {
       const next = new Set(prev);
       next.has(section) ? next.delete(section) : next.add(section);
