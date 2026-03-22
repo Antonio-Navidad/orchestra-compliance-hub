@@ -559,8 +559,13 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
             </div>
             <div>
               <h2 className="text-sm font-bold">Smart Packet Intake</h2>
+              {isExistingShipment && (
+                <p className="text-[10px] font-semibold text-primary">
+                  Adding to {shipmentId} →
+                </p>
+              )}
               <p className="text-[10px] text-muted-foreground">
-                {phase === "drop" ? "Drop your document packet to begin" :
+                {phase === "drop" ? (isExistingShipment ? "Drop additional documents" : "Drop your document packet to begin") :
                  stats.processing ? `Processing ${files.length} files...` :
                  `${stats.identified} documents ready`}
               </p>
