@@ -228,7 +228,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
   };
 
   return (
-    <div className="w-[280px] min-w-[280px] shrink-0 border-r border-border bg-card/50 flex flex-col h-full">
+    <div className="w-[320px] min-w-[320px] shrink-0 border-r border-border bg-card/50 flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-3 border-b border-border">
         <h2 className="text-sm font-bold text-foreground">Shipments</h2>
@@ -425,11 +425,10 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                         width: "24px",
                                         height: "24px",
                                         borderRadius: "4px",
-                                        background: "red",
+                                        background: "none",
                                         border: "none",
                                         cursor: "pointer",
                                         padding: 0,
-                                        color: "white",
                                         opacity: 1,
                                       }}
                                     >
