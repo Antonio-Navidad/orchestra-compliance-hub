@@ -231,20 +231,38 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                               )}
                               onClick={() => onSelect(s.shipment_id)}
                             >
-                              <div style={{ minWidth: 0 }}>
-                                <div className="flex items-center gap-1.5">
-                                  {MODE_ICONS[s.mode] || <Ship size={11} />}
-                                  <span
-                                    style={{
-                                      whiteSpace: "nowrap",
-                                      fontWeight: 600,
-                                      fontSize: "12px",
-                                      fontFamily: "monospace",
-                                    }}
-                                  >
-                                    {s.shipment_id}
-                                  </span>
-                                </div>
+                            <div
+                              onMouseEnter={() => setHoveredId(s.shipment_id)}
+                              onMouseLeave={() => setHoveredId(null)}
+                            >
+                              <div className="flex items-center gap-1.5">
+                                {MODE_ICONS[s.mode] || <Ship size={11} />}
+                                <span
+                                  style={{
+                                    whiteSpace: "nowrap",
+                                    fontWeight: 600,
+                                    fontSize: "12px",
+                                    fontFamily: "monospace",
+                                  }}
+                                  className="flex-1"
+                                >
+                                  {s.shipment_id}
+                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteTarget(s);
+                                  }}
+                                  className="shrink-0 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                                  style={{
+                                    opacity: hoveredId === s.shipment_id ? 1 : 0,
+                                    transition: "opacity 0.15s",
+                                  }}
+                                  title="Delete shipment"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
 
                                 <p
                                   style={{
