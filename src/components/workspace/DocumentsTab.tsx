@@ -168,6 +168,30 @@ export function DocumentsTab({
     extractDocument(docId, file);
   }, [onUploadDoc, extractDocument]);
 
+  const handleDocDelete = useCallback(async (docId: string) => {
+    if (!shipmentId || shipmentId === 'draft') return;
+    try {
+      await supabase.from("document_library")
+        .delete()
+        .eq("shipment_id", shipmentId)
+        .eq("document_type", docId);
+      await supabase.from("crossref_results")
+        .delete()
+        .eq("shipment_id", shipmentId)
+        .or(`document_a_type.eq.${docId},document_b_type.eq.${docId}`);
+      // Force reload by clearing from extracted docs
+      window.location.reload();
+    } catch (err) {
+      console.error("Failed to delete document:", err);
+    }
+  }, [shipmentId]);
+
+  const handleDocReplace = useCallback((docId: string, files: FileList) => {
+    const file = files[0];
+    if (!file) return;
+    extractDocument(docId, file);
+  }, [extractDocument]);
+
   // Map deadline types to document IDs
   const DEADLINE_DOC_MAP: Record<string, string> = {
     isf_filing: 'isf_filing',
