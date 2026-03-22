@@ -125,8 +125,13 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
   // Reset library loaded flag when shipmentId changes
   useEffect(() => { setLibraryLoaded(false); }, [shipmentId]);
 
-  // Auto-load on shipmentId change
-  useEffect(() => { loadFromLibrary(); }, [loadFromLibrary]);
+  // Auto-load on shipmentId change (only if not already loaded)
+  useEffect(() => { if (!libraryLoaded) loadFromLibrary(); }, [loadFromLibrary, libraryLoaded]);
+
+  // Force reload — call after intake completes to re-fetch documents and crossref
+  const reloadLibrary = useCallback(() => {
+    setLibraryLoaded(false);
+  }, []);
 
   // Persistent cross-reference: queries ALL verified docs from document_library then calls edge function
   const runPersistentCrossRef = useCallback(async () => {
