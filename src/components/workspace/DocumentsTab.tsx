@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useRef } from "react";
 import { FileCheck, Sparkles, AlertTriangle, CheckCircle2, ShieldCheck } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -168,6 +169,30 @@ export function DocumentsTab({
     extractDocument(docId, file);
   }, [onUploadDoc, extractDocument]);
 
+  const handleDocDelete = useCallback(async (docId: string) => {
+    if (!shipmentId || shipmentId === 'draft') return;
+    try {
+      await supabase.from("document_library")
+        .delete()
+        .eq("shipment_id", shipmentId)
+        .eq("document_type", docId);
+      await supabase.from("crossref_results")
+        .delete()
+        .eq("shipment_id", shipmentId)
+        .or(`document_a_type.eq.${docId},document_b_type.eq.${docId}`);
+      // Force reload by clearing from extracted docs
+      window.location.reload();
+    } catch (err) {
+      console.error("Failed to delete document:", err);
+    }
+  }, [shipmentId]);
+
+  const handleDocReplace = useCallback((docId: string, files: FileList) => {
+    const file = files[0];
+    if (!file) return;
+    extractDocument(docId, file);
+  }, [extractDocument]);
+
   // Map deadline types to document IDs
   const DEADLINE_DOC_MAP: Record<string, string> = {
     isf_filing: 'isf_filing',
@@ -314,7 +339,11 @@ export function DocumentsTab({
     return filteredCards;
   }, [filteredCards, sortBy]);
 
-  const flaggedCount = allCards.filter(c => c.state === 'issue').length;
+  // Count flagged = cards with issue state + unresolved critical/high crossref findings not already counted
+  const crossRefFlaggedCount = crossRefResults.filter(cr =>
+    (cr.severity === 'critical' || cr.severity === 'high') && !cr.resolved
+  ).length;
+  const flaggedCount = Math.max(allCards.filter(c => c.state === 'issue').length, crossRefFlaggedCount);
 
   // Build status pills
   const statusPills: Array<{ label: string; type: 'green' | 'amber' | 'red'; onClick?: () => void }> = [];
@@ -425,7 +454,7 @@ export function DocumentsTab({
         score={score}
         totalRequired={totalRequired}
         verified={verified}
-        issuesFlagged={issuesFlagged}
+        issuesFlagged={flaggedCount}
         missing={missing}
         shipmentSubtitle={shipmentSubtitle}
         statusPills={statusPills}
@@ -490,6 +519,8 @@ export function DocumentsTab({
                     onRequestFromSupplier={(id) => openAlert(id, { docName: card.name })}
                     onClickAlert={(id, msg) => openAlert(id, { docName: card.name, message: msg })}
                     onClickCard={(id) => openAlert(id, { docName: card.name, severity: card.state === 'missing' ? 'critical' : card.state === 'issue' ? 'high' : 'info' })}
+                    onDelete={handleDocDelete}
+                    onReplace={(id, files) => handleDocReplace(id, files)}
                   />
                 ))}
               </div>

@@ -4,8 +4,15 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle2, AlertTriangle, XCircle, MinusCircle, ChevronDown,
-  Upload, FileText, Mail, RefreshCw, Loader2, Info
+  Upload, FileText, Mail, RefreshCw, Loader2, Info, Trash2
 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
 
 export type DocCardState = 'verified' | 'issue' | 'missing' | 'not_applicable' | 'processing';
 
@@ -43,6 +50,8 @@ interface Props {
   onMarkNA?: (docId: string) => void;
   onClickAlert?: (docId: string, message: string) => void;
   onClickCard?: (docId: string) => void;
+  onDelete?: (docId: string) => void;
+  onReplace?: (docId: string, files: FileList) => void;
 }
 
 const STATE_CONFIG: Record<DocCardState, { border: string; dot: typeof CheckCircle2; dotClass: string; bg: string }> = {
@@ -53,9 +62,60 @@ const STATE_CONFIG: Record<DocCardState, { border: string; dot: typeof CheckCirc
   not_applicable: { border: 'border-l-muted', dot: MinusCircle, dotClass: 'text-muted-foreground/50', bg: 'opacity-50' },
 };
 
-export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCorrected, onMarkNA, onClickAlert, onClickCard }: Props) {
+/** Try to parse a value as a line items array and render a table */
+function LineItemsTable({ value }: { value: string }) {
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    if (!Array.isArray(parsed) || parsed.length === 0) return <span>{value}</span>;
+
+    return (
+      <div className="w-full overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-[10px] h-7 px-2">#</TableHead>
+              <TableHead className="text-[10px] h-7 px-2">Description</TableHead>
+              <TableHead className="text-[10px] h-7 px-2">Ctns</TableHead>
+              <TableHead className="text-[10px] h-7 px-2">Qty</TableHead>
+              <TableHead className="text-[10px] h-7 px-2">Net Wt</TableHead>
+              <TableHead className="text-[10px] h-7 px-2">Gross Wt</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {parsed.map((item: any, i: number) => (
+              <TableRow key={i}>
+                <TableCell className="text-[10px] py-1 px-2">{i + 1}</TableCell>
+                <TableCell className="text-[10px] py-1 px-2 max-w-[160px] truncate">
+                  {item.description || item.item_description || item.name || '—'}
+                </TableCell>
+                <TableCell className="text-[10px] py-1 px-2">{item.cartons ?? item.ctns ?? '—'}</TableCell>
+                <TableCell className="text-[10px] py-1 px-2">{item.quantity ?? item.qty ?? '—'}</TableCell>
+                <TableCell className="text-[10px] py-1 px-2">{item.net_weight ?? item.net_weight_kg ?? '—'}</TableCell>
+                <TableCell className="text-[10px] py-1 px-2">{item.gross_weight ?? item.gross_weight_kg ?? '—'}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  } catch {
+    return <span>{value}</span>;
+  }
+}
+
+/** Check if a value looks like a JSON array string */
+function isLineItemsField(label: string, value: string): boolean {
+  const lcLabel = label.toLowerCase();
+  if (lcLabel.includes('line item') || lcLabel.includes('line_item')) return true;
+  if (typeof value === 'string' && value.startsWith('[') && value.includes('{')) return true;
+  return false;
+}
+
+export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCorrected, onMarkNA, onClickAlert, onClickCard, onDelete, onReplace }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const cfg = STATE_CONFIG[doc.state];
   const Icon = cfg.dot;
 
@@ -74,8 +134,14 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
     e.target.value = '';
   }, [doc.id, onUpload]);
 
-  // Auto-expand when processing completes with results
-  const shouldAutoExpand = doc.state === 'verified' && doc.extractedFields && doc.extractedFields.length > 1;
+  const handleReplaceInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0 && onReplace) {
+      onReplace(doc.id, e.target.files);
+    }
+    e.target.value = '';
+  }, [doc.id, onReplace]);
+
+  const isUploaded = doc.state === 'verified' || doc.state === 'issue' || doc.state === 'processing';
 
   if (doc.state === 'not_applicable' && !expanded) {
     return (
@@ -95,11 +161,34 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
   }
 
   return (
-    <div className={cn(
-      "rounded-lg border border-l-4 transition-all overflow-hidden",
-      "border-border", cfg.border, cfg.bg,
-      expanded && "col-span-2"
-    )}>
+    <div
+      className={cn(
+        "rounded-lg border border-l-4 transition-all overflow-hidden relative",
+        "border-border", cfg.border, cfg.bg,
+        expanded && "col-span-2"
+      )}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Hover action buttons for uploaded docs */}
+      {isUploaded && hovered && !expanded && (
+        <div className="absolute right-8 top-1/2 -translate-y-1/2 flex items-center gap-1 z-10">
+          <label title="Replace document">
+            <input type="file" className="hidden" onChange={handleReplaceInput} accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif,.docx,.xlsx" />
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
+              <Upload size={12} />
+            </span>
+          </label>
+          <button
+            title="Remove document"
+            onClick={(e) => { e.stopPropagation(); setDeleteConfirmOpen(true); }}
+            className="inline-flex items-center justify-center w-6 h-6 rounded bg-secondary/80 hover:bg-destructive/20 text-muted-foreground hover:text-destructive cursor-pointer transition-colors"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+      )}
+
       {/* Collapsed row */}
       <button
         onClick={() => setExpanded(!expanded)}
@@ -108,10 +197,7 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
           "hover:bg-accent/20 active:scale-[0.998] transition-colors"
         )}
       >
-        <Icon
-          size={14}
-          className={cn(cfg.dotClass, "shrink-0")}
-        />
+        <Icon size={14} className={cn(cfg.dotClass, "shrink-0")} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-semibold block truncate">{doc.name}</span>
@@ -182,28 +268,40 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
                     <FileText size={10} /> AI Extracted Data
                   </h4>
                   <div className="space-y-0.5 max-h-[300px] overflow-y-auto">
-                    {doc.extractedFields.map((field, i) => (
-                      <div
-                        key={i}
-                        className={cn(
-                          "flex items-start justify-between py-1 px-2 rounded text-[11px] gap-2",
-                          i % 2 === 0 ? "bg-secondary/20" : ""
-                        )}
-                      >
-                        <span className="text-muted-foreground font-medium shrink-0">{field.label}</span>
-                        <span className={cn(
-                          "font-semibold text-right break-words min-w-0",
-                          field.status === 'verified' && "text-green-600",
-                          field.status === 'flagged' && "text-amber-500",
-                          field.status === 'error' && "text-red-500",
-                        )}>
-                          {field.value}
-                          {field.status === 'flagged' && (
-                            <span className="text-[9px] block text-amber-400 font-normal">Please verify</span>
+                    {doc.extractedFields.map((field, i) => {
+                      // Render line items as a table
+                      if (isLineItemsField(field.label, field.value)) {
+                        return (
+                          <div key={i} className="col-span-2 py-1">
+                            <span className="text-muted-foreground font-medium text-[11px] block mb-1">{field.label}</span>
+                            <LineItemsTable value={field.value} />
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={i}
+                          className={cn(
+                            "flex items-start justify-between py-1 px-2 rounded text-[11px] gap-2",
+                            i % 2 === 0 ? "bg-secondary/20" : ""
                           )}
-                        </span>
-                      </div>
-                    ))}
+                        >
+                          <span className="text-muted-foreground font-medium shrink-0">{field.label}</span>
+                          <span className={cn(
+                            "font-semibold text-right break-words min-w-0",
+                            field.status === 'verified' && "text-green-600",
+                            field.status === 'flagged' && "text-amber-500",
+                            field.status === 'error' && "text-red-500",
+                          )}>
+                            {field.value}
+                            {field.status === 'flagged' && (
+                              <span className="text-[9px] block text-amber-400 font-normal">Please verify</span>
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -234,10 +332,11 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
                 </div>
               )}
 
-              {/* Show message when no cross-ref data yet */}
+              {/* No cross-ref checks and verified: show confirmation */}
               {(!doc.crossRefChecks || doc.crossRefChecks.length === 0) && doc.state === 'verified' && (
-                <div className="flex items-center justify-center text-[11px] text-muted-foreground/50 py-4">
-                  Upload another document to enable cross-reference checks
+                <div className="flex items-center gap-2 text-[11px] text-green-600 py-4">
+                  <CheckCircle2 size={14} className="shrink-0" />
+                  No discrepancies found
                 </div>
               )}
             </div>
@@ -282,12 +381,22 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
               </>
             )}
             {(doc.state === 'issue' || doc.state === 'verified') && (
-              <label>
-                <input type="file" className="hidden" onChange={handleFileInput} accept=".pdf,.jpg,.png,.doc,.docx,.xlsx" />
-                <Button variant="outline" size="sm" className="text-[10px] h-7 gap-1" asChild>
-                  <span><RefreshCw size={10} /> Upload corrected version</span>
+              <>
+                <label>
+                  <input type="file" className="hidden" onChange={handleReplaceInput} accept=".pdf,.jpg,.png,.doc,.docx,.xlsx" />
+                  <Button variant="outline" size="sm" className="text-[10px] h-7 gap-1" asChild>
+                    <span><RefreshCw size={10} /> Replace with corrected version</span>
+                  </Button>
+                </label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-[10px] h-7 gap-1 text-destructive hover:text-destructive"
+                  onClick={() => setDeleteConfirmOpen(true)}
+                >
+                  <Trash2 size={10} /> Remove document
                 </Button>
-              </label>
+              </>
             )}
           </div>
         </div>
@@ -298,11 +407,33 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
         <div className="px-3 pb-4 pt-2 border-t border-border/50">
           <div className="flex flex-col items-center gap-2 py-6">
             <Loader2 size={24} className="text-blue-500 animate-spin" />
-            <p className="text-xs text-muted-foreground font-medium">Extracting with Claude AI...</p>
+            <p className="text-xs text-muted-foreground font-medium">Extracting with AI...</p>
             <p className="text-[10px] text-muted-foreground/60">Identifying fields, verifying data, checking compliance</p>
           </div>
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {doc.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the uploaded file and all extracted data for this document.
+              You can re-upload it later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => onDelete?.(doc.id)}
+            >
+              Remove document
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
