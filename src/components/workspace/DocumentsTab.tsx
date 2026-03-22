@@ -59,6 +59,9 @@ export function DocumentsTab({
   const [markedNA, setMarkedNA] = useState<Set<string>>(new Set());
   const [alertDrawerOpen, setAlertDrawerOpen] = useState(false);
   const [alertDrawerData, setAlertDrawerData] = useState<AlertDrawerData | null>(null);
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set(['all']));
+  const [sortBy, setSortBy] = useState<string>('workflow');
+  const firstMissingRef = useRef<HTMLDivElement>(null);
 
   const {
     extractDocument, processingDocs, getCardEnhancements, getScore, uploadedFiles, crossRefResults, extractedDocs,
