@@ -265,17 +265,95 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                         <div
                           key={s.shipment_id}
                           className={cn(
-                            "relative w-full text-left px-3 py-2 transition-colors cursor-pointer",
+                            "w-full text-left px-3 py-2 transition-colors cursor-pointer",
                             "hover:bg-accent/40",
                             isSelected && "bg-primary/8 border-l-2 border-primary"
                           )}
                           onMouseEnter={() => setHoveredId(s.shipment_id)}
                           onMouseLeave={() => setHoveredId(null)}
-                          style={{ position: 'relative', paddingRight: '32px', minHeight: '64px' }}
                           onClick={() => onSelect(s.shipment_id)}
                         >
-                          {/* Three-dot menu — visible on hover only */}
-                          <div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          {/* Left: shipment text */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div className="flex items-center gap-1.5">
+                              {MODE_ICONS[s.mode] || <Ship size={11} />}
+                              <span
+                                className="text-[12px] font-bold font-mono text-foreground"
+                                style={{ whiteSpace: 'nowrap', fontWeight: 500, fontSize: '12px' }}
+                              >
+                                {s.shipment_id}
+                              </span>
+                            </div>
+                            {renamingId === s.shipment_id ? (
+                              <Input
+                                ref={renameInputRef}
+                                value={renameValue}
+                                onChange={(e) => setRenameValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") commitRename(s.shipment_id);
+                                  if (e.key === "Escape") setRenamingId(null);
+                                }}
+                                onBlur={() => commitRename(s.shipment_id)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="h-5 text-[10px] mt-0.5 px-1"
+                              />
+                            ) : (
+                              <p
+                                className="text-muted-foreground mt-0.5 leading-snug"
+                                style={{
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  fontSize: '11px',
+                                }}
+                              >
+                                {formatRoute(s)}
+                              </p>
+                            )}
+                            <Badge
+                              variant="outline"
+                              className={cn("text-[9px] px-1.5 py-0 mt-1 inline-flex items-center gap-1", badge.className)}
+                              style={{ whiteSpace: 'nowrap', display: 'inline-flex' }}
+                            >
+                              {badge.icon} {badge.label}
+                            </Badge>
+                            {isSelected && deadlines.length > 0 && (() => {
+                              const urgent = getMostUrgentDeadline(deadlines);
+                              if (!urgent || urgent.status === 'upcoming') return null;
+                              const isOver = urgent.status === 'overdue';
+                              const isUrg = urgent.status === 'urgent';
+                              return (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); onClickDeadline?.(urgent); }}
+                                  className={cn(
+                                    "text-[9px] font-semibold px-1.5 py-0 rounded inline-flex items-center gap-0.5 mt-0.5",
+                                    "border transition-colors active:scale-[0.97] cursor-pointer",
+                                    isOver ? "bg-destructive/10 text-destructive border-destructive/20" :
+                                    isUrg ? "bg-destructive/8 text-destructive border-destructive/20" :
+                                    "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                  )}
+                                >
+                                  {(isOver || isUrg) && <AlertTriangle size={8} />}
+                                  <Clock size={8} />
+                                  {urgent.shortLabel} {isOver
+                                    ? `${Math.abs(urgent.daysRemaining)}d over`
+                                    : urgent.hoursRemaining < 48
+                                      ? `in ${urgent.hoursRemaining}h`
+                                      : `in ${urgent.daysRemaining}d`
+                                  }
+                                </button>
+                              );
+                            })()}
+                            {section.key === 'incomplete' && (
+                              <p className="text-[9px] text-muted-foreground/60 mt-0.5">
+                                Last active: {new Date(s.updated_at).toLocaleDateString()}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Right: three-dot menu */}
+                          <div style={{ flexShrink: 0, marginLeft: '4px' }}>
                             <DropdownMenu
                               open={openMenuId === s.shipment_id}
                               onOpenChange={(open) => setOpenMenuId(open ? s.shipment_id : null)}
@@ -283,10 +361,6 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                               <DropdownMenuTrigger asChild>
                                 <button
                                   style={{
-                                    position: 'absolute',
-                                    right: '8px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)',
                                     opacity: 1,
                                     visibility: 'visible',
                                     display: 'flex',
@@ -296,7 +370,6 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                     padding: '4px 6px',
                                     color: 'inherit',
                                     fontSize: '14px',
-                                    zIndex: 10,
                                   }}
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -338,82 +411,6 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
-
-                          <div className="pr-7">
-                            <div className="flex items-center gap-1.5">
-                              {MODE_ICONS[s.mode] || <Ship size={11} />}
-                              <span
-                                className="text-[12px] font-bold font-mono text-foreground whitespace-nowrap"
-                                style={{ whiteSpace: 'nowrap', fontWeight: 500, fontSize: '12px' }}
-                              >
-                                {s.shipment_id}
-                              </span>
-                            </div>
-                            {renamingId === s.shipment_id ? (
-                              <Input
-                                ref={renameInputRef}
-                                value={renameValue}
-                                onChange={(e) => setRenameValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") commitRename(s.shipment_id);
-                                  if (e.key === "Escape") setRenamingId(null);
-                                }}
-                                onBlur={() => commitRename(s.shipment_id)}
-                                onClick={(e) => e.stopPropagation()}
-                                className="h-5 text-[10px] mt-0.5 px-1"
-                              />
-                            ) : (
-                              <p
-                                className="text-[10px] text-muted-foreground mt-0.5 leading-snug truncate min-w-0"
-                                style={{
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  fontSize: '11px',
-                                }}
-                              >
-                                {formatRoute(s)}
-                              </p>
-                            )}
-                            <Badge
-                              variant="outline"
-                              className={cn("text-[9px] px-1.5 py-0 mt-1 inline-flex items-center gap-1 whitespace-nowrap", badge.className)}
-                              style={{ whiteSpace: 'nowrap', display: 'inline-flex' }}
-                            >
-                              {badge.icon} {badge.label}
-                            </Badge>
-                            {isSelected && deadlines.length > 0 && (() => {
-                              const urgent = getMostUrgentDeadline(deadlines);
-                              if (!urgent || urgent.status === 'upcoming') return null;
-                              const isOver = urgent.status === 'overdue';
-                              const isUrg = urgent.status === 'urgent';
-                              return (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); onClickDeadline?.(urgent); }}
-                                  className={cn(
-                                    "text-[9px] font-semibold px-1.5 py-0 rounded inline-flex items-center gap-0.5 mt-0.5",
-                                    "border transition-colors active:scale-[0.97] cursor-pointer",
-                                    isOver ? "bg-destructive/10 text-destructive border-destructive/20" :
-                                    isUrg ? "bg-destructive/8 text-destructive border-destructive/20" :
-                                    "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                                  )}
-                                >
-                                  {(isOver || isUrg) && <AlertTriangle size={8} />}
-                                  <Clock size={8} />
-                                  {urgent.shortLabel} {isOver
-                                    ? `${Math.abs(urgent.daysRemaining)}d over`
-                                    : urgent.hoursRemaining < 48
-                                      ? `in ${urgent.hoursRemaining}h`
-                                      : `in ${urgent.daysRemaining}d`
-                                  }
-                                </button>
-                              );
-                            })()}
-                            {section.key === 'incomplete' && (
-                              <p className="text-[9px] text-muted-foreground/60 mt-0.5">
-                                Last active: {new Date(s.updated_at).toLocaleDateString()}
-                              </p>
-                            )}
                           </div>
                         </div>
                       );
