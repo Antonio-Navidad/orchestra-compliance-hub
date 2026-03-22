@@ -263,14 +263,14 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                         <div
                           key={s.shipment_id}
                           className={cn(
-                            "group/row relative w-full text-left px-3 py-2 transition-colors cursor-pointer",
+                            "group relative w-full text-left px-3 py-2 transition-colors cursor-pointer",
                             "hover:bg-accent/40",
                             isSelected && "bg-primary/8 border-l-2 border-primary"
                           )}
                           onClick={() => onSelect(s.shipment_id)}
                         >
                           {/* Three-dot menu — visible on hover only */}
-                          <div className="absolute right-1.5 top-1.5 opacity-0 group-hover/row:opacity-100 transition-opacity z-10">
+                          <div className="absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <button
@@ -313,66 +313,68 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                             </DropdownMenu>
                           </div>
 
-                          <div className="flex items-center gap-1.5">
-                            {MODE_ICONS[s.mode] || <Ship size={11} />}
-                            <span className="text-[12px] font-bold font-mono text-foreground">{s.shipment_id}</span>
+                          <div className="pr-7">
+                            <div className="flex items-center gap-1.5">
+                              {MODE_ICONS[s.mode] || <Ship size={11} />}
+                              <span className="text-[12px] font-bold font-mono text-foreground whitespace-nowrap">{s.shipment_id}</span>
+                            </div>
+                            {renamingId === s.shipment_id ? (
+                              <Input
+                                ref={renameInputRef}
+                                value={renameValue}
+                                onChange={(e) => setRenameValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") commitRename(s.shipment_id);
+                                  if (e.key === "Escape") setRenamingId(null);
+                                }}
+                                onBlur={() => commitRename(s.shipment_id)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="h-5 text-[10px] mt-0.5 px-1"
+                              />
+                            ) : (
+                              <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug truncate min-w-0">
+                                {formatRoute(s)}
+                              </p>
+                            )}
+                            <Badge
+                              variant="outline"
+                              className={cn("text-[9px] px-1.5 py-0 mt-1 inline-flex items-center gap-1 whitespace-nowrap", badge.className)}
+                            >
+                              {badge.icon} {badge.label}
+                            </Badge>
+                            {isSelected && deadlines.length > 0 && (() => {
+                              const urgent = getMostUrgentDeadline(deadlines);
+                              if (!urgent || urgent.status === 'upcoming') return null;
+                              const isOver = urgent.status === 'overdue';
+                              const isUrg = urgent.status === 'urgent';
+                              return (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); onClickDeadline?.(urgent); }}
+                                  className={cn(
+                                    "text-[9px] font-semibold px-1.5 py-0 rounded inline-flex items-center gap-0.5 mt-0.5",
+                                    "border transition-colors active:scale-[0.97] cursor-pointer",
+                                    isOver ? "bg-destructive/10 text-destructive border-destructive/20" :
+                                    isUrg ? "bg-destructive/8 text-destructive border-destructive/20" :
+                                    "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                  )}
+                                >
+                                  {(isOver || isUrg) && <AlertTriangle size={8} />}
+                                  <Clock size={8} />
+                                  {urgent.shortLabel} {isOver
+                                    ? `${Math.abs(urgent.daysRemaining)}d over`
+                                    : urgent.hoursRemaining < 48
+                                      ? `in ${urgent.hoursRemaining}h`
+                                      : `in ${urgent.daysRemaining}d`
+                                  }
+                                </button>
+                              );
+                            })()}
+                            {section.key === 'incomplete' && (
+                              <p className="text-[9px] text-muted-foreground/60 mt-0.5">
+                                Last active: {new Date(s.updated_at).toLocaleDateString()}
+                              </p>
+                            )}
                           </div>
-                          {renamingId === s.shipment_id ? (
-                            <Input
-                              ref={renameInputRef}
-                              value={renameValue}
-                              onChange={(e) => setRenameValue(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") commitRename(s.shipment_id);
-                                if (e.key === "Escape") setRenamingId(null);
-                              }}
-                              onBlur={() => commitRename(s.shipment_id)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="h-5 text-[10px] mt-0.5 px-1"
-                            />
-                          ) : (
-                            <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug truncate">
-                              {formatRoute(s)}
-                            </p>
-                          )}
-                          <Badge
-                            variant="outline"
-                            className={cn("text-[9px] px-1.5 py-0 mt-1 inline-flex items-center gap-1", badge.className)}
-                          >
-                            {badge.icon} {badge.label}
-                          </Badge>
-                          {isSelected && deadlines.length > 0 && (() => {
-                            const urgent = getMostUrgentDeadline(deadlines);
-                            if (!urgent || urgent.status === 'upcoming') return null;
-                            const isOver = urgent.status === 'overdue';
-                            const isUrg = urgent.status === 'urgent';
-                            return (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); onClickDeadline?.(urgent); }}
-                                className={cn(
-                                  "text-[9px] font-semibold px-1.5 py-0 rounded inline-flex items-center gap-0.5 mt-0.5",
-                                  "border transition-colors active:scale-[0.97] cursor-pointer",
-                                  isOver ? "bg-destructive/10 text-destructive border-destructive/20" :
-                                  isUrg ? "bg-destructive/8 text-destructive border-destructive/20" :
-                                  "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                                )}
-                              >
-                                {(isOver || isUrg) && <AlertTriangle size={8} />}
-                                <Clock size={8} />
-                                {urgent.shortLabel} {isOver
-                                  ? `${Math.abs(urgent.daysRemaining)}d over`
-                                  : urgent.hoursRemaining < 48
-                                    ? `in ${urgent.hoursRemaining}h`
-                                    : `in ${urgent.daysRemaining}d`
-                                }
-                              </button>
-                            );
-                          })()}
-                          {section.key === 'incomplete' && (
-                            <p className="text-[9px] text-muted-foreground/60 mt-0.5">
-                              Last active: {new Date(s.updated_at).toLocaleDateString()}
-                            </p>
-                          )}
                         </div>
                       );
                     })}
