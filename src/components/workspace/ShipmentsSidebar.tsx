@@ -172,7 +172,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
     }
   };
 
-
+  const toggle = (section: Section) => {
     setExpanded(prev => {
       const next = new Set(prev);
       next.has(section) ? next.delete(section) : next.add(section);
