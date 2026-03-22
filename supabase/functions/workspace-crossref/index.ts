@@ -6,8 +6,22 @@ const corsHeaders = {
 };
 
 const CROSS_REF_PAIRS: Array<{ a: string; b: string; checks: string }> = [
-  { a: "commercial_invoice", b: "packing_list", checks: "declared value, total weight, carton count, line item descriptions" },
-  { a: "commercial_invoice", b: "bill_of_lading", checks: "consignee name, cargo description, notify party" },
+  {
+    a: "commercial_invoice",
+    b: "packing_list",
+    checks: `Perform ALL of the following checks between the Commercial Invoice and Packing List. Flag ANY mismatch:
+1. Total carton/package count MUST match exactly. Even a difference of 1 is a finding.
+2. Total gross weight MUST match within 1%. Calculate the percentage difference and flag if >1%.
+3. Number of line items MUST match. Count line items on each document.
+4. Each line item description must SEMANTICALLY match. Flag if wording differs even slightly (e.g. "brake calipers" vs "brake assemblies", "steel bolts" vs "metal fasteners"). Be strict — near-synonyms are flagged as "medium" severity.
+5. Country of origin on packing list must match the invoice's country_of_origin. Flag any mismatch as "critical".
+6. If both documents show net weight totals, they must match within 1%.`
+  },
+  {
+    a: "commercial_invoice",
+    b: "bill_of_lading",
+    checks: "consignee name must match buyer name, cargo/commodity description must semantically match, notify party consistency, total weight must match within 5%, total packages/cartons must match"
+  },
   { a: "isf_filing", b: "bill_of_lading", checks: "container numbers, seal numbers, HTS 6-digit codes" },
   { a: "isf_filing", b: "commercial_invoice", checks: "country of origin, manufacturer address" },
   { a: "fta_certificate", b: "commercial_invoice", checks: "country of origin match, certificate expiry validity" },
@@ -45,8 +59,8 @@ serve(async (req) => {
     ).join("\n\n");
 
     const pairDescriptions = applicablePairs.map(
-      p => `- ${p.a.replace(/_/g, ' ')} ↔ ${p.b.replace(/_/g, ' ')}: check ${p.checks}`
-    ).join("\n");
+      p => `- ${p.a.replace(/_/g, ' ')} ↔ ${p.b.replace(/_/g, ' ')}:\n  ${p.checks}`
+    ).join("\n\n");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -57,23 +71,34 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "You are a senior licensed customs broker performing document cross-reference verification. You are meticulous about identifying discrepancies that could cause CBP holds, penalties, or entry rejections. Be specific about financial impact." },
+          { role: "system", content: `You are a senior licensed customs broker performing document cross-reference verification. You are meticulous and strict about identifying discrepancies that could cause CBP holds, penalties, or entry rejections.
+
+CRITICAL RULES:
+- Be STRICT. Flag every mismatch, no matter how small.
+- Weight differences >1% between documents are findings.
+- Description differences that are even slightly different in wording are findings (medium severity).
+- Carton/package count differences of even 1 unit are critical findings.
+- Country of origin mismatches between any two documents are critical findings.
+- Be specific about the actual values found in each document.
+- Always estimate financial impact where possible.` },
           { role: "user", content: `Compare the following extracted data sets from a ${shipmentMode || ''} customs shipment of ${commodityType || 'goods'} from ${countryOfOrigin || 'unknown origin'}.
 
 DOCUMENTS:
 ${docSummaries}
 
-REQUIRED CROSS-CHECKS:
+REQUIRED CROSS-CHECKS (perform ALL of these):
 ${pairDescriptions}
 
-Identify any discrepancies, mismatches, or missing information. Return ONLY a JSON array (no markdown, no explanation):
+Identify ALL discrepancies, mismatches, or missing information. Be thorough — check every field listed above. Return ONLY a JSON array (no markdown, no explanation):
 [{
   "severity": "critical" | "high" | "medium" | "low",
   "document_a": "document type name",
   "document_b": "document type name",
-  "field_checked": "field name",
-  "finding": "what the discrepancy is",
-  "recommendation": "what to do about it",
+  "field_checked": "specific field name",
+  "value_in_a": "actual value from document A or null if missing",
+  "value_in_b": "actual value from document B or null if missing",
+  "finding": "precise description of the discrepancy including both values",
+  "recommendation": "specific action to resolve",
   "estimated_financial_impact_usd": number or 0
 }]
 
