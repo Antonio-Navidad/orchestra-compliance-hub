@@ -67,9 +67,9 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
     }
   }, [shipmentId]);
 
-  // Load documents from document_library for this shipment on mount / shipmentId change
+  // Load documents from document_library for this shipment
   const loadFromLibrary = useCallback(async () => {
-    if (!shipmentId || shipmentId === 'draft' || libraryLoaded) return;
+    if (!shipmentId || shipmentId === 'draft') return;
     console.log("[loadFromLibrary] Loading docs for shipmentId:", shipmentId);
     try {
       const { data } = await supabase
@@ -113,7 +113,7 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
     setLibraryLoaded(true);
     // Load persisted cross-ref results
     await loadCrossRefFromDB();
-  }, [shipmentId, libraryLoaded, loadCrossRefFromDB]);
+  }, [shipmentId, loadCrossRefFromDB]);
 
   // Trigger crossref after library loads
   useEffect(() => {
@@ -125,8 +125,13 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
   // Reset library loaded flag when shipmentId changes
   useEffect(() => { setLibraryLoaded(false); }, [shipmentId]);
 
-  // Auto-load on shipmentId change
-  useEffect(() => { loadFromLibrary(); }, [loadFromLibrary]);
+  // Auto-load on shipmentId change (only if not already loaded)
+  useEffect(() => { if (!libraryLoaded) loadFromLibrary(); }, [loadFromLibrary, libraryLoaded]);
+
+  // Force reload — call after intake completes to re-fetch documents and crossref
+  const reloadLibrary = useCallback(() => {
+    setLibraryLoaded(false);
+  }, []);
 
   // Persistent cross-reference: queries ALL verified docs from document_library then calls edge function
   const runPersistentCrossRef = useCallback(async () => {
@@ -436,5 +441,6 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
     uploadedFiles,
     getCardEnhancements,
     getScore,
+    reloadLibrary,
   };
 }

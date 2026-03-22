@@ -147,6 +147,7 @@ function ShipmentIntakeInner() {
   const [isPaused, setIsPaused] = useState(false);
   const [pausedDate, setPausedDate] = useState<string | null>(null);
   const [showPacketIntake, setShowPacketIntake] = useState(false);
+  const [docRefreshKey, setDocRefreshKey] = useState(0);
 
   // Hold management state
   const [activeHold, setActiveHold] = useState<ShipmentHold | null>(null);
@@ -829,6 +830,7 @@ function ShipmentIntakeInner() {
                     {/* ─── Documents Tab (Phased Document Checklist) ─── */}
                     <TabsContent value="details" className="mt-4">
                       <DocumentsTab
+                        key={`docs-${form.shipment_id}-${docRefreshKey}`}
                         shipmentMode={shipmentMode}
                         uploadedDocTypes={uploadedDocTypes}
                         commodityType={form.description}
@@ -1072,14 +1074,16 @@ function ShipmentIntakeInner() {
         shipmentId={selectedShipmentId || form.shipment_id}
         onComplete={async (profileData: ShipmentProfileData, sid?: string) => {
           if (sid && sid === selectedShipmentId) {
-            // Existing shipment — docs were added, just refresh
+            // Existing shipment — docs were added, refresh data
             await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
+            setDocRefreshKey(prev => prev + 1);
             toast({ title: `Documents added to ${sid}`, description: "Cross-reference checks updated" });
             handleSelectShipment(sid);
             setActiveTab('details');
           } else if (sid) {
             // New shipment created via intake
             await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
+            setDocRefreshKey(prev => prev + 1);
             await new Promise(resolve => setTimeout(resolve, 250));
             handleSelectShipment(sid);
             setActiveTab('details');

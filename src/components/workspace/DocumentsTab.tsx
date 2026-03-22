@@ -65,7 +65,7 @@ export function DocumentsTab({
   const firstMissingRef = useRef<HTMLDivElement>(null);
 
   const {
-    extractDocument, processingDocs, getCardEnhancements, getScore, uploadedFiles, crossRefResults, extractedDocs,
+    extractDocument, processingDocs, getCardEnhancements, getScore, uploadedFiles, crossRefResults, extractedDocs, reloadLibrary,
   } = useDocExtraction({
     shipmentMode,
     commodityType,

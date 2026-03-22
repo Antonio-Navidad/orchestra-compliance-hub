@@ -668,6 +668,6 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
     crossRefResults, detectedShipments, profileData,
     score, stats, reset,
     draftShipmentId, draftReady, createDraft,
-    activateDraft, pauseDraft,
+    activateDraft, pauseDraft, syncDraftProfile,
   };
 }

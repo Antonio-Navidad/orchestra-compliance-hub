@@ -445,7 +445,7 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
     confirmDocType, assignDocType,
     crossRefResults, detectedShipments, profileData,
     score, stats, reset,
-    draftShipmentId, createDraft, activateDraft, pauseDraft,
+    draftShipmentId, createDraft, activateDraft, pauseDraft, syncDraftProfile,
   } = useSmartPacketIntake(shipmentId);
 
   const [phase, setPhase] = useState<"drop" | "processing" | "multi_shipment">("drop");
@@ -475,7 +475,8 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
 
   const handleOpenWorkspace = useCallback(async () => {
     if (isExistingShipment) {
-      // Existing shipment — just close, docs are already saved
+      // Existing shipment — sync score and profile to DB before closing
+      await syncDraftProfile(shipmentId!, profileData);
       if (onComplete) onComplete(profileData, shipmentId!);
       onOpenChange(false);
       setPhase("drop");
@@ -489,7 +490,7 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
       setPhase("drop");
       reset();
     }
-  }, [isExistingShipment, activateDraft, onComplete, onOpenChange, profileData, reset, shipmentId]);
+  }, [isExistingShipment, activateDraft, syncDraftProfile, onComplete, onOpenChange, profileData, reset, shipmentId]);
 
   const handleSaveAndClose = useCallback(async () => {
     await pauseDraft();
