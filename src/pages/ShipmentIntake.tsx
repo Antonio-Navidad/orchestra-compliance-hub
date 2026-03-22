@@ -830,6 +830,7 @@ function ShipmentIntakeInner() {
                     {/* ─── Documents Tab (Phased Document Checklist) ─── */}
                     <TabsContent value="details" className="mt-4">
                       <DocumentsTab
+                        key={`docs-${form.shipment_id}-${docRefreshKey}`}
                         shipmentMode={shipmentMode}
                         uploadedDocTypes={uploadedDocTypes}
                         commodityType={form.description}
