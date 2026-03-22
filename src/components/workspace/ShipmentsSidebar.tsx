@@ -86,6 +86,8 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
@@ -263,21 +265,49 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                         <div
                           key={s.shipment_id}
                           className={cn(
-                            "group relative w-full text-left px-3 py-2 transition-colors cursor-pointer",
+                            "relative w-full text-left px-3 py-2 transition-colors cursor-pointer",
                             "hover:bg-accent/40",
                             isSelected && "bg-primary/8 border-l-2 border-primary"
                           )}
+                          onMouseEnter={() => setHoveredId(s.shipment_id)}
+                          onMouseLeave={() => setHoveredId(null)}
+                          style={{ position: 'relative' }}
                           onClick={() => onSelect(s.shipment_id)}
                         >
                           {/* Three-dot menu — visible on hover only */}
-                          <div className="absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                            <DropdownMenu>
+                          <div
+                            style={{
+                              position: 'absolute',
+                              right: '8px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              opacity: hoveredId === s.shipment_id ? 1 : 0,
+                              transition: 'opacity 0.15s',
+                              zIndex: 10,
+                            }}
+                          >
+                            <DropdownMenu
+                              open={openMenuId === s.shipment_id}
+                              onOpenChange={(open) => setOpenMenuId(open ? s.shipment_id : null)}
+                            >
                               <DropdownMenuTrigger asChild>
                                 <button
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="h-5 w-5 flex items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '4px',
+                                    color: 'inherit',
+                                    fontSize: '16px',
+                                    lineHeight: 1,
+                                    zIndex: 10,
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenuId(openMenuId === s.shipment_id ? null : s.shipment_id);
+                                  }}
                                 >
-                                  <MoreHorizontal size={12} />
+                                  ···
                                 </button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-44">
