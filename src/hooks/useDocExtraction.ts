@@ -345,13 +345,25 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       status: fd.confidence >= 90 ? "verified" : fd.confidence >= 70 ? "flagged" : "error",
     }));
 
+    // Cross-ref checks from other documents
     const checks: CrossRefCheck[] = crossRefResults
-      .filter(cr => cr.document_a === docId || cr.document_b === docId)
+      .filter(cr => (cr.document_a === docId || cr.document_b === docId) && cr.document_a !== cr.document_b)
       .map(cr => ({
         againstDoc: cr.document_a === docId ? cr.document_b.replace(/_/g, " ") : cr.document_a.replace(/_/g, " "),
         label: cr.finding,
         passed: false,
       }));
+
+    // Internal self-check findings (e.g. packing_list vs packing_list)
+    const selfChecks: CrossRefCheck[] = crossRefResults
+      .filter(cr => cr.document_a === docId && cr.document_b === docId)
+      .map(cr => ({
+        againstDoc: "Internal check",
+        label: cr.finding,
+        passed: false,
+      }));
+
+    const allChecks = [...selfChecks, ...checks];
 
     const allDocTypes = Object.keys(extractedDocs);
     for (const otherDoc of allDocTypes) {
@@ -361,7 +373,7 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
               (cr.document_b === docId && cr.document_a === otherDoc)
       );
       if (!hasIssue) {
-        checks.push({
+        allChecks.push({
           againstDoc: otherDoc.replace(/_/g, " "),
           label: "All fields match",
           passed: true,
@@ -369,22 +381,27 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       }
     }
 
-    const discrepancies = crossRefResults
-      .filter(cr => (cr.document_a === docId || cr.document_b === docId) && (cr.severity === "critical" || cr.severity === "high"))
+    // Include both cross-ref and internal error discrepancies
+    const allRelevantResults = crossRefResults
+      .filter(cr => (cr.document_a === docId || cr.document_b === docId) && (cr.severity === "critical" || cr.severity === "high"));
+
+    const discrepancies = allRelevantResults
       .map(cr => `${cr.finding} — ${cr.recommendation}${cr.estimated_financial_impact_usd > 0 ? ` (est. $${cr.estimated_financial_impact_usd.toLocaleString()} impact)` : ""}`);
 
     const hasIssues = discrepancies.length > 0 || ext.warnings.length > 0;
     const hasCritical = crossRefResults.some(cr =>
       (cr.document_a === docId || cr.document_b === docId) && cr.severity === "critical"
     );
+    const hasInternalErrors = selfChecks.length > 0;
 
     return {
-      state: hasCritical ? "issue" : hasIssues ? "issue" : "verified",
+      state: hasCritical ? "issue" : hasIssues || hasInternalErrors ? "issue" : "verified",
       statusLine: hasCritical ? "AI verified — critical discrepancies found" :
+                  hasInternalErrors ? `AI verified — ${selfChecks.length} internal error(s) detected` :
                   hasIssues ? `AI verified — ${discrepancies.length} issue(s) flagged` :
                   "Uploaded · AI verified clean",
       extractedFields: fields,
-      crossRefChecks: checks.length > 0 ? checks : undefined,
+      crossRefChecks: allChecks.length > 0 ? allChecks : undefined,
       discrepancies: discrepancies.length > 0 ? discrepancies : undefined,
       notes: ext.warnings.length > 0 ? ext.warnings : undefined,
     };
