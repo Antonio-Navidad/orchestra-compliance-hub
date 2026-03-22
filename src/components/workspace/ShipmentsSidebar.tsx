@@ -1,10 +1,20 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Plus,
   ChevronDown,
@@ -16,8 +26,10 @@ import {
   XCircle,
   Pause,
   Clock,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 
 import type { ShipmentDeadline } from "@/lib/deadlineEngine";
 import { getMostUrgentDeadline } from "@/lib/deadlineEngine";
@@ -91,8 +103,9 @@ const PAUSED_STATUSES = ["paused", "waiting_docs", "draft"];
 
 export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadlines = [], onClickDeadline }: Props) {
   const [expanded, setExpanded] = useState<Set<Section>>(new Set(["active"]));
-
-  
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ShipmentListItem | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: shipments = [], isLoading } = useQuery({
     queryKey: ["shipments-sidebar-list"],
@@ -115,6 +128,20 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
       next.has(section) ? next.delete(section) : next.add(section);
       return next;
     });
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.shipment_id;
+    const { error } = await supabase.from("shipments").delete().eq("shipment_id", id);
+    if (error) {
+      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Shipment deleted", description: `${id} has been permanently removed.` });
+      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+      if (selectedId === id) onSelect("");
+    }
+    setDeleteTarget(null);
   };
 
   const active = shipments.filter((s) => !COMPLETED_STATUSES.includes(s.status) && !PAUSED_STATUSES.includes(s.status));
@@ -204,20 +231,38 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                               )}
                               onClick={() => onSelect(s.shipment_id)}
                             >
-                              <div style={{ minWidth: 0 }}>
-                                <div className="flex items-center gap-1.5">
-                                  {MODE_ICONS[s.mode] || <Ship size={11} />}
-                                  <span
-                                    style={{
-                                      whiteSpace: "nowrap",
-                                      fontWeight: 600,
-                                      fontSize: "12px",
-                                      fontFamily: "monospace",
-                                    }}
-                                  >
-                                    {s.shipment_id}
-                                  </span>
-                                </div>
+                            <div
+                              onMouseEnter={() => setHoveredId(s.shipment_id)}
+                              onMouseLeave={() => setHoveredId(null)}
+                            >
+                              <div className="flex items-center gap-1.5">
+                                {MODE_ICONS[s.mode] || <Ship size={11} />}
+                                <span
+                                  style={{
+                                    whiteSpace: "nowrap",
+                                    fontWeight: 600,
+                                    fontSize: "12px",
+                                    fontFamily: "monospace",
+                                  }}
+                                  className="flex-1"
+                                >
+                                  {s.shipment_id}
+                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteTarget(s);
+                                  }}
+                                  className="shrink-0 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                                  style={{
+                                    opacity: hoveredId === s.shipment_id ? 1 : 0,
+                                    transition: "opacity 0.15s",
+                                  }}
+                                  title="Delete shipment"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
 
                                 <p
                                   style={{
@@ -293,6 +338,23 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
             )}
         </div>
       </ScrollArea>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this shipment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {deleteTarget?.shipment_id} and all uploaded documents. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
