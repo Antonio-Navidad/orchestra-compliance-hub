@@ -130,6 +130,20 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
     });
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.shipment_id;
+    const { error } = await supabase.from("shipments").delete().eq("shipment_id", id);
+    if (error) {
+      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Shipment deleted", description: `${id} has been permanently removed.` });
+      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+      if (selectedId === id) onSelect("");
+    }
+    setDeleteTarget(null);
+  };
+
   const active = shipments.filter((s) => !COMPLETED_STATUSES.includes(s.status) && !PAUSED_STATUSES.includes(s.status));
   const incomplete = shipments.filter((s) => PAUSED_STATUSES.includes(s.status));
   const completed = shipments.filter((s) => COMPLETED_STATUSES.includes(s.status));
