@@ -147,6 +147,7 @@ function ShipmentIntakeInner() {
   const [isPaused, setIsPaused] = useState(false);
   const [pausedDate, setPausedDate] = useState<string | null>(null);
   const [showPacketIntake, setShowPacketIntake] = useState(false);
+  const [docRefreshKey, setDocRefreshKey] = useState(0);
 
   // Hold management state
   const [activeHold, setActiveHold] = useState<ShipmentHold | null>(null);
