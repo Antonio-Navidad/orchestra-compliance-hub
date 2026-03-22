@@ -432,29 +432,68 @@ export function DocumentsTab({
         onViewAIAnalysis={onViewAIAnalysis}
       />
 
+      {/* Filter bar */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {[
+            { key: 'all', label: `All ${allCards.length}` },
+            { key: 'missing', label: `Missing ${missing}` },
+            { key: 'verified', label: `Verified ${verified}` },
+            { key: 'flagged', label: `Flagged ${flaggedCount}` },
+          ].map(f => (
+            <button
+              key={f.key}
+              onClick={() => toggleFilter(f.key)}
+              className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-colors ${
+                activeFilters.has(f.key)
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-secondary/30 text-muted-foreground border-border hover:bg-secondary/60'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-[200px] h-8 text-[11px] font-medium">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="workflow" className="text-xs">Sort by: Workflow order</SelectItem>
+            <SelectItem value="priority" className="text-xs">Sort by: Action required first</SelectItem>
+            <SelectItem value="phase" className="text-xs">Sort by: Phase</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {PHASES.map(phase => {
-        const phaseCards = allCards.filter(c => c.phase === phase.key);
+        const phaseCards = sortedCards.filter(c => c.phase === phase.key);
         const visible = phaseCards.filter(c => c.state !== 'not_applicable' || showOptional);
-        if (visible.length === 0) return null;
+        const isFirstMissingPhase = !activeFilters.has('all') && visible.length > 0 && visible.some(c => c.state === 'missing');
 
         return (
-          <div key={phase.key} className="space-y-1.5">
-            <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-1 pt-2">
+          <div key={phase.key} className="space-y-1.5" ref={isFirstMissingPhase ? firstMissingRef : undefined}>
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-1 pt-2 sticky top-0 bg-background z-10">
               {phase.label}
+              {!activeFilters.has('all') && visible.length === 0 && (
+                <span className="ml-2 text-muted-foreground/40 font-normal normal-case tracking-normal">— no matches</span>
+              )}
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
-              {visible.map(card => (
-                <DocumentCard
-                  key={card.id}
-                  doc={card}
-                  onUpload={handleDocUpload}
-                  onMarkNA={(id) => setMarkedNA(prev => new Set(prev).add(id))}
-                  onRequestFromSupplier={(id) => openAlert(id, { docName: card.name })}
-                  onClickAlert={(id, msg) => openAlert(id, { docName: card.name, message: msg })}
-                  onClickCard={(id) => openAlert(id, { docName: card.name, severity: card.state === 'missing' ? 'critical' : card.state === 'issue' ? 'high' : 'info' })}
-                />
-              ))}
-            </div>
+            {visible.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                {visible.map(card => (
+                  <DocumentCard
+                    key={card.id}
+                    doc={card}
+                    onUpload={handleDocUpload}
+                    onMarkNA={(id) => setMarkedNA(prev => new Set(prev).add(id))}
+                    onRequestFromSupplier={(id) => openAlert(id, { docName: card.name })}
+                    onClickAlert={(id, msg) => openAlert(id, { docName: card.name, message: msg })}
+                    onClickCard={(id) => openAlert(id, { docName: card.name, severity: card.state === 'missing' ? 'critical' : card.state === 'issue' ? 'high' : 'info' })}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         );
       })}
