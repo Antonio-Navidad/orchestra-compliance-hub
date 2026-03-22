@@ -6,9 +6,37 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, ChevronDown, Ship, Plane, Truck, CheckCircle2, AlertTriangle, XCircle, Pause, Clock, Trash2, Pencil, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Plus,
+  ChevronDown,
+  Ship,
+  Plane,
+  Truck,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  Pause,
+  Clock,
+  Trash2,
+  Pencil,
+  MoreHorizontal,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import type { ShipmentDeadline } from "@/lib/deadlineEngine";
@@ -44,7 +72,7 @@ const MODE_ICONS: Record<string, React.ReactNode> = {
 function getReadinessBadge(score: number | null, status: string) {
   const s = score ?? 0;
 
-  if (status === 'paused' || status === 'waiting_docs') {
+  if (status === "paused" || status === "waiting_docs") {
     return {
       icon: <Pause size={10} />,
       label: `${s}% — awaiting docs`,
@@ -64,7 +92,7 @@ function getReadinessBadge(score: number | null, status: string) {
     const issues = Math.ceil((100 - s) / 10);
     return {
       icon: <AlertTriangle size={10} />,
-      label: `⚠ ${s}% — ${issues} issue${issues > 1 ? 's' : ''}`,
+      label: `⚠ ${s}% — ${issues} issue${issues > 1 ? "s" : ""}`,
       className: "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400",
     };
   }
@@ -76,13 +104,13 @@ function getReadinessBadge(score: number | null, status: string) {
   };
 }
 
-type Section = 'active' | 'incomplete' | 'completed';
+type Section = "active" | "incomplete" | "completed";
 
-const COMPLETED_STATUSES = ['cleared', 'delivered', 'closed', 'archived'];
-const PAUSED_STATUSES = ['paused', 'waiting_docs', 'draft'];
+const COMPLETED_STATUSES = ["cleared", "delivered", "closed", "archived"];
+const PAUSED_STATUSES = ["paused", "waiting_docs", "draft"];
 
 export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadlines = [], onClickDeadline }: Props) {
-  const [expanded, setExpanded] = useState<Set<Section>>(new Set(['active']));
+  const [expanded, setExpanded] = useState<Set<Section>>(new Set(["active"]));
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -97,7 +125,9 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
     queryFn: async () => {
       const { data, error } = await supabase
         .from("shipments")
-        .select("shipment_id, description, mode, status, origin_country, destination_country, packet_score, filing_readiness, created_at, updated_at")
+        .select(
+          "shipment_id, description, mode, status, origin_country, destination_country, packet_score, filing_readiness, created_at, updated_at",
+        )
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;
@@ -107,10 +137,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
 
   const deleteMutation = useMutation({
     mutationFn: async (shipmentId: string) => {
-      const { error } = await supabase
-        .from("shipments")
-        .delete()
-        .eq("shipment_id", shipmentId);
+      const { error } = await supabase.from("shipments").delete().eq("shipment_id", shipmentId);
       if (error) throw error;
     },
     onSuccess: (_, shipmentId) => {
@@ -176,28 +203,28 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
   };
 
   const toggle = (section: Section) => {
-    setExpanded(prev => {
+    setExpanded((prev) => {
       const next = new Set(prev);
       next.has(section) ? next.delete(section) : next.add(section);
       return next;
     });
   };
 
-  const active = shipments.filter(s => !COMPLETED_STATUSES.includes(s.status) && !PAUSED_STATUSES.includes(s.status));
-  const incomplete = shipments.filter(s => PAUSED_STATUSES.includes(s.status));
-  const completed = shipments.filter(s => COMPLETED_STATUSES.includes(s.status));
+  const active = shipments.filter((s) => !COMPLETED_STATUSES.includes(s.status) && !PAUSED_STATUSES.includes(s.status));
+  const incomplete = shipments.filter((s) => PAUSED_STATUSES.includes(s.status));
+  const completed = shipments.filter((s) => COMPLETED_STATUSES.includes(s.status));
 
   const sections: { key: Section; label: string; items: ShipmentListItem[]; defaultOpen: boolean }[] = [
-    { key: 'active', label: 'Active', items: active, defaultOpen: true },
-    { key: 'incomplete', label: 'Incomplete / Paused', items: incomplete, defaultOpen: false },
-    { key: 'completed', label: 'Completed', items: completed, defaultOpen: false },
+    { key: "active", label: "Active", items: active, defaultOpen: true },
+    { key: "incomplete", label: "Incomplete / Paused", items: incomplete, defaultOpen: false },
+    { key: "completed", label: "Completed", items: completed, defaultOpen: false },
   ];
 
   const formatRoute = (s: ShipmentListItem) => {
-    const origin = s.origin_country || '?';
-    const dest = s.destination_country || '?';
-    const desc = s.description?.slice(0, 30) || 'No description';
-    return `${desc}${s.description && s.description.length > 30 ? '…' : ''} · ${origin} → ${dest}`;
+    const origin = s.origin_country || "?";
+    const dest = s.destination_country || "?";
+    const desc = s.description?.slice(0, 30) || "No description";
+    return `${desc}${s.description && s.description.length > 30 ? "…" : ""} · ${origin} → ${dest}`;
   };
 
   return (
@@ -205,11 +232,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-3 border-b border-border">
         <h2 className="text-sm font-bold text-foreground">Shipments</h2>
-        <Button
-          size="sm"
-          onClick={onNewShipment}
-          className="h-7 px-2.5 text-[11px] font-semibold gap-1"
-        >
+        <Button size="sm" onClick={onNewShipment} className="h-7 px-2.5 text-[11px] font-semibold gap-1">
           <Plus size={12} /> New
         </Button>
       </div>
@@ -232,202 +255,230 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
             </div>
           )}
 
-          {!isLoading && sections.map(section => (
-            section.items.length > 0 && (
-              <Collapsible
-                key={section.key}
-                open={expanded.has(section.key)}
-                onOpenChange={() => toggle(section.key)}
-              >
-                <CollapsibleTrigger className="w-full">
-                  <div className="flex items-center gap-2 px-3 py-2 hover:bg-accent/30 transition-colors cursor-pointer">
-                    <ChevronDown
-                      size={12}
-                      className={cn(
-                        "text-muted-foreground transition-transform shrink-0",
-                        expanded.has(section.key) && "rotate-180"
-                      )}
-                    />
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex-1 text-left">
-                      {section.label}
-                    </span>
-                    <Badge variant="outline" className="text-[9px] px-1.5 py-0">
-                      {section.items.length}
-                    </Badge>
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="space-y-0.5 pb-1">
-                    {section.items.map(s => {
-                      const badge = getReadinessBadge(s.packet_score, s.status);
-                      const isSelected = selectedId === s.shipment_id;
-                      const isHovered = hoveredId === s.shipment_id;
-                      const menuOpen = openMenuId === s.shipment_id;
-
-                      return (
-                        <div
-                          key={s.shipment_id}
+          {!isLoading &&
+            sections.map(
+              (section) =>
+                section.items.length > 0 && (
+                  <Collapsible
+                    key={section.key}
+                    open={expanded.has(section.key)}
+                    onOpenChange={() => toggle(section.key)}
+                  >
+                    <CollapsibleTrigger className="w-full">
+                      <div className="flex items-center gap-2 px-3 py-2 hover:bg-accent/30 transition-colors cursor-pointer">
+                        <ChevronDown
+                          size={12}
                           className={cn(
-                            "w-full text-left px-3 py-2 transition-colors cursor-pointer",
-                            "hover:bg-accent/40",
-                            isSelected && "bg-primary/8 border-l-2 border-primary"
+                            "text-muted-foreground transition-transform shrink-0",
+                            expanded.has(section.key) && "rotate-180",
                           )}
-                          onMouseEnter={() => setHoveredId(s.shipment_id)}
-                          onMouseLeave={() => {
-                            if (!menuOpen) setHoveredId(null);
-                          }}
-                          onClick={() => onSelect(s.shipment_id)}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '4px' }}>
+                        />
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex-1 text-left">
+                          {section.label}
+                        </span>
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0">
+                          {section.items.length}
+                        </Badge>
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="space-y-0.5 pb-1">
+                        {section.items.map((s) => {
+                          const badge = getReadinessBadge(s.packet_score, s.status);
+                          const isSelected = selectedId === s.shipment_id;
+                          const isHovered = hoveredId === s.shipment_id;
+                          const menuOpen = openMenuId === s.shipment_id;
 
-                            {/* Left: shipment info */}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div className="flex items-center gap-1.5">
-                                {MODE_ICONS[s.mode] || <Ship size={11} />}
-                                <span style={{ whiteSpace: 'nowrap', fontWeight: 600, fontSize: '12px', fontFamily: 'monospace' }}>
-                                  {s.shipment_id}
-                                </span>
-                              </div>
-
-                              {renamingId === s.shipment_id ? (
-                                <Input
-                                  ref={renameInputRef}
-                                  value={renameValue}
-                                  onChange={(e) => setRenameValue(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") commitRename(s.shipment_id);
-                                    if (e.key === "Escape") setRenamingId(null);
-                                  }}
-                                  onBlur={() => commitRename(s.shipment_id)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="h-5 text-[10px] mt-0.5 px-1"
-                                />
-                              ) : (
-                                <p style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11px' }}
-                                  className="text-muted-foreground mt-0.5 leading-snug">
-                                  {formatRoute(s)}
-                                </p>
+                          return (
+                            <div
+                              key={s.shipment_id}
+                              className={cn(
+                                "w-full text-left px-3 py-2 transition-colors cursor-pointer",
+                                "hover:bg-accent/40",
+                                isSelected && "bg-primary/8 border-l-2 border-primary",
                               )}
-
-                              <Badge
-                                variant="outline"
-                                className={cn("text-[9px] px-1.5 py-0 mt-1 inline-flex items-center gap-1", badge.className)}
-                                style={{ whiteSpace: 'nowrap', display: 'inline-flex' }}
-                              >
-                                {badge.icon} {badge.label}
-                              </Badge>
-
-                              {isSelected && deadlines.length > 0 && (() => {
-                                const urgent = getMostUrgentDeadline(deadlines);
-                                if (!urgent || urgent.status === 'upcoming') return null;
-                                const isOver = urgent.status === 'overdue';
-                                const isUrg = urgent.status === 'urgent';
-                                return (
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); onClickDeadline?.(urgent); }}
-                                    className={cn(
-                                      "text-[9px] font-semibold px-1.5 py-0 rounded inline-flex items-center gap-0.5 mt-0.5",
-                                      "border transition-colors active:scale-[0.97] cursor-pointer",
-                                      isOver ? "bg-destructive/10 text-destructive border-destructive/20" :
-                                      isUrg ? "bg-destructive/8 text-destructive border-destructive/20" :
-                                      "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                                    )}
-                                  >
-                                    {(isOver || isUrg) && <AlertTriangle size={8} />}
-                                    <Clock size={8} />
-                                    {urgent.shortLabel} {isOver
-                                      ? `${Math.abs(urgent.daysRemaining)}d over`
-                                      : urgent.hoursRemaining < 48
-                                        ? `in ${urgent.hoursRemaining}h`
-                                        : `in ${urgent.daysRemaining}d`
-                                    }
-                                  </button>
-                                );
-                              })()}
-
-                              {section.key === 'incomplete' && (
-                                <p className="text-[9px] text-muted-foreground/60 mt-0.5">
-                                  Last active: {new Date(s.updated_at).toLocaleDateString()}
-                                </p>
-                              )}
-                            </div>
-
-                            {/* Right: three-dot menu button */}
-                            <div style={{ flexShrink: 0, marginTop: '1px' }}>
-                              <DropdownMenu
-                                open={menuOpen}
-                                onOpenChange={(open) => {
-                                  setOpenMenuId(open ? s.shipment_id : null);
-                                  if (!open) setHoveredId(null);
+                              onMouseEnter={() => setHoveredId(s.shipment_id)}
+                              onMouseLeave={() => {
+                                if (!menuOpen) setHoveredId(null);
+                              }}
+                              onClick={() => onSelect(s.shipment_id)}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "flex-start",
+                                  justifyContent: "space-between",
+                                  gap: "4px",
                                 }}
                               >
-                                <DropdownMenuTrigger asChild>
-                                  <button
-                                    onClick={(e) => e.stopPropagation()}
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      width: '24px',
-                                      height: '24px',
-                                      borderRadius: '4px',
-                                      background: 'red',
-                                      border: 'none',
-                                      cursor: 'pointer',
-                                      padding: 0,
-                                      color: 'currentColor',
-                                      opacity: 1,
-                                      transition: 'opacity 0.15s',
-                                    }}
-                                  >
-                                    <MoreHorizontal size={14} />
-                                  </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-44">
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setRenameValue(s.description || s.shipment_id);
-                                      setRenamingId(s.shipment_id);
-                                      setOpenMenuId(null);
-                                    }}
-                                    className="text-xs gap-2"
-                                  >
-                                    <Pencil size={12} /> Rename shipment
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      pauseMutation.mutate(s.shipment_id);
-                                      setOpenMenuId(null);
-                                    }}
-                                    className="text-xs gap-2"
-                                  >
-                                    <Pause size={12} /> Pause workflow
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setDeleteTarget(s.shipment_id);
-                                      setOpenMenuId(null);
-                                    }}
-                                    className="text-xs gap-2 text-destructive focus:text-destructive"
-                                  >
-                                    <Trash2 size={12} /> Delete shipment
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
+                                {/* Left: shipment info */}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div className="flex items-center gap-1.5">
+                                    {MODE_ICONS[s.mode] || <Ship size={11} />}
+                                    <span
+                                      style={{
+                                        whiteSpace: "nowrap",
+                                        fontWeight: 600,
+                                        fontSize: "12px",
+                                        fontFamily: "monospace",
+                                      }}
+                                    >
+                                      {s.shipment_id}
+                                    </span>
+                                  </div>
 
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            )
-          ))}
+                                  {renamingId === s.shipment_id ? (
+                                    <Input
+                                      ref={renameInputRef}
+                                      value={renameValue}
+                                      onChange={(e) => setRenameValue(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") commitRename(s.shipment_id);
+                                        if (e.key === "Escape") setRenamingId(null);
+                                      }}
+                                      onBlur={() => commitRename(s.shipment_id)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="h-5 text-[10px] mt-0.5 px-1"
+                                    />
+                                  ) : (
+                                    <p
+                                      style={{
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap",
+                                        fontSize: "11px",
+                                      }}
+                                      className="text-muted-foreground mt-0.5 leading-snug"
+                                    >
+                                      {formatRoute(s)}
+                                    </p>
+                                  )}
+
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "text-[9px] px-1.5 py-0 mt-1 inline-flex items-center gap-1",
+                                      badge.className,
+                                    )}
+                                    style={{ whiteSpace: "nowrap", display: "inline-flex" }}
+                                  >
+                                    {badge.icon} {badge.label}
+                                  </Badge>
+
+                                  {isSelected &&
+                                    deadlines.length > 0 &&
+                                    (() => {
+                                      const urgent = getMostUrgentDeadline(deadlines);
+                                      if (!urgent || urgent.status === "upcoming") return null;
+                                      const isOver = urgent.status === "overdue";
+                                      const isUrg = urgent.status === "urgent";
+                                      return (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onClickDeadline?.(urgent);
+                                          }}
+                                          className={cn(
+                                            "text-[9px] font-semibold px-1.5 py-0 rounded inline-flex items-center gap-0.5 mt-0.5",
+                                            "border transition-colors active:scale-[0.97] cursor-pointer",
+                                            isOver
+                                              ? "bg-destructive/10 text-destructive border-destructive/20"
+                                              : isUrg
+                                                ? "bg-destructive/8 text-destructive border-destructive/20"
+                                                : "bg-amber-500/10 text-amber-600 border-amber-500/20",
+                                          )}
+                                        >
+                                          {(isOver || isUrg) && <AlertTriangle size={8} />}
+                                          <Clock size={8} />
+                                          {urgent.shortLabel}{" "}
+                                          {isOver
+                                            ? `${Math.abs(urgent.daysRemaining)}d over`
+                                            : urgent.hoursRemaining < 48
+                                              ? `in ${urgent.hoursRemaining}h`
+                                              : `in ${urgent.daysRemaining}d`}
+                                        </button>
+                                      );
+                                    })()}
+
+                                  {section.key === "incomplete" && (
+                                    <p className="text-[9px] text-muted-foreground/60 mt-0.5">
+                                      Last active: {new Date(s.updated_at).toLocaleDateString()}
+                                    </p>
+                                  )}
+                                </div>
+
+                                {/* Right: three-dot menu button */}
+                                <div style={{ flexShrink: 0, marginTop: "1px" }}>
+                                  <DropdownMenu
+                                    open={menuOpen}
+                                    onOpenChange={(open) => {
+                                      setOpenMenuId(open ? s.shipment_id : null);
+                                      if (!open) setHoveredId(null);
+                                    }}
+                                  >
+                                    <DropdownMenuTrigger
+                                      onClick={(e) => e.stopPropagation()}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        width: "24px",
+                                        height: "24px",
+                                        borderRadius: "4px",
+                                        background: "red",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        padding: 0,
+                                        color: "white",
+                                        opacity: 1,
+                                      }}
+                                    >
+                                      <MoreHorizontal size={14} />
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-44">
+                                      <DropdownMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setRenameValue(s.description || s.shipment_id);
+                                          setRenamingId(s.shipment_id);
+                                          setOpenMenuId(null);
+                                        }}
+                                        className="text-xs gap-2"
+                                      >
+                                        <Pencil size={12} /> Rename shipment
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          pauseMutation.mutate(s.shipment_id);
+                                          setOpenMenuId(null);
+                                        }}
+                                        className="text-xs gap-2"
+                                      >
+                                        <Pause size={12} /> Pause workflow
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setDeleteTarget(s.shipment_id);
+                                          setOpenMenuId(null);
+                                        }}
+                                        className="text-xs gap-2 text-destructive focus:text-destructive"
+                                      >
+                                        <Trash2 size={12} /> Delete shipment
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ),
+            )}
         </div>
       </ScrollArea>
 
@@ -437,9 +488,8 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this shipment?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete{' '}
-              <span className="font-mono font-bold">{deleteTarget}</span>{' '}
-              and all uploaded documents. This cannot be undone.
+              This will permanently delete <span className="font-mono font-bold">{deleteTarget}</span> and all uploaded
+              documents. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
