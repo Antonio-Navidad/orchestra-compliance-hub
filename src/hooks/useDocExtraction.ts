@@ -67,9 +67,9 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
     }
   }, [shipmentId]);
 
-  // Load documents from document_library for this shipment on mount / shipmentId change
+  // Load documents from document_library for this shipment
   const loadFromLibrary = useCallback(async () => {
-    if (!shipmentId || shipmentId === 'draft' || libraryLoaded) return;
+    if (!shipmentId || shipmentId === 'draft') return;
     console.log("[loadFromLibrary] Loading docs for shipmentId:", shipmentId);
     try {
       const { data } = await supabase
@@ -113,7 +113,7 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
     setLibraryLoaded(true);
     // Load persisted cross-ref results
     await loadCrossRefFromDB();
-  }, [shipmentId, libraryLoaded, loadCrossRefFromDB]);
+  }, [shipmentId, loadCrossRefFromDB]);
 
   // Trigger crossref after library loads
   useEffect(() => {
