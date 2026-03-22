@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, ChevronDown, Ship, Plane, Truck, CheckCircle2, AlertTriangle, XCircle, Pause, Clock, MoreHorizontal, Trash2 } from "lucide-react";
+import { Plus, ChevronDown, Ship, Plane, Truck, CheckCircle2, AlertTriangle, XCircle, Pause, Clock, MoreHorizontal, Trash2, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import type { ShipmentDeadline } from "@/lib/deadlineEngine";
@@ -82,8 +83,10 @@ const PAUSED_STATUSES = ['paused', 'waiting_docs', 'draft'];
 
 export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadlines = [], onClickDeadline }: Props) {
   const [expanded, setExpanded] = useState<Set<Section>>(new Set(['active']));
-
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
 
@@ -135,6 +138,39 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
       toast({ title: "Error", description: e.message, variant: "destructive" });
     },
   });
+  const renameMutation = useMutation({
+    mutationFn: async ({ shipmentId, newDesc }: { shipmentId: string; newDesc: string }) => {
+      const { error } = await supabase
+        .from("shipments")
+        .update({ description: newDesc } as any)
+        .eq("shipment_id", shipmentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+      toast({ title: "Shipment renamed" });
+      setRenamingId(null);
+    },
+    onError: (e: any) => {
+      toast({ title: "Rename failed", description: e.message, variant: "destructive" });
+    },
+  });
+
+  useEffect(() => {
+    if (renamingId && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [renamingId]);
+
+  const commitRename = (shipmentId: string) => {
+    const trimmed = renameValue.trim();
+    if (trimmed && trimmed.length > 0) {
+      renameMutation.mutate({ shipmentId, newDesc: trimmed });
+    } else {
+      setRenamingId(null);
+    }
+  };
 
   const toggle = (section: Section) => {
     setExpanded(prev => {
@@ -244,7 +280,17 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                   <MoreHorizontal size={12} />
                                 </button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-40">
+                              <DropdownMenuContent align="end" className="w-44">
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setRenameValue(s.description || s.shipment_id);
+                                    setRenamingId(s.shipment_id);
+                                  }}
+                                  className="text-xs gap-2"
+                                >
+                                  <Pencil size={12} /> Rename shipment
+                                </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -271,9 +317,24 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                             {MODE_ICONS[s.mode] || <Ship size={11} />}
                             <span className="text-[12px] font-bold font-mono text-foreground">{s.shipment_id}</span>
                           </div>
-                          <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug truncate">
-                            {formatRoute(s)}
-                          </p>
+                          {renamingId === s.shipment_id ? (
+                            <Input
+                              ref={renameInputRef}
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") commitRename(s.shipment_id);
+                                if (e.key === "Escape") setRenamingId(null);
+                              }}
+                              onBlur={() => commitRename(s.shipment_id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-5 text-[10px] mt-0.5 px-1"
+                            />
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug truncate">
+                              {formatRoute(s)}
+                            </p>
+                          )}
                           <Badge
                             variant="outline"
                             className={cn("text-[9px] px-1.5 py-0 mt-1 inline-flex items-center gap-1", badge.className)}

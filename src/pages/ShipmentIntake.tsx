@@ -1068,12 +1068,15 @@ function ShipmentIntakeInner() {
         onOpenChange={setShowPacketIntake}
         shipmentId={selectedShipmentId || form.shipment_id}
         onComplete={async (profileData: ShipmentProfileData, sid?: string) => {
-          if (sid) {
-            // Force refetch sidebar so the new shipment appears
+          if (sid && sid === selectedShipmentId) {
+            // Existing shipment — docs were added, just refresh
             await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
-            const sidebarData = queryClient.getQueryData(["shipments-sidebar-list"]);
-            console.log("[SmartPacketIntake:onComplete] sidebar query key:", ["shipments-sidebar-list"], "shipment:", sid, "data:", sidebarData);
-            // Small delay to let sidebar state settle
+            toast({ title: `Documents added to ${sid}`, description: "Cross-reference checks updated" });
+            handleSelectShipment(sid);
+            setActiveTab('details');
+          } else if (sid) {
+            // New shipment created via intake
+            await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
             await new Promise(resolve => setTimeout(resolve, 250));
             handleSelectShipment(sid);
             setActiveTab('details');

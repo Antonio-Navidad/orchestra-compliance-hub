@@ -436,6 +436,7 @@ interface SmartPacketIntakeProps {
 
 export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }: SmartPacketIntakeProps) {
   const navigate = useNavigate();
+  const isExistingShipment = !!shipmentId;
   const {
     files, addFiles, removeFile, startProcessing,
     confirmDocType, assignDocType,
@@ -449,6 +450,10 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
   const hasProcessedFiles = files.some(f =>
     ["extracted", "extracted_warnings", "awaiting_confirmation", "unidentified"].includes(f.status)
   );
+
+  const processedFileCount = files.filter(f =>
+    ["extracted", "extracted_warnings"].includes(f.status)
+  ).length;
 
   const handleDrop = useCallback(async (droppedFiles: File[]) => {
     const queued = addFiles(droppedFiles);
@@ -466,6 +471,14 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
   }, [addFiles, startProcessing]);
 
   const handleOpenWorkspace = useCallback(async () => {
+    if (isExistingShipment) {
+      // Existing shipment — just close, docs are already saved
+      if (onComplete) onComplete(profileData, shipmentId!);
+      onOpenChange(false);
+      setPhase("drop");
+      reset();
+      return;
+    }
     const sid = await activateDraft();
     if (sid) {
       if (onComplete) onComplete(profileData, sid);
@@ -473,7 +486,7 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
       setPhase("drop");
       reset();
     }
-  }, [activateDraft, onComplete, onOpenChange, profileData, reset]);
+  }, [isExistingShipment, activateDraft, onComplete, onOpenChange, profileData, reset, shipmentId]);
 
   const handleSaveAndClose = useCallback(async () => {
     await pauseDraft();
@@ -546,8 +559,13 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
             </div>
             <div>
               <h2 className="text-sm font-bold">Smart Packet Intake</h2>
+              {isExistingShipment && (
+                <p className="text-[10px] font-semibold text-primary">
+                  Adding to {shipmentId} →
+                </p>
+              )}
               <p className="text-[10px] text-muted-foreground">
-                {phase === "drop" ? "Drop your document packet to begin" :
+                {phase === "drop" ? (isExistingShipment ? "Drop additional documents" : "Drop your document packet to begin") :
                  stats.processing ? `Processing ${files.length} files...` :
                  `${stats.identified} documents ready`}
               </p>
@@ -629,7 +647,7 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
                   className="gap-1.5 text-xs font-semibold"
                   disabled={stats.processing}
                 >
-                  Open Shipment Workspace
+                  {isExistingShipment ? `Continue to ${shipmentId}` : "Open Shipment Workspace"}
                   <ArrowRight size={14} />
                 </Button>
               </div>
