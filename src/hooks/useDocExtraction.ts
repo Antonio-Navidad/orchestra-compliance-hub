@@ -111,9 +111,11 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       console.error("Failed to load document library:", err);
     }
     setLibraryLoaded(true);
-    // Also load persisted cross-ref results
+    // Load persisted cross-ref results AND run fresh crossref if 2+ docs exist
     await loadCrossRefFromDB();
-  }, [shipmentId, libraryLoaded, loadCrossRefFromDB]);
+    // Also trigger a fresh crossref to catch any new findings
+    runPersistentCrossRef();
+  }, [shipmentId, libraryLoaded, loadCrossRefFromDB, runPersistentCrossRef]);
 
   // Reset library loaded flag when shipmentId changes
   useEffect(() => { setLibraryLoaded(false); }, [shipmentId]);
