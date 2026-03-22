@@ -454,7 +454,7 @@ export function DocumentsTab({
         score={score}
         totalRequired={totalRequired}
         verified={verified}
-        issuesFlagged={issuesFlagged}
+        issuesFlagged={flaggedCount}
         missing={missing}
         shipmentSubtitle={shipmentSubtitle}
         statusPills={statusPills}
