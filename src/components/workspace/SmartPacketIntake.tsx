@@ -74,7 +74,7 @@ function getFileIcon(file: File) {
   return <File size={16} className="text-muted-foreground" />;
 }
 
-function getStatusDisplay(status: PacketFileStatus, docType: string | null): { icon: React.ReactNode; text: string; color: string } {
+function getStatusDisplay(status: PacketFileStatus, docType: string | null, warnings?: string[]): { icon: React.ReactNode; text: string; color: string } {
   switch (status) {
     case "queued": return { icon: <Loader2 size={14} className="animate-spin text-muted-foreground" />, text: "Queued...", color: "text-muted-foreground" };
     case "uploading": return { icon: <Loader2 size={14} className="animate-spin text-blue-500" />, text: "Uploading...", color: "text-blue-500" };
