@@ -280,7 +280,17 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                   <MoreHorizontal size={12} />
                                 </button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-40">
+                              <DropdownMenuContent align="end" className="w-44">
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setRenameValue(s.description || s.shipment_id);
+                                    setRenamingId(s.shipment_id);
+                                  }}
+                                  className="text-xs gap-2"
+                                >
+                                  <Pencil size={12} /> Rename shipment
+                                </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -307,9 +317,24 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                             {MODE_ICONS[s.mode] || <Ship size={11} />}
                             <span className="text-[12px] font-bold font-mono text-foreground">{s.shipment_id}</span>
                           </div>
-                          <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug truncate">
-                            {formatRoute(s)}
-                          </p>
+                          {renamingId === s.shipment_id ? (
+                            <Input
+                              ref={renameInputRef}
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") commitRename(s.shipment_id);
+                                if (e.key === "Escape") setRenamingId(null);
+                              }}
+                              onBlur={() => commitRename(s.shipment_id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-5 text-[10px] mt-0.5 px-1"
+                            />
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug truncate">
+                              {formatRoute(s)}
+                            </p>
+                          )}
                           <Badge
                             variant="outline"
                             className={cn("text-[9px] px-1.5 py-0 mt-1 inline-flex items-center gap-1", badge.className)}
