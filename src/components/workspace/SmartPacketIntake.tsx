@@ -436,6 +436,7 @@ interface SmartPacketIntakeProps {
 
 export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }: SmartPacketIntakeProps) {
   const navigate = useNavigate();
+  const isExistingShipment = !!shipmentId;
   const {
     files, addFiles, removeFile, startProcessing,
     confirmDocType, assignDocType,
@@ -449,6 +450,10 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
   const hasProcessedFiles = files.some(f =>
     ["extracted", "extracted_warnings", "awaiting_confirmation", "unidentified"].includes(f.status)
   );
+
+  const processedFileCount = files.filter(f =>
+    ["extracted", "extracted_warnings"].includes(f.status)
+  ).length;
 
   const handleDrop = useCallback(async (droppedFiles: File[]) => {
     const queued = addFiles(droppedFiles);
@@ -466,6 +471,14 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
   }, [addFiles, startProcessing]);
 
   const handleOpenWorkspace = useCallback(async () => {
+    if (isExistingShipment) {
+      // Existing shipment — just close, docs are already saved
+      if (onComplete) onComplete(profileData, shipmentId!);
+      onOpenChange(false);
+      setPhase("drop");
+      reset();
+      return;
+    }
     const sid = await activateDraft();
     if (sid) {
       if (onComplete) onComplete(profileData, sid);
@@ -473,7 +486,7 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
       setPhase("drop");
       reset();
     }
-  }, [activateDraft, onComplete, onOpenChange, profileData, reset]);
+  }, [isExistingShipment, activateDraft, onComplete, onOpenChange, profileData, reset, shipmentId]);
 
   const handleSaveAndClose = useCallback(async () => {
     await pauseDraft();
