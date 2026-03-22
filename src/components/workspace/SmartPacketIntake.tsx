@@ -82,7 +82,10 @@ function getStatusDisplay(status: PacketFileStatus, docType: string | null): { i
     case "awaiting_confirmation": return { icon: <AlertTriangle size={14} className="text-amber-500" />, text: `Confirm: ${DOC_TYPE_LABELS[docType || ""] || docType}?`, color: "text-amber-500" };
     case "extracting": return { icon: <Settings size={14} className="animate-spin text-primary" />, text: `Extracting data fields...`, color: "text-primary" };
     case "extracted": return { icon: <CheckCircle2 size={14} className="text-emerald-500" />, text: `${DOC_TYPE_LABELS[docType || ""] || docType} — extracted`, color: "text-emerald-500" };
-    case "extracted_warnings": return { icon: <AlertTriangle size={14} className="text-amber-500" />, text: `${DOC_TYPE_LABELS[docType || ""] || docType} — warnings`, color: "text-amber-500" };
+    case "extracted_warnings": {
+      const warningText = warnings && warnings.length > 0 ? warnings.join("; ") : "warnings detected";
+      return { icon: <AlertTriangle size={14} className="text-amber-500" />, text: `${DOC_TYPE_LABELS[docType || ""] || docType} — ${warningText}`, color: "text-amber-500" };
+    }
     case "unidentified": return { icon: <XCircle size={14} className="text-red-500" />, text: "Could not identify — assign manually", color: "text-red-500" };
     case "error": return { icon: <XCircle size={14} className="text-red-500" />, text: "Error", color: "text-red-500" };
     default: return { icon: null, text: "", color: "" };
