@@ -260,6 +260,51 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
           console.error("[extractDocument] Failed to save to document_library:", libErr);
         }
 
+        // Save packing list internal errors as crossref_results (self-check findings)
+        const internalErrors: any[] = data.internal_errors || [];
+        if (internalErrors.length > 0 && docId.includes("packing_list")) {
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            // Delete previous self-check results for this doc
+            await supabase.from("crossref_results")
+              .delete()
+              .eq("shipment_id", shipmentId)
+              .eq("document_a_type", "packing_list")
+              .eq("document_b_type", "packing_list");
+
+            const rows = internalErrors.map((ie: any) => ({
+              shipment_id: shipmentId,
+              document_a_type: "packing_list",
+              document_b_type: "packing_list",
+              field_checked: ie.check,
+              severity: ie.severity,
+              finding: ie.finding,
+              recommendation: ie.expected_value && ie.actual_value
+                ? `Expected: ${ie.expected_value}, Found: ${ie.actual_value}`
+                : "Review and correct the packing list",
+              estimated_financial_impact_usd: 0,
+              user_id: user?.id || null,
+            }));
+            await supabase.from("crossref_results").insert(rows);
+
+            // Add to in-memory crossref results
+            setCrossRefResults(prev => [
+              ...prev.filter(r => !(r.document_a === "packing_list" && r.document_b === "packing_list")),
+              ...rows.map(r => ({
+                severity: r.severity as "critical" | "high" | "medium" | "low",
+                document_a: r.document_a_type,
+                document_b: r.document_b_type,
+                field_checked: r.field_checked,
+                finding: r.finding,
+                recommendation: r.recommendation,
+                estimated_financial_impact_usd: 0,
+              })),
+            ]);
+          } catch (ieErr) {
+            console.error("[extractDocument] Failed to save internal errors:", ieErr);
+          }
+        }
+
         // Trigger persistent cross-reference against ALL docs in document_library
         runPersistentCrossRef();
       }
