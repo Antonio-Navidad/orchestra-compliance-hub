@@ -8,7 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, ChevronDown, Ship, Plane, Truck, CheckCircle2, AlertTriangle, XCircle, Pause, Clock, Trash2, Pencil } from "lucide-react";
+import { Plus, ChevronDown, Ship, Plane, Truck, CheckCircle2, AlertTriangle, XCircle, Pause, Clock, Trash2, Pencil, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import type { ShipmentDeadline } from "@/lib/deadlineEngine";
@@ -140,6 +140,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
       toast({ title: "Error", description: e.message, variant: "destructive" });
     },
   });
+
   const renameMutation = useMutation({
     mutationFn: async ({ shipmentId, newDesc }: { shipmentId: string; newDesc: string }) => {
       const { error } = await supabase
@@ -260,6 +261,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                     {section.items.map(s => {
                       const badge = getReadinessBadge(s.packet_score, s.status);
                       const isSelected = selectedId === s.shipment_id;
+                      const isHovered = hoveredId === s.shipment_id;
 
                       return (
                         <div
@@ -273,144 +275,146 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                           onMouseLeave={() => setHoveredId(null)}
                           onClick={() => onSelect(s.shipment_id)}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          {/* Left: shipment text */}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div className="flex items-center gap-1.5">
-                              {MODE_ICONS[s.mode] || <Ship size={11} />}
-                              <span
-                                className="text-[12px] font-bold font-mono text-foreground"
-                                style={{ whiteSpace: 'nowrap', fontWeight: 500, fontSize: '12px' }}
-                              >
-                                {s.shipment_id}
-                              </span>
-                            </div>
-                            {renamingId === s.shipment_id ? (
-                              <Input
-                                ref={renameInputRef}
-                                value={renameValue}
-                                onChange={(e) => setRenameValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") commitRename(s.shipment_id);
-                                  if (e.key === "Escape") setRenamingId(null);
-                                }}
-                                onBlur={() => commitRename(s.shipment_id)}
-                                onClick={(e) => e.stopPropagation()}
-                                className="h-5 text-[10px] mt-0.5 px-1"
-                              />
-                            ) : (
-                              <p
-                                className="text-muted-foreground mt-0.5 leading-snug"
-                                style={{
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  fontSize: '11px',
-                                }}
-                              >
-                                {formatRoute(s)}
-                              </p>
-                            )}
-                            <Badge
-                              variant="outline"
-                              className={cn("text-[9px] px-1.5 py-0 mt-1 inline-flex items-center gap-1", badge.className)}
-                              style={{ whiteSpace: 'nowrap', display: 'inline-flex' }}
-                            >
-                              {badge.icon} {badge.label}
-                            </Badge>
-                            {isSelected && deadlines.length > 0 && (() => {
-                              const urgent = getMostUrgentDeadline(deadlines);
-                              if (!urgent || urgent.status === 'upcoming') return null;
-                              const isOver = urgent.status === 'overdue';
-                              const isUrg = urgent.status === 'urgent';
-                              return (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); onClickDeadline?.(urgent); }}
-                                  className={cn(
-                                    "text-[9px] font-semibold px-1.5 py-0 rounded inline-flex items-center gap-0.5 mt-0.5",
-                                    "border transition-colors active:scale-[0.97] cursor-pointer",
-                                    isOver ? "bg-destructive/10 text-destructive border-destructive/20" :
-                                    isUrg ? "bg-destructive/8 text-destructive border-destructive/20" :
-                                    "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                                  )}
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '4px' }}>
+                            {/* Left: shipment text */}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className="flex items-center gap-1.5">
+                                {MODE_ICONS[s.mode] || <Ship size={11} />}
+                                <span
+                                  className="text-[12px] font-mono text-foreground"
+                                  style={{ whiteSpace: 'nowrap', fontWeight: 600, fontSize: '12px' }}
                                 >
-                                  {(isOver || isUrg) && <AlertTriangle size={8} />}
-                                  <Clock size={8} />
-                                  {urgent.shortLabel} {isOver
-                                    ? `${Math.abs(urgent.daysRemaining)}d over`
-                                    : urgent.hoursRemaining < 48
-                                      ? `in ${urgent.hoursRemaining}h`
-                                      : `in ${urgent.daysRemaining}d`
-                                  }
-                                </button>
-                              );
-                            })()}
-                            {section.key === 'incomplete' && (
-                              <p className="text-[9px] text-muted-foreground/60 mt-0.5">
-                                Last active: {new Date(s.updated_at).toLocaleDateString()}
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Right: three-dot menu */}
-                          <div style={{ flexShrink: 0, marginLeft: '4px' }}>
-                            <DropdownMenu
-                              open={openMenuId === s.shipment_id}
-                              onOpenChange={(open) => setOpenMenuId(open ? s.shipment_id : null)}
-                            >
-                              <DropdownMenuTrigger asChild>
-                                <button
+                                  {s.shipment_id}
+                                </span>
+                              </div>
+                              {renamingId === s.shipment_id ? (
+                                <Input
+                                  ref={renameInputRef}
+                                  value={renameValue}
+                                  onChange={(e) => setRenameValue(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") commitRename(s.shipment_id);
+                                    if (e.key === "Escape") setRenamingId(null);
+                                  }}
+                                  onBlur={() => commitRename(s.shipment_id)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="h-5 text-[10px] mt-0.5 px-1"
+                                />
+                              ) : (
+                                <p
+                                  className="text-muted-foreground mt-0.5 leading-snug"
                                   style={{
-                                    opacity: 1,
-                                    visibility: 'visible',
-                                    display: 'flex',
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    padding: '4px 6px',
-                                    color: 'inherit',
-                                    fontSize: '14px',
-                                  }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenMenuId(openMenuId === s.shipment_id ? null : s.shipment_id);
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    fontSize: '11px',
                                   }}
                                 >
-                                  ···
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-44">
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setRenameValue(s.description || s.shipment_id);
-                                    setRenamingId(s.shipment_id);
-                                  }}
-                                  className="text-xs gap-2"
-                                >
-                                  <Pencil size={12} /> Rename shipment
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    pauseMutation.mutate(s.shipment_id);
-                                  }}
-                                  className="text-xs gap-2"
-                                >
-                                  <Pause size={12} /> Pause workflow
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setDeleteTarget(s.shipment_id);
-                                  }}
-                                  className="text-xs gap-2 text-destructive focus:text-destructive"
-                                >
-                                  <Trash2 size={12} /> Delete shipment
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
+                                  {formatRoute(s)}
+                                </p>
+                              )}
+                              <Badge
+                                variant="outline"
+                                className={cn("text-[9px] px-1.5 py-0 mt-1 inline-flex items-center gap-1", badge.className)}
+                                style={{ whiteSpace: 'nowrap', display: 'inline-flex' }}
+                              >
+                                {badge.icon} {badge.label}
+                              </Badge>
+                              {isSelected && deadlines.length > 0 && (() => {
+                                const urgent = getMostUrgentDeadline(deadlines);
+                                if (!urgent || urgent.status === 'upcoming') return null;
+                                const isOver = urgent.status === 'overdue';
+                                const isUrg = urgent.status === 'urgent';
+                                return (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); onClickDeadline?.(urgent); }}
+                                    className={cn(
+                                      "text-[9px] font-semibold px-1.5 py-0 rounded inline-flex items-center gap-0.5 mt-0.5",
+                                      "border transition-colors active:scale-[0.97] cursor-pointer",
+                                      isOver ? "bg-destructive/10 text-destructive border-destructive/20" :
+                                      isUrg ? "bg-destructive/8 text-destructive border-destructive/20" :
+                                      "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                    )}
+                                  >
+                                    {(isOver || isUrg) && <AlertTriangle size={8} />}
+                                    <Clock size={8} />
+                                    {urgent.shortLabel} {isOver
+                                      ? `${Math.abs(urgent.daysRemaining)}d over`
+                                      : urgent.hoursRemaining < 48
+                                        ? `in ${urgent.hoursRemaining}h`
+                                        : `in ${urgent.daysRemaining}d`
+                                    }
+                                  </button>
+                                );
+                              })()}
+                              {section.key === 'incomplete' && (
+                                <p className="text-[9px] text-muted-foreground/60 mt-0.5">
+                                  Last active: {new Date(s.updated_at).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Right: three-dot menu — always visible */}
+                            <div style={{ flexShrink: 0 }}>
+                              <DropdownMenu
+                                open={openMenuId === s.shipment_id}
+                                onOpenChange={(open) => setOpenMenuId(open ? s.shipment_id : null)}
+                              >
+                                <DropdownMenuTrigger asChild>
+                                  <button
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      background: 'none',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      padding: '2px 4px',
+                                      borderRadius: '4px',
+                                      color: 'inherit',
+                                      opacity: isHovered || openMenuId === s.shipment_id ? 1 : 0,
+                                      transition: 'opacity 0.15s',
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setOpenMenuId(openMenuId === s.shipment_id ? null : s.shipment_id);
+                                    }}
+                                  >
+                                    <MoreHorizontal size={14} />
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-44">
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setRenameValue(s.description || s.shipment_id);
+                                      setRenamingId(s.shipment_id);
+                                    }}
+                                    className="text-xs gap-2"
+                                  >
+                                    <Pencil size={12} /> Rename shipment
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      pauseMutation.mutate(s.shipment_id);
+                                    }}
+                                    className="text-xs gap-2"
+                                  >
+                                    <Pause size={12} /> Pause workflow
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeleteTarget(s.shipment_id);
+                                    }}
+                                    className="text-xs gap-2 text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 size={12} /> Delete shipment
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </div>
                         </div>
                       );
