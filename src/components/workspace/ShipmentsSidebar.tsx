@@ -371,7 +371,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                       width: '24px',
                                       height: '24px',
                                       borderRadius: '4px',
-                                      background: 'none',
+                                      background: 'red',
                                       border: 'none',
                                       cursor: 'pointer',
                                       padding: 0,
