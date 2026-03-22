@@ -200,7 +200,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
   };
 
   return (
-    <div className="w-[220px] shrink-0 border-r border-border bg-card/50 flex flex-col h-full">
+    <div className="w-[240px] min-w-[240px] shrink-0 border-r border-border bg-card/50 flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-3 border-b border-border">
         <h2 className="text-sm font-bold text-foreground">Shipments</h2>
@@ -271,21 +271,11 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                           )}
                           onMouseEnter={() => setHoveredId(s.shipment_id)}
                           onMouseLeave={() => setHoveredId(null)}
-                          style={{ position: 'relative' }}
+                          style={{ position: 'relative', paddingRight: '32px', minHeight: '64px' }}
                           onClick={() => onSelect(s.shipment_id)}
                         >
                           {/* Three-dot menu — visible on hover only */}
-                          <div
-                            style={{
-                              position: 'absolute',
-                              right: '8px',
-                              top: '50%',
-                              transform: 'translateY(-50%)',
-                              opacity: hoveredId === s.shipment_id ? 1 : 0,
-                              transition: 'opacity 0.15s',
-                              zIndex: 10,
-                            }}
-                          >
+                          <div>
                             <DropdownMenu
                               open={openMenuId === s.shipment_id}
                               onOpenChange={(open) => setOpenMenuId(open ? s.shipment_id : null)}
@@ -293,13 +283,19 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                               <DropdownMenuTrigger asChild>
                                 <button
                                   style={{
+                                    position: 'absolute',
+                                    right: '8px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    opacity: 1,
+                                    visibility: 'visible',
+                                    display: 'flex',
                                     background: 'none',
                                     border: 'none',
                                     cursor: 'pointer',
-                                    padding: '4px',
+                                    padding: '4px 6px',
                                     color: 'inherit',
-                                    fontSize: '16px',
-                                    lineHeight: 1,
+                                    fontSize: '14px',
                                     zIndex: 10,
                                   }}
                                   onClick={(e) => {
@@ -346,7 +342,12 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                           <div className="pr-7">
                             <div className="flex items-center gap-1.5">
                               {MODE_ICONS[s.mode] || <Ship size={11} />}
-                              <span className="text-[12px] font-bold font-mono text-foreground whitespace-nowrap">{s.shipment_id}</span>
+                              <span
+                                className="text-[12px] font-bold font-mono text-foreground whitespace-nowrap"
+                                style={{ whiteSpace: 'nowrap', fontWeight: 500, fontSize: '12px' }}
+                              >
+                                {s.shipment_id}
+                              </span>
                             </div>
                             {renamingId === s.shipment_id ? (
                               <Input
@@ -362,13 +363,22 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                 className="h-5 text-[10px] mt-0.5 px-1"
                               />
                             ) : (
-                              <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug truncate min-w-0">
+                              <p
+                                className="text-[10px] text-muted-foreground mt-0.5 leading-snug truncate min-w-0"
+                                style={{
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  fontSize: '11px',
+                                }}
+                              >
                                 {formatRoute(s)}
                               </p>
                             )}
                             <Badge
                               variant="outline"
                               className={cn("text-[9px] px-1.5 py-0 mt-1 inline-flex items-center gap-1 whitespace-nowrap", badge.className)}
+                              style={{ whiteSpace: 'nowrap', display: 'inline-flex' }}
                             >
                               {badge.icon} {badge.label}
                             </Badge>
