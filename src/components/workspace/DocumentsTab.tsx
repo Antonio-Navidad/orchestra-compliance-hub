@@ -3,6 +3,7 @@ import { FileCheck, Sparkles, AlertTriangle, CheckCircle2, ShieldCheck } from "l
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScoreBanner } from "./ScoreBanner";
 import { DocumentCard, type DocumentCardData, type DocCardState } from "./DocumentCard";
 import { AlertDrawer } from "./AlertDrawer";
