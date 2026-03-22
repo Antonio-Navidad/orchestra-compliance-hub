@@ -226,7 +226,7 @@ function ProcessingScreen({
           <div className="p-3 space-y-1">
             <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Files ({files.length})</h4>
             {files.map(pf => {
-              const { icon, text, color } = getStatusDisplay(pf.status, pf.documentType);
+              const { icon, text, color } = getStatusDisplay(pf.status, pf.documentType, pf.warnings);
               return (
                 <div key={pf.id} className="flex items-start gap-2 p-2 rounded-lg hover:bg-accent/40 group">
                   <div className="mt-0.5">{getFileIcon(pf.file)}</div>
