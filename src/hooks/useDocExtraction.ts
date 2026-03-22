@@ -339,7 +339,7 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
     const ext = extractedDocs[docId];
     if (!ext) return {};
 
-    const fields: ExtractedField[] = ext.fieldDetails.slice(0, 20).map(fd => ({
+    const fields: ExtractedField[] = ext.fieldDetails.slice(0, 30).map(fd => ({
       label: fd.field.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
       value: typeof fd.value === "object" ? JSON.stringify(fd.value) : String(fd.value ?? "—"),
       status: fd.confidence >= 90 ? "verified" : fd.confidence >= 70 ? "flagged" : "error",

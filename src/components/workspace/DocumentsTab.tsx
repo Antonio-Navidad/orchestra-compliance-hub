@@ -314,7 +314,11 @@ export function DocumentsTab({
     return filteredCards;
   }, [filteredCards, sortBy]);
 
-  const flaggedCount = allCards.filter(c => c.state === 'issue').length;
+  // Count flagged = cards with issue state + unresolved critical/high crossref findings not already counted
+  const crossRefFlaggedCount = crossRefResults.filter(cr =>
+    (cr.severity === 'critical' || cr.severity === 'high') && !cr.resolved
+  ).length;
+  const flaggedCount = Math.max(allCards.filter(c => c.state === 'issue').length, crossRefFlaggedCount);
 
   // Build status pills
   const statusPills: Array<{ label: string; type: 'green' | 'amber' | 'red'; onClick?: () => void }> = [];
