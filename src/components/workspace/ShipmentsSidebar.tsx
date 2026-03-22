@@ -1,27 +1,10 @@
-import { useState, useRef, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   Plus,
   ChevronDown,
@@ -33,12 +16,9 @@ import {
   XCircle,
   Pause,
   Clock,
-  Trash2,
-  Pencil,
-  MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "@/hooks/use-toast";
+
 import type { ShipmentDeadline } from "@/lib/deadlineEngine";
 import { getMostUrgentDeadline } from "@/lib/deadlineEngine";
 
@@ -111,14 +91,8 @@ const PAUSED_STATUSES = ["paused", "waiting_docs", "draft"];
 
 export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadlines = [], onClickDeadline }: Props) {
   const [expanded, setExpanded] = useState<Set<Section>>(new Set(["active"]));
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const renameInputRef = useRef<HTMLInputElement>(null);
 
-  const queryClient = useQueryClient();
+  
 
   const { data: shipments = [], isLoading } = useQuery({
     queryKey: ["shipments-sidebar-list"],
@@ -134,73 +108,6 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
       return (data || []) as ShipmentListItem[];
     },
   });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (shipmentId: string) => {
-      const { error } = await supabase.from("shipments").delete().eq("shipment_id", shipmentId);
-      if (error) throw error;
-    },
-    onSuccess: (_, shipmentId) => {
-      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
-      queryClient.invalidateQueries({ queryKey: ["command-shipments"] });
-      toast({ title: "Shipment deleted", description: `${shipmentId} has been permanently removed.` });
-      if (selectedId === shipmentId) onNewShipment();
-    },
-    onError: (e: any) => {
-      toast({ title: "Delete failed", description: e.message, variant: "destructive" });
-    },
-  });
-
-  const pauseMutation = useMutation({
-    mutationFn: async (shipmentId: string) => {
-      const { error } = await supabase
-        .from("shipments")
-        .update({ status: "paused" as any })
-        .eq("shipment_id", shipmentId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
-      toast({ title: "Workflow paused" });
-    },
-    onError: (e: any) => {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
-    },
-  });
-
-  const renameMutation = useMutation({
-    mutationFn: async ({ shipmentId, newDesc }: { shipmentId: string; newDesc: string }) => {
-      const { error } = await supabase
-        .from("shipments")
-        .update({ description: newDesc } as any)
-        .eq("shipment_id", shipmentId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
-      toast({ title: "Shipment renamed" });
-      setRenamingId(null);
-    },
-    onError: (e: any) => {
-      toast({ title: "Rename failed", description: e.message, variant: "destructive" });
-    },
-  });
-
-  useEffect(() => {
-    if (renamingId && renameInputRef.current) {
-      renameInputRef.current.focus();
-      renameInputRef.current.select();
-    }
-  }, [renamingId]);
-
-  const commitRename = (shipmentId: string) => {
-    const trimmed = renameValue.trim();
-    if (trimmed && trimmed.length > 0) {
-      renameMutation.mutate({ shipmentId, newDesc: trimmed });
-    } else {
-      setRenamingId(null);
-    }
-  };
 
   const toggle = (section: Section) => {
     setExpanded((prev) => {
@@ -286,8 +193,6 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                         {section.items.map((s) => {
                           const badge = getReadinessBadge(s.packet_score, s.status);
                           const isSelected = selectedId === s.shipment_id;
-                          const isHovered = hoveredId === s.shipment_id;
-                          const menuOpen = openMenuId === s.shipment_id;
 
                           return (
                             <div
@@ -297,178 +202,86 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                 "hover:bg-accent/40",
                                 isSelected && "bg-primary/8 border-l-2 border-primary",
                               )}
-                              onMouseEnter={() => setHoveredId(s.shipment_id)}
-                              onMouseLeave={() => {
-                                if (!menuOpen) setHoveredId(null);
-                              }}
                               onClick={() => onSelect(s.shipment_id)}
                             >
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "flex-start",
-                                  justifyContent: "space-between",
-                                  gap: "4px",
-                                }}
-                              >
-                                {/* Left: shipment info */}
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div className="flex items-center gap-1.5">
-                                    {MODE_ICONS[s.mode] || <Ship size={11} />}
-                                    <span
-                                      style={{
-                                        whiteSpace: "nowrap",
-                                        fontWeight: 600,
-                                        fontSize: "12px",
-                                        fontFamily: "monospace",
-                                      }}
-                                    >
-                                      {s.shipment_id}
-                                    </span>
-                                  </div>
-
-                                  {renamingId === s.shipment_id ? (
-                                    <Input
-                                      ref={renameInputRef}
-                                      value={renameValue}
-                                      onChange={(e) => setRenameValue(e.target.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") commitRename(s.shipment_id);
-                                        if (e.key === "Escape") setRenamingId(null);
-                                      }}
-                                      onBlur={() => commitRename(s.shipment_id)}
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="h-5 text-[10px] mt-0.5 px-1"
-                                    />
-                                  ) : (
-                                    <p
-                                      style={{
-                                        overflow: "hidden",
-                                        textOverflow: "ellipsis",
-                                        whiteSpace: "nowrap",
-                                        fontSize: "11px",
-                                      }}
-                                      className="text-muted-foreground mt-0.5 leading-snug"
-                                    >
-                                      {formatRoute(s)}
-                                    </p>
-                                  )}
-
-                                  <Badge
-                                    variant="outline"
-                                    className={cn(
-                                      "text-[9px] px-1.5 py-0 mt-1 inline-flex items-center gap-1",
-                                      badge.className,
-                                    )}
-                                    style={{ whiteSpace: "nowrap", display: "inline-flex" }}
-                                  >
-                                    {badge.icon} {badge.label}
-                                  </Badge>
-
-                                  {isSelected &&
-                                    deadlines.length > 0 &&
-                                    (() => {
-                                      const urgent = getMostUrgentDeadline(deadlines);
-                                      if (!urgent || urgent.status === "upcoming") return null;
-                                      const isOver = urgent.status === "overdue";
-                                      const isUrg = urgent.status === "urgent";
-                                      return (
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            onClickDeadline?.(urgent);
-                                          }}
-                                          className={cn(
-                                            "text-[9px] font-semibold px-1.5 py-0 rounded inline-flex items-center gap-0.5 mt-0.5",
-                                            "border transition-colors active:scale-[0.97] cursor-pointer",
-                                            isOver
-                                              ? "bg-destructive/10 text-destructive border-destructive/20"
-                                              : isUrg
-                                                ? "bg-destructive/8 text-destructive border-destructive/20"
-                                                : "bg-amber-500/10 text-amber-600 border-amber-500/20",
-                                          )}
-                                        >
-                                          {(isOver || isUrg) && <AlertTriangle size={8} />}
-                                          <Clock size={8} />
-                                          {urgent.shortLabel}{" "}
-                                          {isOver
-                                            ? `${Math.abs(urgent.daysRemaining)}d over`
-                                            : urgent.hoursRemaining < 48
-                                              ? `in ${urgent.hoursRemaining}h`
-                                              : `in ${urgent.daysRemaining}d`}
-                                        </button>
-                                      );
-                                    })()}
-
-                                  {section.key === "incomplete" && (
-                                    <p className="text-[9px] text-muted-foreground/60 mt-0.5">
-                                      Last active: {new Date(s.updated_at).toLocaleDateString()}
-                                    </p>
-                                  )}
-                                </div>
-
-                                {/* Right: three-dot menu button */}
-                                <div style={{ flexShrink: 0, marginTop: "1px" }}>
-                                  <DropdownMenu
-                                    open={menuOpen}
-                                    onOpenChange={(open) => {
-                                      setOpenMenuId(open ? s.shipment_id : null);
-                                      if (!open) setHoveredId(null);
+                              <div style={{ minWidth: 0 }}>
+                                <div className="flex items-center gap-1.5">
+                                  {MODE_ICONS[s.mode] || <Ship size={11} />}
+                                  <span
+                                    style={{
+                                      whiteSpace: "nowrap",
+                                      fontWeight: 600,
+                                      fontSize: "12px",
+                                      fontFamily: "monospace",
                                     }}
                                   >
-                                    <DropdownMenuTrigger
-                                      onClick={(e) => e.stopPropagation()}
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        width: "24px",
-                                        height: "24px",
-                                        borderRadius: "4px",
-                                        background: "none",
-                                        border: "none",
-                                        cursor: "pointer",
-                                        padding: 0,
-                                        opacity: 1,
-                                      }}
-                                    >
-                                      <MoreHorizontal size={14} />
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-44">
-                                      <DropdownMenuItem
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setRenameValue(s.description || s.shipment_id);
-                                          setRenamingId(s.shipment_id);
-                                          setOpenMenuId(null);
-                                        }}
-                                        className="text-xs gap-2"
-                                      >
-                                        <Pencil size={12} /> Rename shipment
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          pauseMutation.mutate(s.shipment_id);
-                                          setOpenMenuId(null);
-                                        }}
-                                        className="text-xs gap-2"
-                                      >
-                                        <Pause size={12} /> Pause workflow
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setDeleteTarget(s.shipment_id);
-                                          setOpenMenuId(null);
-                                        }}
-                                        className="text-xs gap-2 text-destructive focus:text-destructive"
-                                      >
-                                        <Trash2 size={12} /> Delete shipment
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
+                                    {s.shipment_id}
+                                  </span>
                                 </div>
+
+                                <p
+                                  style={{
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    fontSize: "11px",
+                                  }}
+                                  className="text-muted-foreground mt-0.5 leading-snug"
+                                >
+                                  {formatRoute(s)}
+                                </p>
+
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "text-[9px] px-1.5 py-0 mt-1 inline-flex items-center gap-1",
+                                    badge.className,
+                                  )}
+                                  style={{ whiteSpace: "nowrap", display: "inline-flex" }}
+                                >
+                                  {badge.icon} {badge.label}
+                                </Badge>
+
+                                {isSelected &&
+                                  deadlines.length > 0 &&
+                                  (() => {
+                                    const urgent = getMostUrgentDeadline(deadlines);
+                                    if (!urgent || urgent.status === "upcoming") return null;
+                                    const isOver = urgent.status === "overdue";
+                                    const isUrg = urgent.status === "urgent";
+                                    return (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onClickDeadline?.(urgent);
+                                        }}
+                                        className={cn(
+                                          "text-[9px] font-semibold px-1.5 py-0 rounded inline-flex items-center gap-0.5 mt-0.5",
+                                          "border transition-colors active:scale-[0.97] cursor-pointer",
+                                          isOver
+                                            ? "bg-destructive/10 text-destructive border-destructive/20"
+                                            : isUrg
+                                              ? "bg-destructive/8 text-destructive border-destructive/20"
+                                              : "bg-amber-500/10 text-amber-600 border-amber-500/20",
+                                        )}
+                                      >
+                                        {(isOver || isUrg) && <AlertTriangle size={8} />}
+                                        <Clock size={8} />
+                                        {urgent.shortLabel}{" "}
+                                        {isOver
+                                          ? `${Math.abs(urgent.daysRemaining)}d over`
+                                          : urgent.hoursRemaining < 48
+                                            ? `in ${urgent.hoursRemaining}h`
+                                            : `in ${urgent.daysRemaining}d`}
+                                      </button>
+                                    );
+                                  })()}
+
+                                {section.key === "incomplete" && (
+                                  <p className="text-[9px] text-muted-foreground/60 mt-0.5">
+                                    Last active: {new Date(s.updated_at).toLocaleDateString()}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           );
@@ -480,31 +293,6 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
             )}
         </div>
       </ScrollArea>
-
-      {/* Delete confirmation dialog */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this shipment?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete <span className="font-mono font-bold">{deleteTarget}</span> and all uploaded
-              documents. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (deleteTarget) deleteMutation.mutate(deleteTarget);
-                setDeleteTarget(null);
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete permanently
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
