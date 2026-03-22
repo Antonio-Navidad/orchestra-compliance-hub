@@ -376,7 +376,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                       cursor: 'pointer',
                                       padding: 0,
                                       color: 'currentColor',
-                                      opacity: isHovered || menuOpen ? 1 : 0,
+                                      opacity: 1,
                                       transition: 'opacity 0.15s',
                                     }}
                                   >
