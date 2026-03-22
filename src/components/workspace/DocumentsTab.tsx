@@ -271,6 +271,51 @@ export function DocumentsTab({
   const aiScore = getScore(totalRequired, Object.keys(uploadedFiles));
   const score = aiScore > 0 ? aiScore : (totalRequired > 0 ? Math.round((verified / totalRequired) * 100) : 0);
 
+  // Filter toggle handler
+  const toggleFilter = useCallback((filter: string) => {
+    setActiveFilters(prev => {
+      const next = new Set(prev);
+      if (filter === 'all') return new Set(['all']);
+      next.delete('all');
+      if (next.has(filter)) {
+        next.delete(filter);
+        if (next.size === 0) return new Set(['all']);
+      } else {
+        next.add(filter);
+      }
+      return next;
+    });
+  }, []);
+
+  // Activate missing+flagged filter and scroll
+  const activateActionRequired = useCallback(() => {
+    setActiveFilters(new Set(['missing', 'flagged']));
+    setTimeout(() => firstMissingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  }, []);
+
+  // Filter cards
+  const filteredCards = useMemo(() => {
+    if (activeFilters.has('all')) return allCards;
+    return allCards.filter(c => {
+      if (activeFilters.has('missing') && c.state === 'missing') return true;
+      if (activeFilters.has('verified') && (c.state === 'verified' || c.state === 'processing')) return true;
+      if (activeFilters.has('flagged') && c.state === 'issue') return true;
+      return false;
+    });
+  }, [allCards, activeFilters]);
+
+  // Sort cards
+  const sortedCards = useMemo(() => {
+    if (sortBy === 'workflow' || sortBy === 'phase') return filteredCards;
+    if (sortBy === 'priority') {
+      const order: Record<string, number> = { issue: 0, missing: 1, processing: 2, verified: 3, not_applicable: 4 };
+      return [...filteredCards].sort((a, b) => (order[a.state] ?? 9) - (order[b.state] ?? 9));
+    }
+    return filteredCards;
+  }, [filteredCards, sortBy]);
+
+  const flaggedCount = allCards.filter(c => c.state === 'issue').length;
+
   // Build status pills
   const statusPills: Array<{ label: string; type: 'green' | 'amber' | 'red'; onClick?: () => void }> = [];
   if (verified > 0) {
@@ -291,7 +336,7 @@ export function DocumentsTab({
     statusPills.push({
       label: `${missing} missing`,
       type: 'red',
-      onClick: () => { setAlertDrawerData(getScorePillDrawer('missing', missing)); setAlertDrawerOpen(true); },
+      onClick: activateActionRequired,
     });
   }
 
