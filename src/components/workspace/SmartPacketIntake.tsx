@@ -74,7 +74,7 @@ function getFileIcon(file: File) {
   return <File size={16} className="text-muted-foreground" />;
 }
 
-function getStatusDisplay(status: PacketFileStatus, docType: string | null): { icon: React.ReactNode; text: string; color: string } {
+function getStatusDisplay(status: PacketFileStatus, docType: string | null, warnings?: string[]): { icon: React.ReactNode; text: string; color: string } {
   switch (status) {
     case "queued": return { icon: <Loader2 size={14} className="animate-spin text-muted-foreground" />, text: "Queued...", color: "text-muted-foreground" };
     case "uploading": return { icon: <Loader2 size={14} className="animate-spin text-blue-500" />, text: "Uploading...", color: "text-blue-500" };
@@ -82,7 +82,10 @@ function getStatusDisplay(status: PacketFileStatus, docType: string | null): { i
     case "awaiting_confirmation": return { icon: <AlertTriangle size={14} className="text-amber-500" />, text: `Confirm: ${DOC_TYPE_LABELS[docType || ""] || docType}?`, color: "text-amber-500" };
     case "extracting": return { icon: <Settings size={14} className="animate-spin text-primary" />, text: `Extracting data fields...`, color: "text-primary" };
     case "extracted": return { icon: <CheckCircle2 size={14} className="text-emerald-500" />, text: `${DOC_TYPE_LABELS[docType || ""] || docType} — extracted`, color: "text-emerald-500" };
-    case "extracted_warnings": return { icon: <AlertTriangle size={14} className="text-amber-500" />, text: `${DOC_TYPE_LABELS[docType || ""] || docType} — warnings`, color: "text-amber-500" };
+    case "extracted_warnings": {
+      const warningText = warnings && warnings.length > 0 ? warnings.join("; ") : "warnings detected";
+      return { icon: <AlertTriangle size={14} className="text-amber-500" />, text: `${DOC_TYPE_LABELS[docType || ""] || docType} — ${warningText}`, color: "text-amber-500" };
+    }
     case "unidentified": return { icon: <XCircle size={14} className="text-red-500" />, text: "Could not identify — assign manually", color: "text-red-500" };
     case "error": return { icon: <XCircle size={14} className="text-red-500" />, text: "Error", color: "text-red-500" };
     default: return { icon: null, text: "", color: "" };
@@ -223,7 +226,7 @@ function ProcessingScreen({
           <div className="p-3 space-y-1">
             <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2">Files ({files.length})</h4>
             {files.map(pf => {
-              const { icon, text, color } = getStatusDisplay(pf.status, pf.documentType);
+              const { icon, text, color } = getStatusDisplay(pf.status, pf.documentType, pf.warnings);
               return (
                 <div key={pf.id} className="flex items-start gap-2 p-2 rounded-lg hover:bg-accent/40 group">
                   <div className="mt-0.5">{getFileIcon(pf.file)}</div>

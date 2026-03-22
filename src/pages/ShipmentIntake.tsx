@@ -846,7 +846,10 @@ function ShipmentIntakeInner() {
                             setDocs(prev => [...prev, { file, docType: docId, id: crypto.randomUUID() }]);
                           });
                         }}
-                        onOpenPacketIntake={() => setShowPacketIntake(true)}
+                        onOpenPacketIntake={() => {
+                          console.log('[DocumentsTab] Opening intake for shipment:', selectedShipmentId, 'form.shipment_id:', form.shipment_id);
+                          setShowPacketIntake(true);
+                        }}
                       />
                     </TabsContent>
 

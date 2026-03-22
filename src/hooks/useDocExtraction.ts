@@ -111,9 +111,16 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       console.error("Failed to load document library:", err);
     }
     setLibraryLoaded(true);
-    // Also load persisted cross-ref results
+    // Load persisted cross-ref results
     await loadCrossRefFromDB();
   }, [shipmentId, libraryLoaded, loadCrossRefFromDB]);
+
+  // Trigger crossref after library loads
+  useEffect(() => {
+    if (libraryLoaded && shipmentId && shipmentId !== 'draft') {
+      runPersistentCrossRef();
+    }
+  }, [libraryLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset library loaded flag when shipmentId changes
   useEffect(() => { setLibraryLoaded(false); }, [shipmentId]);
