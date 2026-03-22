@@ -227,14 +227,14 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                         <div
                           key={s.shipment_id}
                           className={cn(
-                            "group relative w-full text-left px-3 py-2 transition-colors cursor-pointer",
+                            "group/row relative w-full text-left px-3 py-2 transition-colors cursor-pointer",
                             "hover:bg-accent/40",
                             isSelected && "bg-primary/8 border-l-2 border-primary"
                           )}
                           onClick={() => onSelect(s.shipment_id)}
                         >
                           {/* Three-dot menu — visible on hover only */}
-                          <div className="absolute right-1.5 top-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                          <div className="absolute right-1.5 top-1.5 opacity-0 group-hover/row:opacity-100 transition-opacity z-10">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <button
