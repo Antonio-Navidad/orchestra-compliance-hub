@@ -519,6 +519,8 @@ export function DocumentsTab({
                     onRequestFromSupplier={(id) => openAlert(id, { docName: card.name })}
                     onClickAlert={(id, msg) => openAlert(id, { docName: card.name, message: msg })}
                     onClickCard={(id) => openAlert(id, { docName: card.name, severity: card.state === 'missing' ? 'critical' : card.state === 'issue' ? 'high' : 'info' })}
+                    onDelete={handleDocDelete}
+                    onReplace={(id, files) => handleDocReplace(id, files)}
                   />
                 ))}
               </div>
