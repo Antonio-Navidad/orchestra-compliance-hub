@@ -1,8 +1,9 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { FileCheck, Sparkles, AlertTriangle, CheckCircle2, ShieldCheck } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScoreBanner } from "./ScoreBanner";
 import { DocumentCard, type DocumentCardData, type DocCardState } from "./DocumentCard";
 import { AlertDrawer } from "./AlertDrawer";
@@ -58,6 +59,9 @@ export function DocumentsTab({
   const [markedNA, setMarkedNA] = useState<Set<string>>(new Set());
   const [alertDrawerOpen, setAlertDrawerOpen] = useState(false);
   const [alertDrawerData, setAlertDrawerData] = useState<AlertDrawerData | null>(null);
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set(['all']));
+  const [sortBy, setSortBy] = useState<string>('workflow');
+  const firstMissingRef = useRef<HTMLDivElement>(null);
 
   const {
     extractDocument, processingDocs, getCardEnhancements, getScore, uploadedFiles, crossRefResults, extractedDocs,
@@ -267,6 +271,51 @@ export function DocumentsTab({
   const aiScore = getScore(totalRequired, Object.keys(uploadedFiles));
   const score = aiScore > 0 ? aiScore : (totalRequired > 0 ? Math.round((verified / totalRequired) * 100) : 0);
 
+  // Filter toggle handler
+  const toggleFilter = useCallback((filter: string) => {
+    setActiveFilters(prev => {
+      const next = new Set(prev);
+      if (filter === 'all') return new Set(['all']);
+      next.delete('all');
+      if (next.has(filter)) {
+        next.delete(filter);
+        if (next.size === 0) return new Set(['all']);
+      } else {
+        next.add(filter);
+      }
+      return next;
+    });
+  }, []);
+
+  // Activate missing+flagged filter and scroll
+  const activateActionRequired = useCallback(() => {
+    setActiveFilters(new Set(['missing', 'flagged']));
+    setTimeout(() => firstMissingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  }, []);
+
+  // Filter cards
+  const filteredCards = useMemo(() => {
+    if (activeFilters.has('all')) return allCards;
+    return allCards.filter(c => {
+      if (activeFilters.has('missing') && c.state === 'missing') return true;
+      if (activeFilters.has('verified') && (c.state === 'verified' || c.state === 'processing')) return true;
+      if (activeFilters.has('flagged') && c.state === 'issue') return true;
+      return false;
+    });
+  }, [allCards, activeFilters]);
+
+  // Sort cards
+  const sortedCards = useMemo(() => {
+    if (sortBy === 'workflow' || sortBy === 'phase') return filteredCards;
+    if (sortBy === 'priority') {
+      const order: Record<string, number> = { issue: 0, missing: 1, processing: 2, verified: 3, not_applicable: 4 };
+      return [...filteredCards].sort((a, b) => (order[a.state] ?? 9) - (order[b.state] ?? 9));
+    }
+    return filteredCards;
+  }, [filteredCards, sortBy]);
+
+  const flaggedCount = allCards.filter(c => c.state === 'issue').length;
+
   // Build status pills
   const statusPills: Array<{ label: string; type: 'green' | 'amber' | 'red'; onClick?: () => void }> = [];
   if (verified > 0) {
@@ -287,7 +336,7 @@ export function DocumentsTab({
     statusPills.push({
       label: `${missing} missing`,
       type: 'red',
-      onClick: () => { setAlertDrawerData(getScorePillDrawer('missing', missing)); setAlertDrawerOpen(true); },
+      onClick: activateActionRequired,
     });
   }
 
@@ -383,29 +432,68 @@ export function DocumentsTab({
         onViewAIAnalysis={onViewAIAnalysis}
       />
 
+      {/* Filter bar */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {[
+            { key: 'all', label: `All ${allCards.length}` },
+            { key: 'missing', label: `Missing ${missing}` },
+            { key: 'verified', label: `Verified ${verified}` },
+            { key: 'flagged', label: `Flagged ${flaggedCount}` },
+          ].map(f => (
+            <button
+              key={f.key}
+              onClick={() => toggleFilter(f.key)}
+              className={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-colors ${
+                activeFilters.has(f.key)
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-secondary/30 text-muted-foreground border-border hover:bg-secondary/60'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-[200px] h-8 text-[11px] font-medium">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="workflow" className="text-xs">Sort by: Workflow order</SelectItem>
+            <SelectItem value="priority" className="text-xs">Sort by: Action required first</SelectItem>
+            <SelectItem value="phase" className="text-xs">Sort by: Phase</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {PHASES.map(phase => {
-        const phaseCards = allCards.filter(c => c.phase === phase.key);
+        const phaseCards = sortedCards.filter(c => c.phase === phase.key);
         const visible = phaseCards.filter(c => c.state !== 'not_applicable' || showOptional);
-        if (visible.length === 0) return null;
+        const isFirstMissingPhase = !activeFilters.has('all') && visible.length > 0 && visible.some(c => c.state === 'missing');
 
         return (
-          <div key={phase.key} className="space-y-1.5">
-            <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-1 pt-2">
+          <div key={phase.key} className="space-y-1.5" ref={isFirstMissingPhase ? firstMissingRef : undefined}>
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-1 pt-2 sticky top-0 bg-background z-10">
               {phase.label}
+              {!activeFilters.has('all') && visible.length === 0 && (
+                <span className="ml-2 text-muted-foreground/40 font-normal normal-case tracking-normal">— no matches</span>
+              )}
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
-              {visible.map(card => (
-                <DocumentCard
-                  key={card.id}
-                  doc={card}
-                  onUpload={handleDocUpload}
-                  onMarkNA={(id) => setMarkedNA(prev => new Set(prev).add(id))}
-                  onRequestFromSupplier={(id) => openAlert(id, { docName: card.name })}
-                  onClickAlert={(id, msg) => openAlert(id, { docName: card.name, message: msg })}
-                  onClickCard={(id) => openAlert(id, { docName: card.name, severity: card.state === 'missing' ? 'critical' : card.state === 'issue' ? 'high' : 'info' })}
-                />
-              ))}
-            </div>
+            {visible.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                {visible.map(card => (
+                  <DocumentCard
+                    key={card.id}
+                    doc={card}
+                    onUpload={handleDocUpload}
+                    onMarkNA={(id) => setMarkedNA(prev => new Set(prev).add(id))}
+                    onRequestFromSupplier={(id) => openAlert(id, { docName: card.name })}
+                    onClickAlert={(id, msg) => openAlert(id, { docName: card.name, message: msg })}
+                    onClickCard={(id) => openAlert(id, { docName: card.name, severity: card.state === 'missing' ? 'critical' : card.state === 'issue' ? 'high' : 'info' })}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         );
       })}
