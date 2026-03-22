@@ -441,5 +441,6 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
     uploadedFiles,
     getCardEnhancements,
     getScore,
+    reloadLibrary,
   };
 }
