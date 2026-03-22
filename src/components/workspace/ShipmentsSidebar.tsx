@@ -262,6 +262,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                       const badge = getReadinessBadge(s.packet_score, s.status);
                       const isSelected = selectedId === s.shipment_id;
                       const isHovered = hoveredId === s.shipment_id;
+                      const menuOpen = openMenuId === s.shipment_id;
 
                       return (
                         <div
@@ -272,21 +273,22 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                             isSelected && "bg-primary/8 border-l-2 border-primary"
                           )}
                           onMouseEnter={() => setHoveredId(s.shipment_id)}
-                          onMouseLeave={() => setHoveredId(null)}
+                          onMouseLeave={() => {
+                            if (!menuOpen) setHoveredId(null);
+                          }}
                           onClick={() => onSelect(s.shipment_id)}
                         >
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '4px' }}>
-                            {/* Left: shipment text */}
+
+                            {/* Left: shipment info */}
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div className="flex items-center gap-1.5">
                                 {MODE_ICONS[s.mode] || <Ship size={11} />}
-                                <span
-                                  className="text-[12px] font-mono text-foreground"
-                                  style={{ whiteSpace: 'nowrap', fontWeight: 600, fontSize: '12px' }}
-                                >
+                                <span style={{ whiteSpace: 'nowrap', fontWeight: 600, fontSize: '12px', fontFamily: 'monospace' }}>
                                   {s.shipment_id}
                                 </span>
                               </div>
+
                               {renamingId === s.shipment_id ? (
                                 <Input
                                   ref={renameInputRef}
@@ -301,18 +303,12 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                   className="h-5 text-[10px] mt-0.5 px-1"
                                 />
                               ) : (
-                                <p
-                                  className="text-muted-foreground mt-0.5 leading-snug"
-                                  style={{
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                    fontSize: '11px',
-                                  }}
-                                >
+                                <p style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11px' }}
+                                  className="text-muted-foreground mt-0.5 leading-snug">
                                   {formatRoute(s)}
                                 </p>
                               )}
+
                               <Badge
                                 variant="outline"
                                 className={cn("text-[9px] px-1.5 py-0 mt-1 inline-flex items-center gap-1", badge.className)}
@@ -320,6 +316,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                               >
                                 {badge.icon} {badge.label}
                               </Badge>
+
                               {isSelected && deadlines.length > 0 && (() => {
                                 const urgent = getMostUrgentDeadline(deadlines);
                                 if (!urgent || urgent.status === 'upcoming') return null;
@@ -347,6 +344,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                   </button>
                                 );
                               })()}
+
                               {section.key === 'incomplete' && (
                                 <p className="text-[9px] text-muted-foreground/60 mt-0.5">
                                   Last active: {new Date(s.updated_at).toLocaleDateString()}
@@ -354,30 +352,32 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                               )}
                             </div>
 
-                            {/* Right: three-dot menu — always visible */}
-                            <div style={{ flexShrink: 0 }}>
+                            {/* Right: three-dot menu button */}
+                            <div style={{ flexShrink: 0, marginTop: '1px' }}>
                               <DropdownMenu
-                                open={openMenuId === s.shipment_id}
-                                onOpenChange={(open) => setOpenMenuId(open ? s.shipment_id : null)}
+                                open={menuOpen}
+                                onOpenChange={(open) => {
+                                  setOpenMenuId(open ? s.shipment_id : null);
+                                  if (!open) setHoveredId(null);
+                                }}
                               >
                                 <DropdownMenuTrigger asChild>
                                   <button
+                                    onClick={(e) => e.stopPropagation()}
                                     style={{
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
+                                      width: '24px',
+                                      height: '24px',
+                                      borderRadius: '4px',
                                       background: 'none',
                                       border: 'none',
                                       cursor: 'pointer',
-                                      padding: '2px 4px',
-                                      borderRadius: '4px',
-                                      color: 'inherit',
-                                      opacity: isHovered || openMenuId === s.shipment_id ? 1 : 0,
+                                      padding: 0,
+                                      color: 'currentColor',
+                                      opacity: isHovered || menuOpen ? 1 : 0,
                                       transition: 'opacity 0.15s',
-                                    }}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setOpenMenuId(openMenuId === s.shipment_id ? null : s.shipment_id);
                                     }}
                                   >
                                     <MoreHorizontal size={14} />
@@ -389,6 +389,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                       e.stopPropagation();
                                       setRenameValue(s.description || s.shipment_id);
                                       setRenamingId(s.shipment_id);
+                                      setOpenMenuId(null);
                                     }}
                                     className="text-xs gap-2"
                                   >
@@ -398,6 +399,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       pauseMutation.mutate(s.shipment_id);
+                                      setOpenMenuId(null);
                                     }}
                                     className="text-xs gap-2"
                                   >
@@ -407,6 +409,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setDeleteTarget(s.shipment_id);
+                                      setOpenMenuId(null);
                                     }}
                                     className="text-xs gap-2 text-destructive focus:text-destructive"
                                   >
@@ -415,6 +418,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
+
                           </div>
                         </div>
                       );
@@ -433,7 +437,9 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this shipment?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete <span className="font-mono font-bold">{deleteTarget}</span> and all uploaded documents. This cannot be undone.
+              This will permanently delete{' '}
+              <span className="font-mono font-bold">{deleteTarget}</span>{' '}
+              and all uploaded documents. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
