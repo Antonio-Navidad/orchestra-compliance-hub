@@ -260,6 +260,51 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
           console.error("[extractDocument] Failed to save to document_library:", libErr);
         }
 
+        // Save packing list internal errors as crossref_results (self-check findings)
+        const internalErrors: any[] = data.internal_errors || [];
+        if (internalErrors.length > 0 && docId.includes("packing_list")) {
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            // Delete previous self-check results for this doc
+            await supabase.from("crossref_results")
+              .delete()
+              .eq("shipment_id", shipmentId)
+              .eq("document_a_type", "packing_list")
+              .eq("document_b_type", "packing_list");
+
+            const rows = internalErrors.map((ie: any) => ({
+              shipment_id: shipmentId,
+              document_a_type: "packing_list",
+              document_b_type: "packing_list",
+              field_checked: ie.check,
+              severity: ie.severity,
+              finding: ie.finding,
+              recommendation: ie.expected_value && ie.actual_value
+                ? `Expected: ${ie.expected_value}, Found: ${ie.actual_value}`
+                : "Review and correct the packing list",
+              estimated_financial_impact_usd: 0,
+              user_id: user?.id || null,
+            }));
+            await supabase.from("crossref_results").insert(rows);
+
+            // Add to in-memory crossref results
+            setCrossRefResults(prev => [
+              ...prev.filter(r => !(r.document_a === "packing_list" && r.document_b === "packing_list")),
+              ...rows.map(r => ({
+                severity: r.severity as "critical" | "high" | "medium" | "low",
+                document_a: r.document_a_type,
+                document_b: r.document_b_type,
+                field_checked: r.field_checked,
+                finding: r.finding,
+                recommendation: r.recommendation,
+                estimated_financial_impact_usd: 0,
+              })),
+            ]);
+          } catch (ieErr) {
+            console.error("[extractDocument] Failed to save internal errors:", ieErr);
+          }
+        }
+
         // Trigger persistent cross-reference against ALL docs in document_library
         runPersistentCrossRef();
       }
@@ -300,13 +345,25 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       status: fd.confidence >= 90 ? "verified" : fd.confidence >= 70 ? "flagged" : "error",
     }));
 
+    // Cross-ref checks from other documents
     const checks: CrossRefCheck[] = crossRefResults
-      .filter(cr => cr.document_a === docId || cr.document_b === docId)
+      .filter(cr => (cr.document_a === docId || cr.document_b === docId) && cr.document_a !== cr.document_b)
       .map(cr => ({
         againstDoc: cr.document_a === docId ? cr.document_b.replace(/_/g, " ") : cr.document_a.replace(/_/g, " "),
         label: cr.finding,
         passed: false,
       }));
+
+    // Internal self-check findings (e.g. packing_list vs packing_list)
+    const selfChecks: CrossRefCheck[] = crossRefResults
+      .filter(cr => cr.document_a === docId && cr.document_b === docId)
+      .map(cr => ({
+        againstDoc: "Internal check",
+        label: cr.finding,
+        passed: false,
+      }));
+
+    const allChecks = [...selfChecks, ...checks];
 
     const allDocTypes = Object.keys(extractedDocs);
     for (const otherDoc of allDocTypes) {
@@ -316,7 +373,7 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
               (cr.document_b === docId && cr.document_a === otherDoc)
       );
       if (!hasIssue) {
-        checks.push({
+        allChecks.push({
           againstDoc: otherDoc.replace(/_/g, " "),
           label: "All fields match",
           passed: true,
@@ -324,22 +381,27 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       }
     }
 
-    const discrepancies = crossRefResults
-      .filter(cr => (cr.document_a === docId || cr.document_b === docId) && (cr.severity === "critical" || cr.severity === "high"))
+    // Include both cross-ref and internal error discrepancies
+    const allRelevantResults = crossRefResults
+      .filter(cr => (cr.document_a === docId || cr.document_b === docId) && (cr.severity === "critical" || cr.severity === "high"));
+
+    const discrepancies = allRelevantResults
       .map(cr => `${cr.finding} — ${cr.recommendation}${cr.estimated_financial_impact_usd > 0 ? ` (est. $${cr.estimated_financial_impact_usd.toLocaleString()} impact)` : ""}`);
 
     const hasIssues = discrepancies.length > 0 || ext.warnings.length > 0;
     const hasCritical = crossRefResults.some(cr =>
       (cr.document_a === docId || cr.document_b === docId) && cr.severity === "critical"
     );
+    const hasInternalErrors = selfChecks.length > 0;
 
     return {
-      state: hasCritical ? "issue" : hasIssues ? "issue" : "verified",
+      state: hasCritical ? "issue" : hasIssues || hasInternalErrors ? "issue" : "verified",
       statusLine: hasCritical ? "AI verified — critical discrepancies found" :
+                  hasInternalErrors ? `AI verified — ${selfChecks.length} internal error(s) detected` :
                   hasIssues ? `AI verified — ${discrepancies.length} issue(s) flagged` :
                   "Uploaded · AI verified clean",
       extractedFields: fields,
-      crossRefChecks: checks.length > 0 ? checks : undefined,
+      crossRefChecks: allChecks.length > 0 ? allChecks : undefined,
       discrepancies: discrepancies.length > 0 ? discrepancies : undefined,
       notes: ext.warnings.length > 0 ? ext.warnings : undefined,
     };

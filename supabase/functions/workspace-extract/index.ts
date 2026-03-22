@@ -46,10 +46,12 @@ const EXTRACTION_SCHEMAS: Record<string, object> = {
       total_gross_weight_kg: { type: "number" },
       total_net_weight_kg: { type: "number" },
       total_cbm: { type: "number" },
+      country_of_origin: { type: "string" },
       line_items: { type: "array", items: { type: "object", properties: {
         carton_number: { type: "string" }, description: { type: "string" },
         quantity: { type: "number" }, gross_weight_kg: { type: "number" },
         net_weight_kg: { type: "number" }, dimensions: { type: "string" },
+        cbm: { type: "number" },
       }}},
     },
   },
@@ -66,6 +68,31 @@ const EXTRACTION_SCHEMAS: Record<string, object> = {
     },
   },
 };
+
+const PACKING_LIST_VALIDATION_PROMPT = `
+Additionally, perform these MANDATORY internal consistency checks on the packing list and report them in a separate "internal_errors" array:
+
+1. CARTON COUNT CHECK: Sum the number of individual line item cartons/packages. Compare to the stated total_cartons. If they don't match, report it.
+2. GROSS WEIGHT CHECK: Sum gross_weight_kg across all line items. Compare to total_gross_weight_kg. If the difference exceeds 1%, report it.
+3. NET WEIGHT CHECK: Sum net_weight_kg across all line items. Compare to total_net_weight_kg. If the difference exceeds 1%, report it.
+4. ZERO QUANTITY CHECK: Flag any line item where quantity is 0, blank, or missing.
+5. VAGUE DESCRIPTION CHECK: Flag any line item description that is vague, generic, or potentially a customs compliance risk (e.g. "parts", "goods", "merchandise", "miscellaneous", "samples", "accessories", "components" without specificity).
+6. MISSING DIMENSIONS CHECK: Flag any line item where gross_weight_kg is present but dimensions and CBM are both missing or null.
+
+Return the internal_errors as:
+"internal_errors": [
+  {
+    "check": "carton_count_mismatch" | "gross_weight_mismatch" | "net_weight_mismatch" | "zero_quantity" | "vague_description" | "missing_dimensions",
+    "severity": "critical" | "high" | "medium",
+    "finding": "detailed description of what's wrong",
+    "line_item_index": number or null,
+    "expected_value": string or null,
+    "actual_value": string or null
+  }
+]
+
+Use "critical" for math mismatches (carton count, weight totals). Use "high" for zero quantities or vague descriptions. Use "medium" for missing dimensions.
+If all checks pass, return an empty array.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -99,40 +126,35 @@ serve(async (req) => {
     const schemaKey = Object.keys(EXTRACTION_SCHEMAS).find(k => documentType.includes(k));
     const extractionSchema = schemaKey ? EXTRACTION_SCHEMAS[schemaKey] : null;
 
+    const isPackingList = documentType.includes("packing_list");
+
     const systemPrompt = `You are a licensed customs broker's AI assistant. You are processing a ${documentType.replace(/_/g, ' ')} for a ${shipmentMode.replace(/_/g, ' ')} shipment of ${commodityType || 'goods'} from ${countryOfOrigin || 'unknown origin'}.
 
 Extract all relevant customs compliance data points from this document. Return ONLY a valid JSON object with no markdown, no preamble, and no explanation. If a field cannot be found, set its value to null.
 
 ${extractionSchema ? `Use this exact schema for the extracted_data field:\n${JSON.stringify(extractionSchema, null, 2)}` : 'Extract all fields you can identify from the document.'}
 
-Additionally, for each field you extract, provide a confidence score (0-100) and note where in the document the value was found.`;
+Additionally, for each field you extract, provide a confidence score (0-100) and note where in the document the value was found.
+
+${isPackingList ? PACKING_LIST_VALIDATION_PROMPT : ''}`;
 
     const userText = `Extract all customs-relevant data from this ${documentType.replace(/_/g, ' ')}. Return a JSON object with these top-level keys:
 - "extracted_data": the structured data matching the document type schema
 - "field_details": array of { "field": string, "value": any, "confidence": number (0-100), "source_location": string }
 - "document_type_detected": string — what type of document this actually appears to be
 - "warnings": array of strings — any issues with readability, missing sections, or concerns
-- "pga_flags": array of { "agency": string, "requirement": string, "mandatory": boolean, "reason": string } — if this is a commercial invoice, identify PGA requirements based on commodities and HTS codes found`;
+- "pga_flags": array of { "agency": string, "requirement": string, "mandatory": boolean, "reason": string } — if this is a commercial invoice, identify PGA requirements based on commodities and HTS codes found
+${isPackingList ? '- "internal_errors": array of internal consistency check results as specified in your instructions' : ''}`;
 
     // Build messages for Lovable AI Gateway (OpenAI-compatible format)
     const userContent: any[] = [];
 
     if (isPdf || isImage) {
-      // For images, use the OpenAI vision format
-      if (isImage) {
-        userContent.push({
-          type: "image_url",
-          image_url: { url: `data:${mimeType};base64,${base64}` },
-        });
-      } else {
-        // For PDFs, include as text description since gateway uses OpenAI format
-        userContent.push({
-          type: "image_url",
-          image_url: { url: `data:${mimeType};base64,${base64}` },
-        });
-      }
+      userContent.push({
+        type: "image_url",
+        image_url: { url: `data:${mimeType};base64,${base64}` },
+      });
     } else {
-      // For XLSX/DOCX, describe as base64-encoded document
       userContent.push({
         type: "text",
         text: `[Base64-encoded ${file.name} document attached. MIME type: ${mimeType}]`,
@@ -201,6 +223,13 @@ Additionally, for each field you extract, provide a confidence score (0-100) and
       confidenceMap[fd.field] = fd.confidence;
     }
 
+    // Merge internal_errors into warnings for visibility
+    const internalErrors: any[] = result.internal_errors || [];
+    const allWarnings: string[] = [...(result.warnings || [])];
+    for (const ie of internalErrors) {
+      allWarnings.push(`[${ie.severity.toUpperCase()}] ${ie.check}: ${ie.finding}`);
+    }
+
     const { data: extraction, error: extErr } = await adminClient
       .from("document_extractions")
       .insert({
@@ -208,7 +237,7 @@ Additionally, for each field you extract, provide a confidence score (0-100) and
         field_confidence: confidenceMap,
         extraction_model: "gemini-2.5-flash",
         raw_text: result.document_type_detected || null,
-        parse_warnings: result.warnings || [],
+        parse_warnings: allWarnings,
       })
       .select("id")
       .single();
@@ -219,8 +248,9 @@ Additionally, for each field you extract, provide a confidence score (0-100) and
       extracted_data: result.extracted_data || {},
       field_details: result.field_details || [],
       document_type_detected: result.document_type_detected || documentType,
-      warnings: result.warnings || [],
+      warnings: allWarnings,
       pga_flags: result.pga_flags || [],
+      internal_errors: internalErrors,
       extraction_id: extraction?.id || null,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
