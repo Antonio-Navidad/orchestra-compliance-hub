@@ -647,7 +647,7 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
                   className="gap-1.5 text-xs font-semibold"
                   disabled={stats.processing}
                 >
-                  Open Shipment Workspace
+                  {isExistingShipment ? `Continue to ${shipmentId}` : "Open Shipment Workspace"}
                   <ArrowRight size={14} />
                 </Button>
               </div>

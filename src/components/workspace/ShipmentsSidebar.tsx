@@ -83,8 +83,10 @@ const PAUSED_STATUSES = ['paused', 'waiting_docs', 'draft'];
 
 export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadlines = [], onClickDeadline }: Props) {
   const [expanded, setExpanded] = useState<Set<Section>>(new Set(['active']));
-
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   const queryClient = useQueryClient();
 
