@@ -987,7 +987,7 @@ function ShipmentIntakeInner() {
 
                       <div className="flex justify-between">
                         <Button variant="outline" onClick={() => setActiveTab('details')} className="text-xs">← Back to Documents</Button>
-                        <Button onClick={() => setActiveTab('compliance')} className="text-xs gap-1.5">Continue to Workflow Log →</Button>
+                        <Button onClick={() => setActiveTab('review')} className="text-xs gap-1.5">Continue to Shipment Profile →</Button>
                       </div>
                     </TabsContent>
 
