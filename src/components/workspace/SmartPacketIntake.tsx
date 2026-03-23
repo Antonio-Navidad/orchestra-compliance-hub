@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "@/hooks/use-toast";
 import {
   Upload, FileText, Image, FileSpreadsheet, File, X, Check, AlertTriangle,
   Loader2, Search, Settings, CheckCircle2, XCircle, ChevronRight, Download, ArrowRight, Pause,
