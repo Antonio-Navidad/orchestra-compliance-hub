@@ -31,6 +31,11 @@ export interface WizardResult {
 
 type ShipmentModeChoice = "ocean_import" | "air_import" | "land_mexico_import" | "land_canada_import" | "ocean_export" | "air_export" | "land_mexico_export" | "land_canada_export" | "inbond_te";
 
+export interface PacketIntakeDraft {
+  shipmentReference: string;
+  title: string;
+}
+
 interface ModeCard { id: ShipmentModeChoice; label: string; icon: React.ReactNode; detail: string }
 
 const MODE_GROUPS: { title: string; cards: ModeCard[] }[] = [
