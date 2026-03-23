@@ -373,10 +373,14 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
     const allDocTypes = Object.keys(extractedDocs);
     for (const otherDoc of allDocTypes) {
       if (otherDoc === docId) continue;
-      const hasIssue = crossRefResults.some(
-        cr => (cr.document_a === docId && cr.document_b === otherDoc) ||
-              (cr.document_b === docId && cr.document_a === otherDoc)
-      );
+      // Check for actual issue findings (not passing checks)
+      const hasIssue = crossRefResults.some(cr => {
+        const involves = (cr.document_a === docId && cr.document_b === otherDoc) ||
+                         (cr.document_b === docId && cr.document_a === otherDoc);
+        if (!involves) return false;
+        const text = (cr.finding + ' ' + (cr.recommendation || '')).toLowerCase();
+        return !text.includes('no action needed') && !text.includes('no discrepancy found');
+      });
       if (!hasIssue) {
         allChecks.push({
           againstDoc: otherDoc.replace(/_/g, " "),

@@ -340,7 +340,7 @@ export function DocumentsTab({
     return allCards.filter(c => {
       if (activeFilters.has('missing') && c.state === 'missing') return true;
       if (activeFilters.has('verified') && (c.state === 'verified' || c.state === 'processing')) return true;
-      if (activeFilters.has('flagged') && c.state === 'issue') return true;
+      if (activeFilters.has('flagged') && (c.state === 'issue' || c.state === 'critical')) return true;
       return false;
     });
   }, [allCards, activeFilters]);
