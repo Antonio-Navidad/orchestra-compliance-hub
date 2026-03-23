@@ -294,7 +294,11 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
               {onOpenPacketIntake && (
                 <button
                   type="button"
-                  onClick={() => { onOpenChange(false); onOpenPacketIntake(); }}
+                  onClick={() => {
+                    const ref = shipmentReference.trim() || nextSequentialId;
+                    onOpenChange(false);
+                    onOpenPacketIntake({ shipmentReference: ref, title: title.trim() });
+                  }}
                   className="w-full flex flex-col items-center gap-3 py-8 px-6 rounded-xl border-2 border-dashed border-primary bg-primary/5 hover:bg-primary/10 hover:border-primary hover:shadow-md transition-all cursor-pointer"
                 >
                   <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
