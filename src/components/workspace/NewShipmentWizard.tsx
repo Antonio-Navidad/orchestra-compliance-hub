@@ -131,6 +131,9 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
   const [step, setStep] = useState(1);
   // Step 1
   const [title, setTitle] = useState("");
+  const [shipmentReference, setShipmentReference] = useState("");
+  const [referenceError, setReferenceError] = useState("");
+  const [nextSequentialId, setNextSequentialId] = useState("ORC-0001");
   const [importerOfRecord, setImporterOfRecord] = useState("");
   const [importerQuery, setImporterQuery] = useState("");
   const [showImporterSuggestions, setShowImporterSuggestions] = useState(false);
@@ -147,6 +150,45 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
   const [bondNumber, setBondNumber] = useState("");
   const [achSetup, setAchSetup] = useState(false);
 
+  // Generate sequential ID on mount / open
+  useEffect(() => {
+    if (!open) return;
+    const fetchNextId = async () => {
+      const { data } = await supabase
+        .from("shipments")
+        .select("shipment_id")
+        .like("shipment_id", "ORC-%")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      let maxNum = 0;
+      (data || []).forEach((s: any) => {
+        const match = s.shipment_id.match(/^ORC-(\d+)$/);
+        if (match) maxNum = Math.max(maxNum, parseInt(match[1], 10));
+      });
+      const nextId = `ORC-${String(maxNum + 1).padStart(4, "0")}`;
+      setNextSequentialId(nextId);
+      if (!shipmentReference) setShipmentReference(nextId);
+    };
+    fetchNextId();
+  }, [open]);
+
+  // Validate uniqueness when reference changes
+  useEffect(() => {
+    if (!shipmentReference.trim()) {
+      setReferenceError("");
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const { data } = await supabase
+        .from("shipments")
+        .select("shipment_id")
+        .eq("shipment_id", shipmentReference.trim())
+        .maybeSingle();
+      setReferenceError(data ? "This reference already exists. Please use a unique ID." : "");
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [shipmentReference]);
+
   const isNewImporter = importerOfRecord.length > 0 && !existingImporters.some(i => i.toLowerCase() === importerOfRecord.toLowerCase());
 
   const tags = useMemo(() => inferTags(shipmentMode, commodityType, countryOfOrigin), [shipmentMode, commodityType, countryOfOrigin]);
@@ -154,7 +196,7 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
 
   const filteredImporters = existingImporters.filter(i => i.toLowerCase().includes(importerQuery.toLowerCase()));
 
-  const canProceed = title.trim().length > 0 && importerOfRecord.trim().length > 0 && commodityType.length > 0;
+  const canProceed = title.trim().length > 0 && importerOfRecord.trim().length > 0 && commodityType.length > 0 && !referenceError;
 
   const handleNext = () => {
     if (isNewImporter) {
