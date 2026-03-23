@@ -432,7 +432,7 @@ function ShipmentIntakeInner() {
 
     setForm(prev => ({
       ...prev,
-      shipment_id: generateShipmentId(),
+      shipment_id: result.shipmentReference || generateShipmentId(),
       description: result.title,
       consignee: result.importerOfRecord,
       origin_country: result.countryOfOrigin,

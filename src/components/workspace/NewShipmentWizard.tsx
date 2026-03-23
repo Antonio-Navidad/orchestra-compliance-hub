@@ -264,6 +264,26 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
                 />
               </div>
 
+              {/* 1b. Shipment Reference / ID */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Shipment Reference / ID</Label>
+                <Input
+                  value={shipmentReference}
+                  onChange={e => setShipmentReference(e.target.value)}
+                  placeholder={nextSequentialId}
+                  className={cn("text-sm font-mono", referenceError && "border-destructive")}
+                />
+                {referenceError ? (
+                  <p className="text-[10px] text-destructive flex items-center gap-1">
+                    <AlertTriangle size={10} /> {referenceError}
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground">
+                    Auto-generated as {nextSequentialId}. You can type any custom reference.
+                  </p>
+                )}
+              </div>
+
               {/* 2. Smart Packet Intake — HERO drop zone */}
               {onOpenPacketIntake && (
                 <button
