@@ -478,6 +478,15 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
       // Existing shipment — sync score and profile to DB before closing
       await syncDraftProfile(shipmentId!, profileData);
       if (onComplete) onComplete(profileData, shipmentId!);
+
+      const docCount = files.filter(f =>
+        ["extracted", "extracted_warnings"].includes(f.status)
+      ).length;
+
+      toast({
+        title: `${docCount} document${docCount !== 1 ? 's' : ''} added to ${shipmentId}`,
+      });
+
       onOpenChange(false);
       setPhase("drop");
       reset();
@@ -490,7 +499,7 @@ export function SmartPacketIntake({ open, onOpenChange, shipmentId, onComplete }
       setPhase("drop");
       reset();
     }
-  }, [isExistingShipment, activateDraft, syncDraftProfile, onComplete, onOpenChange, profileData, reset, shipmentId]);
+  }, [isExistingShipment, activateDraft, syncDraftProfile, onComplete, onOpenChange, profileData, reset, shipmentId, files]);
 
   const handleSaveAndClose = useCallback(async () => {
     await pauseDraft();
