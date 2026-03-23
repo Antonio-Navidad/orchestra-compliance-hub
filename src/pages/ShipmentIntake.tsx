@@ -23,7 +23,7 @@ import { getModeSubtitle } from "@/lib/modeDocumentDefs";
 import { ShipmentModeSelector } from "@/components/workspace/ShipmentModeSelector";
 import { DocChecklistPanel } from "@/components/workspace/DocChecklistPanel";
 import { ShipmentsSidebar } from "@/components/workspace/ShipmentsSidebar";
-import { NewShipmentWizard, type WizardResult } from "@/components/workspace/NewShipmentWizard";
+import { NewShipmentWizard, type WizardResult, type PacketIntakeDraft } from "@/components/workspace/NewShipmentWizard";
 import { DocumentsTab } from "@/components/workspace/DocumentsTab";
 import { DeadlineBar } from "@/components/workspace/DeadlineBar";
 import { AlertDrawer } from "@/components/workspace/AlertDrawer";
