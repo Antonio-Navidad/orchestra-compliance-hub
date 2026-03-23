@@ -97,7 +97,7 @@ export function PreSubmissionGate({ open, onOpenChange, shipmentData, onConfirm,
             Pre-Submission Compliance Check
           </DialogTitle>
           <DialogDescription>
-            Final validation before creating shipment {shipmentData.shipmentId}
+            Final validation before submitting shipment {shipmentData.shipmentId}
           </DialogDescription>
         </DialogHeader>
 

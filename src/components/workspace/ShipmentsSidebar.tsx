@@ -346,7 +346,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this shipment?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete {deleteTarget?.shipment_id} and all uploaded documents. This cannot be undone.
+              Delete {deleteTarget?.shipment_id} permanently? This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
