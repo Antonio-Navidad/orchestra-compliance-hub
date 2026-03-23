@@ -304,6 +304,13 @@ export function DocumentsTab({
   const aiScore = getScore(totalRequired, Object.keys(uploadedFiles));
   const score = aiScore > 0 ? aiScore : (totalRequired > 0 ? Math.round((verified / totalRequired) * 100) : 0);
 
+  // Persist score to shipments table so sidebar shows same value
+  useMemo(() => {
+    if (shipmentId && shipmentId !== 'draft' && score > 0) {
+      supabase.from("shipments").update({ packet_score: score }).eq("shipment_id", shipmentId).then(() => {});
+    }
+  }, [score, shipmentId]);
+
   // Filter toggle handler
   const toggleFilter = useCallback((filter: string) => {
     setActiveFilters(prev => {
