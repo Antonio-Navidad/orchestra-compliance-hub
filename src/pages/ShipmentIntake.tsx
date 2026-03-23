@@ -32,7 +32,7 @@ import { HoldManagementPanel, HoldBanner } from "@/components/workspace/HoldMana
 import { useDocExtraction } from "@/hooks/useDocExtraction";
 import { useImporterMemory } from "@/hooks/useImporterMemory";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { WorkflowLogTab, type WorkflowShipment } from "@/components/workspace/WorkflowLogTab";
+
 import { calculateDeadlines, getDeadlinesWithin7Days } from "@/lib/deadlineEngine";
 import { getDeadlineDrawer, type AlertDrawerData } from "@/lib/alertDrawerContent";
 import { getHoldDrawer, type ShipmentHold } from "@/lib/holdTypes";
@@ -218,93 +218,6 @@ function ShipmentIntakeInner() {
   }, [shipmentMode, form.planned_departure, form.estimated_arrival]);
 
   const urgentDeadlines = useMemo(() => getDeadlinesWithin7Days(shipmentDeadlines), [shipmentDeadlines]);
-
-  // Fetch ALL shipments from database for Workflow Log
-  const { data: allDbShipments = [] } = useQuery({
-    queryKey: ["all-shipments-workflow"],
-    queryFn: async () => {
-      const { data } = await supabase.from("shipments").select("*").order("created_at", { ascending: false });
-      return (data || []) as any[];
-    },
-  });
-
-  // Build workflow log data from ALL shipments in database + current draft
-  const workflowShipments = useMemo<WorkflowShipment[]>(() => {
-    const dbShipments: WorkflowShipment[] = allDbShipments.map((s: any) => {
-      const declVal = parseFloat(s.declared_value) || 0;
-      const sMode = s.mode || 'sea';
-      const mpf = Math.min(Math.max(declVal * 0.003464, 31.67), 614.35);
-      const hmf = sMode === 'sea' ? declVal * 0.00125 : 0;
-      return {
-        shipment_id: s.shipment_id,
-        title: s.description || "Untitled shipment",
-        created_at: s.created_at,
-        updated_at: s.updated_at || s.created_at,
-        mode: (sMode || '').replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
-        importer: s.consignee || "—",
-        origin_country: s.origin_country || "—",
-        port_of_entry: s.port_of_entry || "—",
-        commodity_type: (s.description || "—").split(" ")[0],
-        hts_codes: s.hs_code || "—",
-        declared_value: declVal,
-        fta_program: s.coo_status === "potentially_eligible" ? "Pending" : "None",
-        advcd_applicable: false,
-        section_301: (s.origin_country || '').toLowerCase().includes("china"),
-        estimated_duties: 0,
-        mpf: Math.round(mpf * 100) / 100,
-        hmf: Math.round(hmf * 100) / 100,
-        isf_filed: "",
-        entry_type: "Formal",
-        cbp_hold: false,
-        pga_agencies: [],
-        docs_uploaded: 0,
-        docs_required: 13,
-        discrepancies: 0,
-        score: s.packet_score || 0,
-        status: s.status === 'paused' ? 'Paused' : s.status === 'completed' ? 'Completed' : s.status === 'waiting_docs' ? 'Awaiting Docs' : 'Active',
-        notes: "",
-      };
-    });
-
-    // Add current draft if it's new and not yet in the DB
-    const currentInDb = dbShipments.some(s => s.shipment_id === form.shipment_id);
-    if (isNewMode && !currentInDb && (form.description || form.consignee)) {
-      const declVal = parseFloat(form.declared_value) || 0;
-      const mpf = Math.min(Math.max(declVal * 0.003464, 31.67), 614.35);
-      const hmf = form.mode === "sea" ? declVal * 0.00125 : 0;
-      dbShipments.unshift({
-        shipment_id: form.shipment_id,
-        title: form.description || "Untitled shipment",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        mode: shipmentMode.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
-        importer: form.consignee || "—",
-        origin_country: form.origin_country || "—",
-        port_of_entry: form.port_of_entry || "—",
-        commodity_type: form.description?.split(" ")[0] || "—",
-        hts_codes: form.hs_code || "—",
-        declared_value: declVal,
-        fta_program: form.coo_status === "potentially_eligible" ? "Pending" : "None",
-        advcd_applicable: false,
-        section_301: form.origin_country?.toLowerCase().includes("china") || false,
-        estimated_duties: 0,
-        mpf: Math.round(mpf * 100) / 100,
-        hmf: Math.round(hmf * 100) / 100,
-        isf_filed: "",
-        entry_type: "Formal",
-        cbp_hold: !!activeHold,
-        pga_agencies: [],
-        docs_uploaded: docs.length,
-        docs_required: 13,
-        discrepancies: docExtraction.crossRefResults.length,
-        score: 0,
-        status: isPaused ? "Paused" : "Draft",
-        notes: "",
-      });
-    }
-
-    return dbShipments;
-  }, [allDbShipments, form, shipmentMode, docs.length, docExtraction.crossRefResults.length, activeHold, isPaused, isNewMode]);
 
   const handleDeadlineClick = useCallback((deadline: any) => {
     const drawerData = getDeadlineDrawer(deadline);
@@ -862,8 +775,8 @@ function ShipmentIntakeInner() {
                           </Badge>
                         )}
                       </TabsTrigger>
-                      <TabsTrigger value="compliance" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                        <ShieldCheck size={12} /> Workflow Log
+                      <TabsTrigger value="review" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                        <FileCheck size={12} /> Shipment Profile
                       </TabsTrigger>
                       <TabsTrigger value="review" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                         <FileCheck size={12} /> Shipment Profile
@@ -987,56 +900,10 @@ function ShipmentIntakeInner() {
 
                       <div className="flex justify-between">
                         <Button variant="outline" onClick={() => setActiveTab('details')} className="text-xs">← Back to Documents</Button>
-                        <Button onClick={() => setActiveTab('compliance')} className="text-xs gap-1.5">Continue to Workflow Log →</Button>
-                      </div>
-                    </TabsContent>
-
-                    {/* ─── Workflow Log Tab ─── */}
-                    <TabsContent value="compliance" className="mt-4 space-y-4">
-                      <WorkflowLogTab
-                        shipments={workflowShipments}
-                        docEvents={[]}
-                        aiRecs={docExtraction.crossRefResults.map(cr => ({
-                          shipment_id: form.shipment_id,
-                          severity: cr.severity,
-                          title: `${cr.document_a} ↔ ${cr.document_b}: ${cr.field_checked}`,
-                          finding: cr.finding,
-                          recommendation: cr.recommendation,
-                          financial_impact: cr.estimated_financial_impact_usd,
-                          resolved: false,
-                        }))}
-                        discrepancies={docExtraction.crossRefResults.map(cr => ({
-                          shipment_id: form.shipment_id,
-                          doc_a: cr.document_a,
-                          doc_b: cr.document_b,
-                          field: cr.field_checked,
-                          finding: cr.finding,
-                          severity: cr.severity,
-                          resolved: false,
-                          resolution_note: "",
-                        }))}
-                        currentShipmentId={form.shipment_id}
-                        onShipmentClick={(id) => {
-                          setSelectedShipmentId(id);
-                          setActiveTab('details');
-                        }}
-                        onNotesChange={(id, notes) => {
-                          console.log(`Notes for ${id}:`, notes);
-                        }}
-                      />
-
-                      <ComplianceCoach shipmentContext={{
-                        originCountry: form.origin_country, destinationCountry: form.destination_country,
-                        mode: form.mode, hsCode: form.hs_code, description: form.description,
-                        declaredValue: form.declared_value, currency: form.currency,
-                        incoterm: form.incoterm, cooStatus: form.coo_status,
-                      }} />
-
-                      <div className="flex justify-between">
-                        <Button variant="outline" onClick={() => setActiveTab('documents')} className="text-xs">← Back to AI Verification</Button>
                         <Button onClick={() => setActiveTab('review')} className="text-xs gap-1.5">Continue to Shipment Profile →</Button>
                       </div>
                     </TabsContent>
+
 
                     {/* ─── Shipment Profile / Review Tab ─── */}
                     <TabsContent value="review" className="mt-4 space-y-4">
@@ -1116,6 +983,27 @@ function ShipmentIntakeInner() {
         onOpenChange={setShowPacketIntake}
         shipmentId={selectedShipmentId || form.shipment_id}
         onComplete={async (profileData: ShipmentProfileData, sid?: string) => {
+          // Build update payload from extracted profile data
+          const profileUpdate: Record<string, any> = {};
+          if (profileData.countryOfOrigin) profileUpdate.origin_country = profileData.countryOfOrigin;
+          if (profileData.portOfLoading) profileUpdate.origin_country = profileUpdate.origin_country || profileData.portOfLoading;
+          if (profileData.portOfDischarge) profileUpdate.destination_country = profileData.portOfDischarge;
+          if (profileData.exporterSeller) profileUpdate.shipper = profileData.exporterSeller;
+          if (profileData.importerOfRecord) profileUpdate.consignee = profileData.importerOfRecord;
+          if (profileData.htsCodes?.length) profileUpdate.hs_code = profileData.htsCodes[0];
+          if (profileData.declaredValue) profileUpdate.declared_value = parseFloat(profileData.declaredValue) || 0;
+          if (profileData.currency) profileUpdate.currency = profileData.currency;
+          if (profileData.incoterms) profileUpdate.incoterm = profileData.incoterms;
+          if (profileData.etd) profileUpdate.planned_departure = profileData.etd;
+          if (profileData.eta) profileUpdate.estimated_arrival = profileData.eta;
+
+          const targetId = sid || form.shipment_id;
+
+          // Persist extracted profile to shipments table
+          if (targetId && Object.keys(profileUpdate).length > 0) {
+            await supabase.from("shipments").update(profileUpdate as any).eq("shipment_id", targetId);
+          }
+
           if (sid && sid === selectedShipmentId) {
             // Existing shipment — docs were added, refresh data
             await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
@@ -1136,10 +1024,13 @@ function ShipmentIntakeInner() {
               consignee: profileData.importerOfRecord || prev.consignee,
               shipper: profileData.exporterSeller || prev.shipper,
               origin_country: profileData.countryOfOrigin || prev.origin_country,
+              destination_country: profileData.portOfDischarge || prev.destination_country,
               declared_value: profileData.declaredValue || prev.declared_value,
               currency: profileData.currency || prev.currency,
               hs_code: profileData.htsCodes[0] || prev.hs_code,
               incoterm: profileData.incoterms || prev.incoterm,
+              planned_departure: profileData.etd || prev.planned_departure,
+              estimated_arrival: profileData.eta || prev.estimated_arrival,
             }));
             if (profileData.shipmentMode === "ocean" || profileData.shipmentMode === "Ocean Import") handleModeChange("ocean_import");
             else if (profileData.shipmentMode === "air") handleModeChange("air_import");
