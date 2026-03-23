@@ -258,12 +258,9 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                     e.stopPropagation();
                                     setDeleteTarget(s);
                                   }}
-                                  className="shrink-0 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                                  style={{
-                                    opacity: hoveredId === s.shipment_id ? 1 : 0,
-                                    transition: "opacity 0.15s",
-                                  }}
-                                  title="Delete shipment"
+                                    className="shrink-0 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                                    style={{ opacity: 1 }}
+                                    title="Delete shipment"
                                 >
                                   <Trash2 size={12} />
                                 </button>
