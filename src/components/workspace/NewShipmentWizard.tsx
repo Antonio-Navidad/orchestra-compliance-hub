@@ -207,13 +207,15 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
   };
 
   const handleSubmit = () => {
+    const ref = shipmentReference.trim() || nextSequentialId;
     onComplete({
-      title, importerOfRecord, shipmentMode, commodityType, countryOfOrigin, portOfEntry,
+      title, shipmentReference: ref, importerOfRecord, shipmentMode, commodityType, countryOfOrigin, portOfEntry,
       einNumber, poaOnFile, poaFile, bondStatus, suretyCompany, bondNumber, achSetup,
     });
     // Reset state
     setStep(1);
-    setTitle(""); setImporterOfRecord(""); setImporterQuery(""); setCommodityType("");
+    setTitle(""); setShipmentReference(""); setReferenceError("");
+    setImporterOfRecord(""); setImporterQuery(""); setCommodityType("");
     setCountryOfOrigin(""); setPortOfEntry(""); setEinNumber(""); setPoaOnFile(false);
     setPoaFile(null); setBondStatus(""); setSuretyCompany(""); setBondNumber(""); setAchSetup(false);
   };
