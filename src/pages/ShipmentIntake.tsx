@@ -1116,6 +1116,27 @@ function ShipmentIntakeInner() {
         onOpenChange={setShowPacketIntake}
         shipmentId={selectedShipmentId || form.shipment_id}
         onComplete={async (profileData: ShipmentProfileData, sid?: string) => {
+          // Build update payload from extracted profile data
+          const profileUpdate: Record<string, any> = {};
+          if (profileData.countryOfOrigin) profileUpdate.origin_country = profileData.countryOfOrigin;
+          if (profileData.portOfLoading) profileUpdate.origin_country = profileUpdate.origin_country || profileData.portOfLoading;
+          if (profileData.portOfDischarge) profileUpdate.destination_country = profileData.portOfDischarge;
+          if (profileData.exporterSeller) profileUpdate.shipper = profileData.exporterSeller;
+          if (profileData.importerOfRecord) profileUpdate.consignee = profileData.importerOfRecord;
+          if (profileData.htsCodes?.length) profileUpdate.hs_code = profileData.htsCodes[0];
+          if (profileData.declaredValue) profileUpdate.declared_value = parseFloat(profileData.declaredValue) || 0;
+          if (profileData.currency) profileUpdate.currency = profileData.currency;
+          if (profileData.incoterms) profileUpdate.incoterm = profileData.incoterms;
+          if (profileData.etd) profileUpdate.planned_departure = profileData.etd;
+          if (profileData.eta) profileUpdate.estimated_arrival = profileData.eta;
+
+          const targetId = sid || form.shipment_id;
+
+          // Persist extracted profile to shipments table
+          if (targetId && Object.keys(profileUpdate).length > 0) {
+            await supabase.from("shipments").update(profileUpdate as any).eq("shipment_id", targetId);
+          }
+
           if (sid && sid === selectedShipmentId) {
             // Existing shipment — docs were added, refresh data
             await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
@@ -1136,10 +1157,13 @@ function ShipmentIntakeInner() {
               consignee: profileData.importerOfRecord || prev.consignee,
               shipper: profileData.exporterSeller || prev.shipper,
               origin_country: profileData.countryOfOrigin || prev.origin_country,
+              destination_country: profileData.portOfDischarge || prev.destination_country,
               declared_value: profileData.declaredValue || prev.declared_value,
               currency: profileData.currency || prev.currency,
               hs_code: profileData.htsCodes[0] || prev.hs_code,
               incoterm: profileData.incoterms || prev.incoterm,
+              planned_departure: profileData.etd || prev.planned_departure,
+              estimated_arrival: profileData.eta || prev.estimated_arrival,
             }));
             if (profileData.shipmentMode === "ocean" || profileData.shipmentMode === "Ocean Import") handleModeChange("ocean_import");
             else if (profileData.shipmentMode === "air") handleModeChange("air_import");
