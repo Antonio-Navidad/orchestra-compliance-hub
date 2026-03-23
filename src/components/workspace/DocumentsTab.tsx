@@ -257,7 +257,7 @@ export function DocumentsTab({
       state = enhancements.state;
       statusLine = enhancements.statusLine || 'Uploaded · AI verified';
       if (state === 'verified') verified++;
-      if (state === 'issue') issuesFlagged++;
+      if (state === 'issue' || state === 'critical') issuesFlagged++;
       totalRequired++;
     } else if (hasUpload) {
       state = 'verified';
