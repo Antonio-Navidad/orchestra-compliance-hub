@@ -32,7 +32,7 @@ import { HoldManagementPanel, HoldBanner } from "@/components/workspace/HoldMana
 import { useDocExtraction } from "@/hooks/useDocExtraction";
 import { useImporterMemory } from "@/hooks/useImporterMemory";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { WorkflowLogTab, type WorkflowShipment } from "@/components/workspace/WorkflowLogTab";
+
 import { calculateDeadlines, getDeadlinesWithin7Days } from "@/lib/deadlineEngine";
 import { getDeadlineDrawer, type AlertDrawerData } from "@/lib/alertDrawerContent";
 import { getHoldDrawer, type ShipmentHold } from "@/lib/holdTypes";
