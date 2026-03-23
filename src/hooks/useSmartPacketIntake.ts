@@ -71,6 +71,8 @@ export interface ShipmentProfileData {
   containerNumbers: string[];
   totalPackages: string;
   grossWeight: string;
+  etd: string;
+  eta: string;
   [key: string]: any;
 }
 
