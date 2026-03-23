@@ -418,10 +418,10 @@ function ShipmentIntakeInner() {
     inbond_te: 'in_bond',
   };
 
-  const handleWizardComplete = (result: WizardResult) => {
+  const handleWizardComplete = async (result: WizardResult) => {
     resetForm();
     setSelectedShipmentId(null);
-    setIsNewMode(true);
+    setIsNewMode(false);
     setShowWizard(false);
 
     const modeId = WIZARD_MODE_MAP[result.shipmentMode] || 'ocean_import';
@@ -430,15 +430,42 @@ function ShipmentIntakeInner() {
     // Auto-fill from importer memory if known
     const knownImporter = importerMemory.getImporter(result.importerOfRecord);
 
+    const shipRef = result.shipmentReference || generateShipmentId();
+    const config = SHIPMENT_MODES.find(m => m.id === modeId)!;
+
     setForm(prev => ({
       ...prev,
-      shipment_id: result.shipmentReference || generateShipmentId(),
+      shipment_id: shipRef,
       description: result.title,
       consignee: result.importerOfRecord,
       origin_country: result.countryOfOrigin,
       port_of_entry: result.portOfEntry,
+      mode: config.transportMode as TransportMode,
       destination_country: ['ocean_export', 'air_export', 'land_mexico_export', 'land_canada_export'].includes(result.shipmentMode) ? '' : 'United States',
     }));
+
+    // Create the shipment in the database immediately so it appears in the sidebar
+    try {
+      const dest = ['ocean_export', 'air_export', 'land_mexico_export', 'land_canada_export'].includes(result.shipmentMode) ? '' : 'United States';
+      await supabase.from("shipments").insert({
+        shipment_id: shipRef,
+        mode: config.transportMode,
+        description: result.title,
+        consignee: result.importerOfRecord || 'TBD',
+        hs_code: '',
+        declared_value: 0,
+        status: 'new' as any,
+        origin_country: result.countryOfOrigin || null,
+        destination_country: dest,
+        risk_score: 0,
+        risk_notes: null,
+      } as any);
+
+      setSelectedShipmentId(shipRef);
+      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+    } catch (err: any) {
+      console.error("[handleWizardComplete] Insert failed:", err);
+    }
 
     toast({
       title: "Shipment workspace ready",
