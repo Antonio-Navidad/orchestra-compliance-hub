@@ -129,7 +129,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   onComplete: (result: WizardResult) => void;
   existingImporters?: string[];
-  onOpenPacketIntake?: () => void;
+  onOpenPacketIntake?: (draft: PacketIntakeDraft) => void;
 }
 
 export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImporters = [], onOpenPacketIntake }: Props) {
