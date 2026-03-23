@@ -99,6 +99,7 @@ const DEFAULT_PROFILE: ShipmentProfileData = {
   incoterms: "", ftaDetected: "", relatedParty: false,
   portOfLoading: "", portOfDischarge: "", blNumber: "",
   vesselName: "", containerNumbers: [], totalPackages: "", grossWeight: "",
+  etd: "", eta: "",
 };
 
 export function useSmartPacketIntake(existingShipmentId?: string) {
