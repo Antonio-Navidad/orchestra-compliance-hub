@@ -491,7 +491,7 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
       });
 
       // Persist to document library immediately
-      const shipmentIdForSave = sid || draftShipmentId;
+      const shipmentIdForSave = sid || draftShipmentId || existingShipmentId;
       if (shipmentIdForSave) {
         const pf = files.find(f => f.id === fileId) || { id: fileId, file, savedToLibrary: false } as any;
         if (!pf.savedToLibrary) {
