@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import { cn } from "@/lib/utils";
 /* ── Types ── */
 export interface WizardResult {
   title: string;
+  shipmentReference: string;
   importerOfRecord: string;
   shipmentMode: ShipmentModeChoice;
   commodityType: string;
@@ -129,6 +131,9 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
   const [step, setStep] = useState(1);
   // Step 1
   const [title, setTitle] = useState("");
+  const [shipmentReference, setShipmentReference] = useState("");
+  const [referenceError, setReferenceError] = useState("");
+  const [nextSequentialId, setNextSequentialId] = useState("ORC-0001");
   const [importerOfRecord, setImporterOfRecord] = useState("");
   const [importerQuery, setImporterQuery] = useState("");
   const [showImporterSuggestions, setShowImporterSuggestions] = useState(false);
@@ -145,6 +150,45 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
   const [bondNumber, setBondNumber] = useState("");
   const [achSetup, setAchSetup] = useState(false);
 
+  // Generate sequential ID on mount / open
+  useEffect(() => {
+    if (!open) return;
+    const fetchNextId = async () => {
+      const { data } = await supabase
+        .from("shipments")
+        .select("shipment_id")
+        .like("shipment_id", "ORC-%")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      let maxNum = 0;
+      (data || []).forEach((s: any) => {
+        const match = s.shipment_id.match(/^ORC-(\d+)$/);
+        if (match) maxNum = Math.max(maxNum, parseInt(match[1], 10));
+      });
+      const nextId = `ORC-${String(maxNum + 1).padStart(4, "0")}`;
+      setNextSequentialId(nextId);
+      if (!shipmentReference) setShipmentReference(nextId);
+    };
+    fetchNextId();
+  }, [open]);
+
+  // Validate uniqueness when reference changes
+  useEffect(() => {
+    if (!shipmentReference.trim()) {
+      setReferenceError("");
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const { data } = await supabase
+        .from("shipments")
+        .select("shipment_id")
+        .eq("shipment_id", shipmentReference.trim())
+        .maybeSingle();
+      setReferenceError(data ? "This reference already exists. Please use a unique ID." : "");
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [shipmentReference]);
+
   const isNewImporter = importerOfRecord.length > 0 && !existingImporters.some(i => i.toLowerCase() === importerOfRecord.toLowerCase());
 
   const tags = useMemo(() => inferTags(shipmentMode, commodityType, countryOfOrigin), [shipmentMode, commodityType, countryOfOrigin]);
@@ -152,7 +196,7 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
 
   const filteredImporters = existingImporters.filter(i => i.toLowerCase().includes(importerQuery.toLowerCase()));
 
-  const canProceed = title.trim().length > 0 && importerOfRecord.trim().length > 0 && commodityType.length > 0;
+  const canProceed = title.trim().length > 0 && importerOfRecord.trim().length > 0 && commodityType.length > 0 && !referenceError;
 
   const handleNext = () => {
     if (isNewImporter) {
@@ -163,13 +207,15 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
   };
 
   const handleSubmit = () => {
+    const ref = shipmentReference.trim() || nextSequentialId;
     onComplete({
-      title, importerOfRecord, shipmentMode, commodityType, countryOfOrigin, portOfEntry,
+      title, shipmentReference: ref, importerOfRecord, shipmentMode, commodityType, countryOfOrigin, portOfEntry,
       einNumber, poaOnFile, poaFile, bondStatus, suretyCompany, bondNumber, achSetup,
     });
     // Reset state
     setStep(1);
-    setTitle(""); setImporterOfRecord(""); setImporterQuery(""); setCommodityType("");
+    setTitle(""); setShipmentReference(""); setReferenceError("");
+    setImporterOfRecord(""); setImporterQuery(""); setCommodityType("");
     setCountryOfOrigin(""); setPortOfEntry(""); setEinNumber(""); setPoaOnFile(false);
     setPoaFile(null); setBondStatus(""); setSuretyCompany(""); setBondNumber(""); setAchSetup(false);
   };
@@ -216,6 +262,26 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
                   placeholder='e.g. Auto Parts — Korea Q1 2026'
                   className="text-sm"
                 />
+              </div>
+
+              {/* 1b. Shipment Reference / ID */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Shipment Reference / ID</Label>
+                <Input
+                  value={shipmentReference}
+                  onChange={e => setShipmentReference(e.target.value)}
+                  placeholder={nextSequentialId}
+                  className={cn("text-sm font-mono", referenceError && "border-destructive")}
+                />
+                {referenceError ? (
+                  <p className="text-[10px] text-destructive flex items-center gap-1">
+                    <AlertTriangle size={10} /> {referenceError}
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground">
+                    Auto-generated as {nextSequentialId}. You can type any custom reference.
+                  </p>
+                )}
               </div>
 
               {/* 2. Smart Packet Intake — HERO drop zone */}
