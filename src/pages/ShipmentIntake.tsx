@@ -338,8 +338,12 @@ function ShipmentIntakeInner() {
     const modeId = WIZARD_MODE_MAP[result.shipmentMode] || 'ocean_import';
     handleModeChange(modeId);
 
-    // Use the user's custom reference — only fall back if truly empty
-    const shipRef = result.shipmentReference?.trim() || generateShipmentId();
+    // Always honor the user-entered shipment reference from the wizard
+    const shipRef = (result.shipmentReference || "").trim();
+    if (!shipRef) {
+      toast({ title: "Missing shipment reference", description: "Shipment Reference / ID is required", variant: "destructive" });
+      return;
+    }
     const config = SHIPMENT_MODES.find(m => m.id === modeId)!;
 
     // Auto-fill from importer memory if known
