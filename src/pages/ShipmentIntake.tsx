@@ -981,7 +981,18 @@ function ShipmentIntakeInner() {
         onOpenChange={setShowWizard}
         onComplete={handleWizardComplete}
         existingImporters={existingImporters}
-        onOpenPacketIntake={() => { setShowWizard(false); setShowPacketIntake(true); }}
+        onOpenPacketIntake={(draft: PacketIntakeDraft) => {
+          setShowWizard(false);
+          if (draft?.shipmentReference) {
+            setForm(prev => ({
+              ...prev,
+              shipment_id: draft.shipmentReference,
+              description: draft.title || prev.description,
+            }));
+          }
+          setSelectedShipmentId(null);
+          setShowPacketIntake(true);
+        }}
       />
       <SmartPacketIntake
         open={showPacketIntake}
