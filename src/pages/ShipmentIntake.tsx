@@ -991,52 +991,6 @@ function ShipmentIntakeInner() {
                       </div>
                     </TabsContent>
 
-                    {/* ─── Workflow Log Tab ─── */}
-                    <TabsContent value="compliance" className="mt-4 space-y-4">
-                      <WorkflowLogTab
-                        shipments={workflowShipments}
-                        docEvents={[]}
-                        aiRecs={docExtraction.crossRefResults.map(cr => ({
-                          shipment_id: form.shipment_id,
-                          severity: cr.severity,
-                          title: `${cr.document_a} ↔ ${cr.document_b}: ${cr.field_checked}`,
-                          finding: cr.finding,
-                          recommendation: cr.recommendation,
-                          financial_impact: cr.estimated_financial_impact_usd,
-                          resolved: false,
-                        }))}
-                        discrepancies={docExtraction.crossRefResults.map(cr => ({
-                          shipment_id: form.shipment_id,
-                          doc_a: cr.document_a,
-                          doc_b: cr.document_b,
-                          field: cr.field_checked,
-                          finding: cr.finding,
-                          severity: cr.severity,
-                          resolved: false,
-                          resolution_note: "",
-                        }))}
-                        currentShipmentId={form.shipment_id}
-                        onShipmentClick={(id) => {
-                          setSelectedShipmentId(id);
-                          setActiveTab('details');
-                        }}
-                        onNotesChange={(id, notes) => {
-                          console.log(`Notes for ${id}:`, notes);
-                        }}
-                      />
-
-                      <ComplianceCoach shipmentContext={{
-                        originCountry: form.origin_country, destinationCountry: form.destination_country,
-                        mode: form.mode, hsCode: form.hs_code, description: form.description,
-                        declaredValue: form.declared_value, currency: form.currency,
-                        incoterm: form.incoterm, cooStatus: form.coo_status,
-                      }} />
-
-                      <div className="flex justify-between">
-                        <Button variant="outline" onClick={() => setActiveTab('documents')} className="text-xs">← Back to AI Verification</Button>
-                        <Button onClick={() => setActiveTab('review')} className="text-xs gap-1.5">Continue to Shipment Profile →</Button>
-                      </div>
-                    </TabsContent>
 
                     {/* ─── Shipment Profile / Review Tab ─── */}
                     <TabsContent value="review" className="mt-4 space-y-4">
