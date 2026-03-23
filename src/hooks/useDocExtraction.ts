@@ -386,9 +386,13 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       }
     }
 
-    // Build structured discrepancy items instead of raw strings
+    // Build structured discrepancy items, filtering out passing checks
     const allRelevantResults = crossRefResults
-      .filter(cr => (cr.document_a === docId || cr.document_b === docId) && (cr.severity === "critical" || cr.severity === "high"));
+      .filter(cr => (cr.document_a === docId || cr.document_b === docId) && (cr.severity === "critical" || cr.severity === "high"))
+      .filter(cr => {
+        const text = (cr.finding + ' ' + cr.recommendation).toLowerCase();
+        return !text.includes('no action needed') && !text.includes('match') && !text.includes('no discrepancy');
+      });
 
     const discrepancies = allRelevantResults.map(cr => {
       const rawLabel = cr.field_checked.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
