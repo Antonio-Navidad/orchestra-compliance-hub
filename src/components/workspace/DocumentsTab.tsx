@@ -360,7 +360,7 @@ export function DocumentsTab({
     if (cr.resolved) return false;
     if (cr.severity !== 'critical' && cr.severity !== 'high') return false;
     const text = (cr.finding + ' ' + (cr.recommendation || '')).toLowerCase();
-    if (text.includes('no action needed') || text.includes('no discrepancy')) return false;
+    if (text.includes('no action needed') || text.includes('no discrepancy found') || text.includes('matches — no action')) return false;
     return true;
   }).length;
   const flaggedCount = crossRefFlaggedCount;
