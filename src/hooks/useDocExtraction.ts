@@ -414,11 +414,12 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
     const isClean = !hasCritical && !hasHigh && !hasInternalErrors && discrepancies.length === 0 && ext.warnings.length === 0;
 
     return {
-      state: (hasCritical || hasHigh || hasInternalErrors || hasIssues) ? "issue" : "verified",
-      statusLine: hasCritical ? "AI verified — critical discrepancies found" :
-                  hasHigh ? `AI verified — ${discrepancies.length} high-severity issue(s)` :
-                  hasInternalErrors ? `AI verified — ${selfChecks.length} internal error(s) detected` :
-                  hasIssues ? `AI verified — ${discrepancies.length} issue(s) flagged` :
+      state: hasCritical ? "critical" as const :
+             (hasHigh || hasInternalErrors || hasIssues) ? "issue" as const : "verified" as const,
+      statusLine: hasCritical ? "AI extracted — critical issues" :
+                  hasHigh ? `AI extracted — ${discrepancies.length} high-severity issue(s)` :
+                  hasInternalErrors ? `AI extracted — ${selfChecks.length} internal error(s) detected` :
+                  hasIssues ? `AI extracted — issues found` :
                   "Uploaded · AI verified clean",
       extractedFields: fields,
       crossRefChecks: allChecks.length > 0 ? allChecks : undefined,

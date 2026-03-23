@@ -117,9 +117,14 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
         )
         .order("created_at", { ascending: false })
         .limit(200);
-      if (error) throw error;
+      if (error) {
+        console.error("[ShipmentsSidebar] Query error:", error);
+        throw error;
+      }
+      console.log("[ShipmentsSidebar] Fetched shipments:", data?.length ?? 0);
       return (data || []) as ShipmentListItem[];
     },
+    refetchInterval: 5000,
   });
 
   const toggle = (section: Section) => {
