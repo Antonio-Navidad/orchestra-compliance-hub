@@ -383,7 +383,7 @@ function ShipmentIntakeInner() {
       } as any);
 
       setSelectedShipmentId(shipRef);
-      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+      await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
     } catch (err: any) {
       console.error("[handleWizardComplete] Insert failed:", err);
     }
