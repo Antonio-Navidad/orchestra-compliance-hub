@@ -355,10 +355,14 @@ export function DocumentsTab({
     return filteredCards;
   }, [filteredCards, sortBy]);
 
-  // Count flagged = unresolved critical/high crossref findings (single source of truth)
-  const crossRefFlaggedCount = crossRefResults.filter(cr =>
-    (cr.severity === 'critical' || cr.severity === 'high') && !cr.resolved
-  ).length;
+  // Count flagged = unresolved critical/high crossref findings (single source of truth), excluding passing checks
+  const crossRefFlaggedCount = crossRefResults.filter(cr => {
+    if (cr.resolved) return false;
+    if (cr.severity !== 'critical' && cr.severity !== 'high') return false;
+    const text = (cr.finding + ' ' + (cr.recommendation || '')).toLowerCase();
+    if (text.includes('no action needed') || text.includes('no discrepancy')) return false;
+    return true;
+  }).length;
   const flaggedCount = crossRefFlaggedCount;
 
   // Build status pills
