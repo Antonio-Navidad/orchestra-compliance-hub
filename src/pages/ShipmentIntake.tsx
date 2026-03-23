@@ -368,7 +368,7 @@ function ShipmentIntakeInner() {
     // Create the shipment in the database immediately so it appears in the sidebar
     try {
       const dest = ['ocean_export', 'air_export', 'land_mexico_export', 'land_canada_export'].includes(result.shipmentMode) ? '' : 'United States';
-      await supabase.from("shipments").insert({
+      const { error: insertErr } = await supabase.from("shipments").insert({
         shipment_id: shipRef,
         mode: config.transportMode,
         description: result.title,
@@ -381,6 +381,13 @@ function ShipmentIntakeInner() {
         risk_score: 0,
         risk_notes: null,
       } as any);
+
+      if (insertErr) {
+        console.error("[handleWizardComplete] DB insert error:", insertErr);
+        toast({ title: "Failed to create shipment", description: insertErr.message, variant: "destructive" });
+      } else {
+        console.log("[handleWizardComplete] Shipment inserted:", shipRef);
+      }
 
       setSelectedShipmentId(shipRef);
       await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });

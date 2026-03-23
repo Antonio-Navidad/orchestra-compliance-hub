@@ -102,7 +102,7 @@ const COMPLETED_STATUSES = ["cleared", "delivered", "closed", "archived"];
 const PAUSED_STATUSES = ["paused", "waiting_docs", "draft"];
 
 export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadlines = [], onClickDeadline }: Props) {
-  const [expanded, setExpanded] = useState<Set<Section>>(new Set(["active"]));
+  const [expanded, setExpanded] = useState<Set<Section>>(new Set(["active", "incomplete"]));
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ShipmentListItem | null>(null);
   const queryClient = useQueryClient();
@@ -117,9 +117,14 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
         )
         .order("created_at", { ascending: false })
         .limit(200);
-      if (error) throw error;
+      if (error) {
+        console.error("[ShipmentsSidebar] Query error:", error);
+        throw error;
+      }
+      console.log("[ShipmentsSidebar] Fetched shipments:", data?.length ?? 0);
       return (data || []) as ShipmentListItem[];
     },
+    refetchInterval: 5000,
   });
 
   const toggle = (section: Section) => {

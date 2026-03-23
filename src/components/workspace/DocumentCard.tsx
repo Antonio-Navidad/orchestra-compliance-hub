@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-export type DocCardState = 'verified' | 'issue' | 'missing' | 'not_applicable' | 'processing';
+export type DocCardState = 'verified' | 'issue' | 'critical' | 'missing' | 'not_applicable' | 'processing';
 
 export interface ExtractedField {
   label: string;
@@ -64,6 +64,7 @@ interface Props {
 const STATE_CONFIG: Record<DocCardState, { border: string; dot: typeof CheckCircle2; dotClass: string; bg: string }> = {
   verified: { border: 'border-l-green-500', dot: CheckCircle2, dotClass: 'text-green-500', bg: '' },
   issue: { border: 'border-l-amber-500', dot: AlertTriangle, dotClass: 'text-amber-500', bg: 'bg-amber-500/3' },
+  critical: { border: 'border-l-red-500', dot: XCircle, dotClass: 'text-red-500', bg: 'bg-red-500/3' },
   missing: { border: 'border-l-red-500', dot: XCircle, dotClass: 'text-red-500', bg: 'bg-red-500/3' },
   processing: { border: 'border-l-blue-500', dot: Loader2, dotClass: 'text-blue-500 animate-spin', bg: 'bg-blue-500/3' },
   not_applicable: { border: 'border-l-muted', dot: MinusCircle, dotClass: 'text-muted-foreground/50', bg: 'opacity-50' },
