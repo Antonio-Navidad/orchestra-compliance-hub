@@ -149,7 +149,7 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
     e.target.value = '';
   }, [doc.id, onReplace]);
 
-  const isUploaded = doc.state === 'verified' || doc.state === 'issue' || doc.state === 'processing';
+  const isUploaded = doc.state === 'verified' || doc.state === 'issue' || doc.state === 'critical' || doc.state === 'processing';
 
   if (doc.state === 'not_applicable' && !expanded) {
     return (
