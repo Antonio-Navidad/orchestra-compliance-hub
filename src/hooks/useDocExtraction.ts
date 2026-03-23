@@ -334,7 +334,7 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
     statusLine?: string;
     extractedFields?: ExtractedField[];
     crossRefChecks?: CrossRefCheck[];
-    discrepancies?: string[];
+    discrepancies?: Array<{ severity: "critical" | "high" | "medium" | "low"; label: string; detail: string; impact?: string }>;
     notes?: string[];
   } => {
     if (processingDocs.has(docId)) {
@@ -386,12 +386,21 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       }
     }
 
-    // Include both cross-ref and internal error discrepancies
+    // Build structured discrepancy items instead of raw strings
     const allRelevantResults = crossRefResults
       .filter(cr => (cr.document_a === docId || cr.document_b === docId) && (cr.severity === "critical" || cr.severity === "high"));
 
-    const discrepancies = allRelevantResults
-      .map(cr => `${cr.finding} — ${cr.recommendation}${cr.estimated_financial_impact_usd > 0 ? ` (est. $${cr.estimated_financial_impact_usd.toLocaleString()} impact)` : ""}`);
+    const discrepancies = allRelevantResults.map(cr => {
+      const rawLabel = cr.field_checked.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+      const isInternal = cr.document_a === cr.document_b;
+      const label = isInternal ? `Internal: ${rawLabel}` : `${rawLabel} Mismatch`;
+      return {
+        severity: cr.severity as "critical" | "high" | "medium" | "low",
+        label,
+        detail: cr.recommendation || cr.finding,
+        impact: cr.estimated_financial_impact_usd > 0 ? `$${cr.estimated_financial_impact_usd.toLocaleString()}` : undefined,
+      };
+    });
 
     const hasIssues = discrepancies.length > 0 || ext.warnings.length > 0;
     const hasCritical = crossRefResults.some(cr =>
