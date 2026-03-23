@@ -219,16 +219,6 @@ function ShipmentIntakeInner() {
 
   const urgentDeadlines = useMemo(() => getDeadlinesWithin7Days(shipmentDeadlines), [shipmentDeadlines]);
 
-  // Fetch ALL shipments from database for Workflow Log
-  const { data: allDbShipments = [] } = useQuery({
-    queryKey: ["all-shipments-workflow"],
-    queryFn: async () => {
-      const { data } = await supabase.from("shipments").select("*").order("created_at", { ascending: false });
-      return (data || []) as any[];
-    },
-  });
-
-
   const handleDeadlineClick = useCallback((deadline: any) => {
     const drawerData = getDeadlineDrawer(deadline);
     setDeadlineDrawerData(drawerData);
