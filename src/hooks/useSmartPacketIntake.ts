@@ -354,6 +354,8 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
         if (data.container_numbers) next.containerNumbers = data.container_numbers;
         if (data.total_packages) next.totalPackages = String(data.total_packages);
         if (data.gross_weight_kg) next.grossWeight = `${data.gross_weight_kg} kg`;
+        if (data.etd || data.date_of_shipment) next.etd = data.etd || data.date_of_shipment;
+        if (data.eta || data.estimated_arrival) next.eta = data.eta || data.estimated_arrival;
       }
       if (docType === "air_waybill") next.shipmentMode = "air";
       if (docType === "paps_document" || docType === "truck_bol_carrier_manifest") next.shipmentMode = "land";
