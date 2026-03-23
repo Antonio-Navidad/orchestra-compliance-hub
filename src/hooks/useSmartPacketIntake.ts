@@ -140,12 +140,6 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
       return sid;
     }
 
-    // NEVER create a new shipment if we're working with an existing one
-    if (existingShipmentId) {
-      console.error("[ensureDraftShipment] Existing shipment not found in DB:", sid);
-      return sid; // Return anyway — it should exist, RLS may be filtering
-    }
-
     const { error: insertError } = await supabase.from("shipments").insert({
       shipment_id: sid,
       description: "Draft — Smart Packet Intake",
@@ -165,15 +159,21 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
 
     console.log("[ensureDraftShipment] Inserted missing draft shipment:", sid);
     return sid;
-  }, [existingShipmentId]);
+  }, []);
 
   // Create draft shipment on mount (if no existing shipment)
   const createDraft = useCallback(async () => {
-    // For existing shipments, NEVER create a new one — just return the existing ID
+    // For existing shipment IDs, ensure the record exists and reuse it
     if (existingShipmentId) {
-      setDraftShipmentId(existingShipmentId);
+      const ensuredExisting = await ensureDraftShipment(existingShipmentId);
+      if (!ensuredExisting) {
+        console.error("[createDraft] Failed to ensure existing shipment:", existingShipmentId);
+        return null;
+      }
+      setDraftShipmentId(ensuredExisting);
       setDraftReady(true);
-      return existingShipmentId;
+      await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
+      return ensuredExisting;
     }
 
     const id = draftShipmentId || `ORC-${String(Math.floor(Math.random() * 9000) + 1000)}`;
@@ -193,7 +193,7 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
     console.log("[createDraft] Draft shipment ready:", ensuredId);
     setDraftShipmentId(ensuredId);
     setDraftReady(true);
-    queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+    await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
     return ensuredId;
   }, [draftShipmentId, existingShipmentId, user, queryClient, ensureDraftShipment]);
 
