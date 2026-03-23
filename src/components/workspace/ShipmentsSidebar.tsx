@@ -266,17 +266,6 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                 </button>
                               </div>
 
-                                <p
-                                  style={{
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                    fontSize: "11px",
-                                  }}
-                                  className="text-muted-foreground mt-0.5 leading-snug"
-                                >
-                                  {formatRoute(s)}
-                                </p>
 
                                 <Badge
                                   variant="outline"
