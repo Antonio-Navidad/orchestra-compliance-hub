@@ -30,13 +30,21 @@ interface DocumentsTabProps {
   onOpenPacketIntake?: () => void;
 }
 
-function calcFees(declaredValue: string, mode: ShipmentModeId): Record<string, string> {
+function calcFees(declaredValue: string, mode: ShipmentModeId, extractedDocs?: Record<string, any>): Record<string, string> {
   const isExport = ['ocean_export', 'air_export', 'land_export_mexico', 'land_export_canada', 'us_export'].includes(mode);
   if (isExport) {
     return { no_export_fees: 'No MPF or HMF applies to U.S. exports' };
   }
 
-  const val = parseFloat(declaredValue) || 0;
+  // Use declared value from extracted invoice if available and form value is 0
+  let val = parseFloat(declaredValue) || 0;
+  if (val === 0 && extractedDocs) {
+    const invoiceData = extractedDocs['commercial_invoice']?.extractedData;
+    if (invoiceData?.total_value) {
+      val = parseFloat(String(invoiceData.total_value)) || 0;
+    }
+  }
+
   const isOcean = mode === 'ocean_import';
   const isCanada = mode === 'land_import_canada';
   const mpf = Math.min(Math.max(val * 0.003464, 31.67), 614.35);
@@ -147,7 +155,7 @@ export function DocumentsTab({
     [shipmentMode, originCountry],
   );
 
-  const fees = calcFees(declaredValue, shipmentMode);
+  const fees = calcFees(declaredValue, shipmentMode, extractedDocs);
 
   const openAlert = useCallback((alertId: string, context?: { docName?: string; severity?: string; message?: string }) => {
     const drawerData = getDrawerContent(alertId, {

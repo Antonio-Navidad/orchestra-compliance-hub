@@ -418,10 +418,10 @@ function ShipmentIntakeInner() {
     inbond_te: 'in_bond',
   };
 
-  const handleWizardComplete = (result: WizardResult) => {
+  const handleWizardComplete = async (result: WizardResult) => {
     resetForm();
     setSelectedShipmentId(null);
-    setIsNewMode(true);
+    setIsNewMode(false);
     setShowWizard(false);
 
     const modeId = WIZARD_MODE_MAP[result.shipmentMode] || 'ocean_import';
@@ -430,15 +430,42 @@ function ShipmentIntakeInner() {
     // Auto-fill from importer memory if known
     const knownImporter = importerMemory.getImporter(result.importerOfRecord);
 
+    const shipRef = result.shipmentReference || generateShipmentId();
+    const config = SHIPMENT_MODES.find(m => m.id === modeId)!;
+
     setForm(prev => ({
       ...prev,
-      shipment_id: result.shipmentReference || generateShipmentId(),
+      shipment_id: shipRef,
       description: result.title,
       consignee: result.importerOfRecord,
       origin_country: result.countryOfOrigin,
       port_of_entry: result.portOfEntry,
+      mode: config.transportMode as TransportMode,
       destination_country: ['ocean_export', 'air_export', 'land_mexico_export', 'land_canada_export'].includes(result.shipmentMode) ? '' : 'United States',
     }));
+
+    // Create the shipment in the database immediately so it appears in the sidebar
+    try {
+      const dest = ['ocean_export', 'air_export', 'land_mexico_export', 'land_canada_export'].includes(result.shipmentMode) ? '' : 'United States';
+      await supabase.from("shipments").insert({
+        shipment_id: shipRef,
+        mode: config.transportMode,
+        description: result.title,
+        consignee: result.importerOfRecord || 'TBD',
+        hs_code: '',
+        declared_value: 0,
+        status: 'new' as any,
+        origin_country: result.countryOfOrigin || null,
+        destination_country: dest,
+        risk_score: 0,
+        risk_notes: null,
+      } as any);
+
+      setSelectedShipmentId(shipRef);
+      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+    } catch (err: any) {
+      console.error("[handleWizardComplete] Insert failed:", err);
+    }
 
     toast({
       title: "Shipment workspace ready",
@@ -585,22 +612,37 @@ function ShipmentIntakeInner() {
       return;
     }
     try {
-      const { error: shipErr } = await supabase.from("shipments").insert({
-        shipment_id: form.shipment_id, mode: form.mode, description: form.description,
-        consignee: form.consignee || 'TBD', hs_code: form.hs_code || '0000.00',
-        declared_value: form.declared_value ? parseFloat(form.declared_value) : 0,
-        status: 'new' as any, direction: form.direction as any,
-        origin_country: form.origin_country || null, destination_country: form.destination_country,
-        jurisdiction_code: form.jurisdiction_code, assigned_broker: form.assigned_broker || null,
-        broker_id: form.broker_id || null, import_country: form.import_country || null,
-        export_country: form.export_country || null, port_of_entry: form.port_of_entry || null,
-        incoterm: form.incoterm || null, shipper: form.shipper || null, forwarder: form.forwarder || null,
-        coo_status: form.coo_status, filing_status: form.filing_status, priority: form.priority,
-        planned_departure: form.planned_departure || null, estimated_arrival: form.estimated_arrival || null,
-        currency: form.currency, quantity: form.quantity ? parseInt(form.quantity) : null,
-        packet_score: packetScore.overallScore, filing_readiness: packetScore.filingReadiness,
-      } as any);
-      if (shipErr) throw shipErr;
+      // Check if already exists (may have been created by wizard)
+      const { data: existing } = await supabase.from("shipments").select("shipment_id").eq("shipment_id", form.shipment_id).maybeSingle();
+
+      if (existing) {
+        // Update instead of insert
+        await supabase.from("shipments").update({
+          mode: form.mode, description: form.description,
+          consignee: form.consignee || 'TBD', hs_code: form.hs_code || '0000.00',
+          declared_value: form.declared_value ? parseFloat(form.declared_value) : 0,
+          status: 'new' as any,
+          origin_country: form.origin_country || null, destination_country: form.destination_country,
+          packet_score: packetScore.overallScore, filing_readiness: packetScore.filingReadiness,
+        } as any).eq("shipment_id", form.shipment_id);
+      } else {
+        const { error: shipErr } = await supabase.from("shipments").insert({
+          shipment_id: form.shipment_id, mode: form.mode, description: form.description,
+          consignee: form.consignee || 'TBD', hs_code: form.hs_code || '0000.00',
+          declared_value: form.declared_value ? parseFloat(form.declared_value) : 0,
+          status: 'new' as any, direction: form.direction as any,
+          origin_country: form.origin_country || null, destination_country: form.destination_country,
+          jurisdiction_code: form.jurisdiction_code, assigned_broker: form.assigned_broker || null,
+          broker_id: form.broker_id || null, import_country: form.import_country || null,
+          export_country: form.export_country || null, port_of_entry: form.port_of_entry || null,
+          incoterm: form.incoterm || null, shipper: form.shipper || null, forwarder: form.forwarder || null,
+          coo_status: form.coo_status, filing_status: form.filing_status, priority: form.priority,
+          planned_departure: form.planned_departure || null, estimated_arrival: form.estimated_arrival || null,
+          currency: form.currency, quantity: form.quantity ? parseInt(form.quantity) : null,
+          packet_score: packetScore.overallScore, filing_readiness: packetScore.filingReadiness,
+        } as any);
+        if (shipErr) throw shipErr;
+      }
 
       for (const doc of docs) {
         const filePath = `${form.shipment_id}/${doc.docType}/${doc.file.name}`;
@@ -632,6 +674,7 @@ function ShipmentIntakeInner() {
       setLastSaved(new Date());
       setIsNewMode(false);
       setSelectedShipmentId(form.shipment_id);
+      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
