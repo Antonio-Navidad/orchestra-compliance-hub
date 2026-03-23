@@ -595,7 +595,7 @@ function ShipmentIntakeInner() {
       setLastSaved(new Date());
       setIsNewMode(false);
       setSelectedShipmentId(form.shipment_id);
-      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+      await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
