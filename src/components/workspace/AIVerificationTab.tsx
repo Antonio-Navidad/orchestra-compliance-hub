@@ -143,12 +143,14 @@ export function AIVerificationTab({ extractedDocs, crossRefResults, onOpenDrawer
     return rows;
   }, [docIds, crossRefResults]);
 
-  // Sort recommendations by severity, filtering out passing checks
+  // Sort recommendations by severity, filtering out only explicit passing checks
   const sortedRecommendations = useMemo(() => {
     return [...crossRefResults]
       .filter(r => {
-        const lower = (r.finding + ' ' + r.recommendation).toLowerCase();
-        return !lower.includes('no action needed') && !lower.includes('match') && !lower.includes('no discrepancy');
+        if (r.resolved) return false;
+        const lower = (r.finding + ' ' + (r.recommendation || '')).toLowerCase();
+        // Only filter out explicit "no action needed" / "no discrepancy found" passes
+        return !lower.includes('no action needed') && !lower.includes('no discrepancy found');
       })
       .sort(
         (a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9)
