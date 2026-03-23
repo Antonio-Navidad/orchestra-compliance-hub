@@ -98,11 +98,16 @@ export function AIVerificationTab({ extractedDocs, crossRefResults, onOpenDrawer
     return rows;
   }, [docIds, crossRefResults]);
 
-  // Sort recommendations by severity
+  // Sort recommendations by severity, filtering out passing checks
   const sortedRecommendations = useMemo(() => {
-    return [...crossRefResults].sort(
-      (a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9)
-    );
+    return [...crossRefResults]
+      .filter(r => {
+        const lower = (r.finding + ' ' + r.recommendation).toLowerCase();
+        return !lower.includes('no action needed') && !lower.includes('match') && !lower.includes('no discrepancy');
+      })
+      .sort(
+        (a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9)
+      );
   }, [crossRefResults]);
 
   const handleResolve = (idx: number) => {

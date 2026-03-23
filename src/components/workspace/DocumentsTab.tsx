@@ -257,7 +257,7 @@ export function DocumentsTab({
       state = enhancements.state;
       statusLine = enhancements.statusLine || 'Uploaded · AI verified';
       if (state === 'verified') verified++;
-      if (state === 'issue') issuesFlagged++;
+      if (state === 'issue' || state === 'critical') issuesFlagged++;
       totalRequired++;
     } else if (hasUpload) {
       state = 'verified';
@@ -304,6 +304,14 @@ export function DocumentsTab({
   const aiScore = getScore(totalRequired, Object.keys(uploadedFiles));
   const score = aiScore > 0 ? aiScore : (totalRequired > 0 ? Math.round((verified / totalRequired) * 100) : 0);
 
+  // Persist score to shipments table so sidebar shows same value
+  // Using a ref to avoid adding useEffect import (already using useRef)
+  const prevScoreRef = useRef(0);
+  if (shipmentId && shipmentId !== 'draft' && score > 0 && score !== prevScoreRef.current) {
+    prevScoreRef.current = score;
+    supabase.from("shipments").update({ packet_score: score }).eq("shipment_id", shipmentId).then(() => {});
+  }
+
   // Filter toggle handler
   const toggleFilter = useCallback((filter: string) => {
     setActiveFilters(prev => {
@@ -347,11 +355,15 @@ export function DocumentsTab({
     return filteredCards;
   }, [filteredCards, sortBy]);
 
-  // Count flagged = cards with issue state + unresolved critical/high crossref findings not already counted
-  const crossRefFlaggedCount = crossRefResults.filter(cr =>
-    (cr.severity === 'critical' || cr.severity === 'high') && !cr.resolved
-  ).length;
-  const flaggedCount = Math.max(allCards.filter(c => c.state === 'issue').length, crossRefFlaggedCount);
+  // Count flagged = unresolved critical/high crossref findings (single source of truth), excluding passing checks
+  const crossRefFlaggedCount = crossRefResults.filter(cr => {
+    if (cr.resolved) return false;
+    if (cr.severity !== 'critical' && cr.severity !== 'high') return false;
+    const text = (cr.finding + ' ' + (cr.recommendation || '')).toLowerCase();
+    if (text.includes('no action needed') || text.includes('no discrepancy')) return false;
+    return true;
+  }).length;
+  const flaggedCount = crossRefFlaggedCount;
 
   // Build status pills
   const statusPills: Array<{ label: string; type: 'green' | 'amber' | 'red'; onClick?: () => void }> = [];
