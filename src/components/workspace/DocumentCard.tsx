@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 
-export type DocCardState = 'verified' | 'issue' | 'missing' | 'not_applicable' | 'processing';
+export type DocCardState = 'verified' | 'issue' | 'critical' | 'missing' | 'not_applicable' | 'processing';
 
 export interface ExtractedField {
   label: string;
