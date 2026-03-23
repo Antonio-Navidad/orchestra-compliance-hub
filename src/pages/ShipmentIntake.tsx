@@ -786,9 +786,6 @@ function ShipmentIntakeInner() {
                       <TabsTrigger value="review" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                         <FileCheck size={12} /> Shipment Profile
                       </TabsTrigger>
-                      <TabsTrigger value="review" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                        <FileCheck size={12} /> Shipment Profile
-                      </TabsTrigger>
                     </TabsList>
 
                     {/* ─── Documents Tab (Phased Document Checklist) ─── */}
