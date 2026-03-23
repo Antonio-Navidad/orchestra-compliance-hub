@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 /* ── Types ── */
 export interface WizardResult {
   title: string;
+  shipmentReference: string;
   importerOfRecord: string;
   shipmentMode: ShipmentModeChoice;
   commodityType: string;
