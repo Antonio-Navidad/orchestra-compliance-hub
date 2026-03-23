@@ -25,42 +25,49 @@ function base64ToBytes(base64: string): Uint8Array {
   return bytes;
 }
 
-/** Call Anthropic Claude API */
-async function callClaude(
+/** Call Lovable AI Gateway (OpenAI-compatible) */
+async function callAI(
   apiKey: string,
   system: string,
-  userContent: string | Array<{ type: string; [k: string]: any }>,
+  userContent: string | any[],
   tools?: any[],
   toolChoice?: any,
 ): Promise<any> {
   const messages: any[] = [
-    { role: "user", content: userContent },
+    { role: "system", content: system },
   ];
 
+  // Handle multimodal content (for PDF/image extraction)
+  if (Array.isArray(userContent)) {
+    messages.push({ role: "user", content: userContent });
+  } else {
+    messages.push({ role: "user", content: userContent });
+  }
+
   const body: any = {
-    model: "claude-sonnet-4-6-20250514",
-    max_tokens: 8192,
-    system,
+    model: "google/gemini-2.5-flash",
+    temperature: 0,
     messages,
   };
 
   if (tools && tools.length > 0) {
-    // Convert OpenAI-style tool definitions to Anthropic format
     body.tools = tools.map((t: any) => ({
-      name: t.function.name,
-      description: t.function.description,
-      input_schema: t.function.parameters,
+      type: "function",
+      function: {
+        name: t.function.name,
+        description: t.function.description,
+        parameters: t.function.parameters,
+      },
     }));
     if (toolChoice) {
-      body.tool_choice = { type: "tool", name: toolChoice.function.name };
+      body.tool_choice = { type: "function", function: { name: toolChoice.function.name } };
     }
   }
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
@@ -70,35 +77,36 @@ async function callClaude(
     if (response.status === 429) {
       throw { status: 429, message: "Rate limit exceeded. Please try again shortly." };
     }
-    if (response.status === 402 || response.status === 400) {
-      const t = await response.text();
-      console.error("Anthropic API error:", response.status, t);
-      throw { status: response.status, message: `Claude API error: ${response.status}` };
+    if (response.status === 402) {
+      throw { status: 402, message: "AI usage credits exhausted. Please add funds." };
     }
     const t = await response.text();
-    console.error("Anthropic API error:", response.status, t);
-    throw { status: 500, message: `Claude API error: ${response.status}` };
+    console.error("AI gateway error:", response.status, t);
+    throw { status: 500, message: `AI gateway error: ${response.status}` };
   }
 
   return await response.json();
 }
 
-/** Extract tool result from Anthropic response */
+/** Extract tool result from OpenAI-compatible response */
 function extractToolResult(response: any): any {
-  const toolBlock = response.content?.find((b: any) => b.type === "tool_use");
-  if (toolBlock) return toolBlock.input;
-  // Fallback to text content
-  const textBlock = response.content?.find((b: any) => b.type === "text");
-  return textBlock?.text || null;
+  const toolCall = response.choices?.[0]?.message?.tool_calls?.[0];
+  if (toolCall) {
+    try {
+      return JSON.parse(toolCall.function.arguments);
+    } catch {
+      return toolCall.function.arguments;
+    }
+  }
+  return null;
 }
 
-/** Extract text content from Anthropic response */
+/** Extract text content from OpenAI-compatible response */
 function extractTextResult(response: any): string {
-  const textBlock = response.content?.find((b: any) => b.type === "text");
-  return textBlock?.text || "";
+  return response.choices?.[0]?.message?.content || "";
 }
 
-/** Use Claude vision to extract raw text from a PDF */
+/** Use AI vision to extract raw text from a PDF */
 async function extractRawTextFromPdf(
   apiKey: string,
   fileBytes: Uint8Array,
@@ -107,13 +115,15 @@ async function extractRawTextFromPdf(
   const pdfBase64 = bytesToBase64(fileBytes);
   const mediaType = mimeType === "application/pdf" ? "application/pdf" : mimeType;
 
-  const response = await callClaude(
+  const response = await callAI(
     apiKey,
     "You extract raw text from trade documents. Return only text that appears in the document. Preserve labels, line breaks, and key table values.",
     [
       {
-        type: "document",
-        source: { type: "base64", media_type: mediaType, data: pdfBase64 },
+        type: "image_url",
+        image_url: {
+          url: `data:${mediaType};base64,${pdfBase64}`,
+        },
       },
       {
         type: "text",
@@ -131,6 +141,7 @@ async function extractRawTextFromPdf(
               rawText: { type: "string" },
             },
             required: ["rawText"],
+            additionalProperties: false,
           },
         },
       },
@@ -148,8 +159,8 @@ serve(async (req) => {
 
   try {
     const { action, ...params } = await req.json();
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     let systemPrompt = "";
     let userPrompt = "";
@@ -181,6 +192,7 @@ Currency: ${params.currency || "USD"}`;
               tradeAgreementNote: { type: "string", description: "Note about applicable trade agreements that could reduce duty" },
             },
             required: ["officialDescription", "matches", "confidence", "warning", "estimatedDutyRate"],
+            additionalProperties: false,
           },
         },
       }];
@@ -207,6 +219,7 @@ Destination Country: ${params.destinationCountry || "US"}`;
               examinationRiskIncrease: { type: "string", description: "Estimated customs examination risk increase %" },
             },
             required: ["quality", "score", "issues", "suggestions", "compliantExample"],
+            additionalProperties: false,
           },
         },
       }];
@@ -264,7 +277,7 @@ User Question: ${params.question}`;
       // Extract text from binary
       if (!documentText && fileBytes) {
         if (isPdf) {
-          documentText = await extractRawTextFromPdf(ANTHROPIC_API_KEY, fileBytes, mimeType);
+          documentText = await extractRawTextFromPdf(LOVABLE_API_KEY, fileBytes, mimeType);
         } else {
           documentText = new TextDecoder().decode(fileBytes);
         }
@@ -348,6 +361,7 @@ Return all extracted fields with confidence and sourceText. Extract ALL quantity
               },
             },
             required: ["fields"],
+            additionalProperties: false,
           },
         },
       }];
@@ -406,6 +420,7 @@ Return all extracted fields with confidence and sourceText. Extract ALL quantity
               },
             },
             required: ["overallReadiness", "clearanceRate", "blockers", "warnings", "readyItems"],
+            additionalProperties: false,
           },
         },
       }];
@@ -416,9 +431,9 @@ Return all extracted fields with confidence and sourceText. Extract ALL quantity
       });
     }
 
-    // Call Claude
-    const claudeResponse = await callClaude(
-      ANTHROPIC_API_KEY,
+    // Call Lovable AI Gateway
+    const aiResponse = await callAI(
+      LOVABLE_API_KEY,
       systemPrompt,
       userPrompt,
       tools.length > 0 ? tools : undefined,
@@ -427,15 +442,15 @@ Return all extracted fields with confidence and sourceText. Extract ALL quantity
 
     // Handle coach (text response)
     if (action === "coach") {
-      const content = extractTextResult(claudeResponse);
+      const content = extractTextResult(aiResponse);
       return new Response(JSON.stringify({ answer: content || "I couldn't generate a response. Please try again." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     // Handle tool responses
-    const result = extractToolResult(claudeResponse);
-    if (!result) throw new Error("Claude did not return structured results");
+    const result = extractToolResult(aiResponse);
+    if (!result) throw new Error("AI did not return structured results");
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
