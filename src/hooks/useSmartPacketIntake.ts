@@ -669,9 +669,10 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
     setScore(0);
     extractedRef.current = {};
     setProfileData({ ...DEFAULT_PROFILE });
-    setDraftShipmentId(null);
-    setDraftReady(false);
-  }, []);
+    // Restore to existing shipment ID if one was provided, otherwise clear
+    setDraftShipmentId(existingShipmentId || null);
+    setDraftReady(!!existingShipmentId);
+  }, [existingShipmentId]);
 
   const stats = {
     total: files.length,
