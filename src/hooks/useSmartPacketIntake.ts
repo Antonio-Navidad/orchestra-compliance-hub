@@ -111,6 +111,14 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
   const [draftReady, setDraftReady] = useState(!!existingShipmentId);
   const extractedRef = useRef<Record<string, any>>({});
 
+  // Keep draftShipmentId in sync when existingShipmentId changes (e.g. after reset)
+  useEffect(() => {
+    if (existingShipmentId) {
+      setDraftShipmentId(existingShipmentId);
+      setDraftReady(true);
+    }
+  }, [existingShipmentId]);
+
   const ensureDraftShipment = useCallback(async (sid: string) => {
     if (!sid) return null;
 
@@ -127,6 +135,12 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
 
     if (existing?.shipment_id) {
       return sid;
+    }
+
+    // NEVER create a new shipment if we're working with an existing one
+    if (existingShipmentId) {
+      console.error("[ensureDraftShipment] Existing shipment not found in DB:", sid);
+      return sid; // Return anyway — it should exist, RLS may be filtering
     }
 
     const { error: insertError } = await supabase.from("shipments").insert({
@@ -148,12 +162,18 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
 
     console.log("[ensureDraftShipment] Inserted missing draft shipment:", sid);
     return sid;
-  }, []);
+  }, [existingShipmentId]);
 
   // Create draft shipment on mount (if no existing shipment)
   const createDraft = useCallback(async () => {
-    const preferredId = draftShipmentId || existingShipmentId;
-    const id = preferredId || `ORC-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+    // For existing shipments, NEVER create a new one — just return the existing ID
+    if (existingShipmentId) {
+      setDraftShipmentId(existingShipmentId);
+      setDraftReady(true);
+      return existingShipmentId;
+    }
+
+    const id = draftShipmentId || `ORC-${String(Math.floor(Math.random() * 9000) + 1000)}`;
 
     console.log("[createDraft] Ensuring draft shipment exists:", {
       id,
