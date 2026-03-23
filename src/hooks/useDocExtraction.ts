@@ -397,11 +397,17 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
     const hasCritical = crossRefResults.some(cr =>
       (cr.document_a === docId || cr.document_b === docId) && cr.severity === "critical"
     );
+    const hasHigh = crossRefResults.some(cr =>
+      (cr.document_a === docId || cr.document_b === docId) && cr.severity === "high"
+    );
     const hasInternalErrors = selfChecks.length > 0;
+    // Never show "AI verified clean" if there are critical/high findings or internal errors
+    const isClean = !hasCritical && !hasHigh && !hasInternalErrors && discrepancies.length === 0 && ext.warnings.length === 0;
 
     return {
-      state: hasCritical ? "issue" : hasIssues || hasInternalErrors ? "issue" : "verified",
+      state: (hasCritical || hasHigh || hasInternalErrors || hasIssues) ? "issue" : "verified",
       statusLine: hasCritical ? "AI verified — critical discrepancies found" :
+                  hasHigh ? `AI verified — ${discrepancies.length} high-severity issue(s)` :
                   hasInternalErrors ? `AI verified — ${selfChecks.length} internal error(s) detected` :
                   hasIssues ? `AI verified — ${discrepancies.length} issue(s) flagged` :
                   "Uploaded · AI verified clean",

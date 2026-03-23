@@ -150,7 +150,7 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
   const [bondNumber, setBondNumber] = useState("");
   const [achSetup, setAchSetup] = useState(false);
 
-  // Generate sequential ID on mount / open
+  // Generate sequential ID on mount / open — always set reference to sequential ID independently of title
   useEffect(() => {
     if (!open) return;
     const fetchNextId = async () => {
@@ -167,7 +167,8 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
       });
       const nextId = `ORC-${String(maxNum + 1).padStart(4, "0")}`;
       setNextSequentialId(nextId);
-      if (!shipmentReference) setShipmentReference(nextId);
+      // Always pre-fill with sequential ID — never copy from title
+      setShipmentReference(nextId);
     };
     fetchNextId();
   }, [open]);
