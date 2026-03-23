@@ -334,7 +334,7 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
     statusLine?: string;
     extractedFields?: ExtractedField[];
     crossRefChecks?: CrossRefCheck[];
-    discrepancies?: string[];
+    discrepancies?: Array<{ severity: "critical" | "high" | "medium" | "low"; label: string; detail: string; impact?: string }>;
     notes?: string[];
   } => {
     if (processingDocs.has(docId)) {
