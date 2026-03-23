@@ -28,6 +28,13 @@ export interface CrossRefCheck {
   passed: boolean;
 }
 
+export interface DiscrepancyItem {
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  label: string;
+  detail: string;
+  impact?: string;
+}
+
 export interface DocumentCardData {
   id: string;
   name: string;
@@ -36,7 +43,7 @@ export interface DocumentCardData {
   statusLine: string;
   extractedFields?: ExtractedField[];
   crossRefChecks?: CrossRefCheck[];
-  discrepancies?: string[];
+  discrepancies?: DiscrepancyItem[];
   notes?: string[];
   actionHint?: string;
   fileName?: string;
