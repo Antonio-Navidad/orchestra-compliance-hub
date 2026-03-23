@@ -862,8 +862,8 @@ function ShipmentIntakeInner() {
                           </Badge>
                         )}
                       </TabsTrigger>
-                      <TabsTrigger value="compliance" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                        <ShieldCheck size={12} /> Workflow Log
+                      <TabsTrigger value="review" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
+                        <FileCheck size={12} /> Shipment Profile
                       </TabsTrigger>
                       <TabsTrigger value="review" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                         <FileCheck size={12} /> Shipment Profile
