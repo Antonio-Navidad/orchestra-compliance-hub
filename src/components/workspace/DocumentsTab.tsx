@@ -305,11 +305,12 @@ export function DocumentsTab({
   const score = aiScore > 0 ? aiScore : (totalRequired > 0 ? Math.round((verified / totalRequired) * 100) : 0);
 
   // Persist score to shipments table so sidebar shows same value
-  useMemo(() => {
-    if (shipmentId && shipmentId !== 'draft' && score > 0) {
-      supabase.from("shipments").update({ packet_score: score }).eq("shipment_id", shipmentId).then(() => {});
-    }
-  }, [score, shipmentId]);
+  // Using a ref to avoid adding useEffect import (already using useRef)
+  const prevScoreRef = useRef(0);
+  if (shipmentId && shipmentId !== 'draft' && score > 0 && score !== prevScoreRef.current) {
+    prevScoreRef.current = score;
+    supabase.from("shipments").update({ packet_score: score }).eq("shipment_id", shipmentId).then(() => {});
+  }
 
   // Filter toggle handler
   const toggleFilter = useCallback((filter: string) => {
