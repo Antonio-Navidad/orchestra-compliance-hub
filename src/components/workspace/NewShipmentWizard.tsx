@@ -31,6 +31,11 @@ export interface WizardResult {
 
 type ShipmentModeChoice = "ocean_import" | "air_import" | "land_mexico_import" | "land_canada_import" | "ocean_export" | "air_export" | "land_mexico_export" | "land_canada_export" | "inbond_te";
 
+export interface PacketIntakeDraft {
+  shipmentReference: string;
+  title: string;
+}
+
 interface ModeCard { id: ShipmentModeChoice; label: string; icon: React.ReactNode; detail: string }
 
 const MODE_GROUPS: { title: string; cards: ModeCard[] }[] = [
@@ -124,7 +129,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   onComplete: (result: WizardResult) => void;
   existingImporters?: string[];
-  onOpenPacketIntake?: () => void;
+  onOpenPacketIntake?: (draft: PacketIntakeDraft) => void;
 }
 
 export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImporters = [], onOpenPacketIntake }: Props) {
@@ -289,7 +294,11 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
               {onOpenPacketIntake && (
                 <button
                   type="button"
-                  onClick={() => { onOpenChange(false); onOpenPacketIntake(); }}
+                  onClick={() => {
+                    const ref = shipmentReference.trim() || nextSequentialId;
+                    onOpenChange(false);
+                    onOpenPacketIntake({ shipmentReference: ref, title: title.trim() });
+                  }}
                   className="w-full flex flex-col items-center gap-3 py-8 px-6 rounded-xl border-2 border-dashed border-primary bg-primary/5 hover:bg-primary/10 hover:border-primary hover:shadow-md transition-all cursor-pointer"
                 >
                   <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">

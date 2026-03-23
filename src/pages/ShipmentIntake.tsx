@@ -23,7 +23,7 @@ import { getModeSubtitle } from "@/lib/modeDocumentDefs";
 import { ShipmentModeSelector } from "@/components/workspace/ShipmentModeSelector";
 import { DocChecklistPanel } from "@/components/workspace/DocChecklistPanel";
 import { ShipmentsSidebar } from "@/components/workspace/ShipmentsSidebar";
-import { NewShipmentWizard, type WizardResult } from "@/components/workspace/NewShipmentWizard";
+import { NewShipmentWizard, type WizardResult, type PacketIntakeDraft } from "@/components/workspace/NewShipmentWizard";
 import { DocumentsTab } from "@/components/workspace/DocumentsTab";
 import { DeadlineBar } from "@/components/workspace/DeadlineBar";
 import { AlertDrawer } from "@/components/workspace/AlertDrawer";
@@ -338,8 +338,12 @@ function ShipmentIntakeInner() {
     const modeId = WIZARD_MODE_MAP[result.shipmentMode] || 'ocean_import';
     handleModeChange(modeId);
 
-    // Use the user's custom reference — only fall back if truly empty
-    const shipRef = result.shipmentReference?.trim() || generateShipmentId();
+    // Always honor the user-entered shipment reference from the wizard
+    const shipRef = (result.shipmentReference || "").trim();
+    if (!shipRef) {
+      toast({ title: "Missing shipment reference", description: "Shipment Reference / ID is required", variant: "destructive" });
+      return;
+    }
     const config = SHIPMENT_MODES.find(m => m.id === modeId)!;
 
     // Auto-fill from importer memory if known
@@ -379,7 +383,7 @@ function ShipmentIntakeInner() {
       } as any);
 
       setSelectedShipmentId(shipRef);
-      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+      await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
     } catch (err: any) {
       console.error("[handleWizardComplete] Insert failed:", err);
     }
@@ -591,7 +595,7 @@ function ShipmentIntakeInner() {
       setLastSaved(new Date());
       setIsNewMode(false);
       setSelectedShipmentId(form.shipment_id);
-      queryClient.invalidateQueries({ queryKey: ["shipments-sidebar-list"] });
+      await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
@@ -778,9 +782,6 @@ function ShipmentIntakeInner() {
                             {Object.keys(docExtraction.extractedDocs).length}
                           </Badge>
                         )}
-                      </TabsTrigger>
-                      <TabsTrigger value="review" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
-                        <FileCheck size={12} /> Shipment Profile
                       </TabsTrigger>
                       <TabsTrigger value="review" className="text-[11px] gap-1.5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary">
                         <FileCheck size={12} /> Shipment Profile
@@ -980,7 +981,18 @@ function ShipmentIntakeInner() {
         onOpenChange={setShowWizard}
         onComplete={handleWizardComplete}
         existingImporters={existingImporters}
-        onOpenPacketIntake={() => { setShowWizard(false); setShowPacketIntake(true); }}
+        onOpenPacketIntake={(draft: PacketIntakeDraft) => {
+          setShowWizard(false);
+          if (draft?.shipmentReference) {
+            setForm(prev => ({
+              ...prev,
+              shipment_id: draft.shipmentReference,
+              description: draft.title || prev.description,
+            }));
+          }
+          setSelectedShipmentId(null);
+          setShowPacketIntake(true);
+        }}
       />
       <SmartPacketIntake
         open={showPacketIntake}
