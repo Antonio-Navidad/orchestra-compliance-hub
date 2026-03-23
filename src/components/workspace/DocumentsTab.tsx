@@ -155,7 +155,7 @@ export function DocumentsTab({
     [shipmentMode, originCountry],
   );
 
-  const fees = calcFees(declaredValue, shipmentMode);
+  const fees = calcFees(declaredValue, shipmentMode, extractedDocs);
 
   const openAlert = useCallback((alertId: string, context?: { docName?: string; severity?: string; message?: string }) => {
     const drawerData = getDrawerContent(alertId, {
