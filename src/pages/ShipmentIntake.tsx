@@ -544,15 +544,27 @@ function ShipmentIntakeInner() {
       const { data: existing } = await supabase.from("shipments").select("shipment_id").eq("shipment_id", form.shipment_id).maybeSingle();
 
       if (existing) {
-        // Update instead of insert
-        await supabase.from("shipments").update({
-          mode: form.mode, description: form.description,
-          consignee: form.consignee || 'TBD', hs_code: form.hs_code || '0000.00',
-          declared_value: form.declared_value ? parseFloat(form.declared_value) : 0,
-          status: 'new' as any,
-          origin_country: form.origin_country || null, destination_country: form.destination_country,
-          packet_score: packetScore.overallScore, filing_readiness: packetScore.filingReadiness,
-        } as any).eq("shipment_id", form.shipment_id);
+        // PATCH: only update profile fields the user can edit — never overwrite documents, scores, or findings
+        const patchFields: Record<string, any> = {};
+        if (form.mode) patchFields.mode = form.mode;
+        if (form.description) patchFields.description = form.description;
+        if (form.consignee) patchFields.consignee = form.consignee;
+        if (form.hs_code) patchFields.hs_code = form.hs_code;
+        if (form.declared_value) patchFields.declared_value = parseFloat(form.declared_value);
+        if (form.origin_country) patchFields.origin_country = form.origin_country;
+        if (form.destination_country) patchFields.destination_country = form.destination_country;
+        if (form.shipper) patchFields.shipper = form.shipper;
+        if (form.incoterm) patchFields.incoterm = form.incoterm;
+        if (form.planned_departure) patchFields.planned_departure = form.planned_departure;
+        if (form.estimated_arrival) patchFields.estimated_arrival = form.estimated_arrival;
+        if (form.assigned_broker) patchFields.assigned_broker = form.assigned_broker;
+        if (form.broker_id) patchFields.broker_id = form.broker_id;
+        if (form.port_of_entry) patchFields.port_of_entry = form.port_of_entry;
+        if (form.coo_status && form.coo_status !== 'unknown') patchFields.coo_status = form.coo_status;
+        if (form.currency && form.currency !== 'USD') patchFields.currency = form.currency;
+        if (form.forwarder) patchFields.forwarder = form.forwarder;
+        if (form.priority && form.priority !== 'normal') patchFields.priority = form.priority;
+        await supabase.from("shipments").update(patchFields as any).eq("shipment_id", form.shipment_id);
       } else {
         const { error: shipErr } = await supabase.from("shipments").insert({
           shipment_id: form.shipment_id, mode: form.mode, description: form.description,

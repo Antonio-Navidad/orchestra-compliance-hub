@@ -64,46 +64,93 @@ export function AIVerificationTab({ extractedDocs, crossRefResults, onOpenDrawer
   const docIds = Object.keys(extractedDocs);
   const hasData = docIds.length >= 1;
 
-  // Build coherence matrix rows
+  // Build coherence matrix rows — uses saved crossref_results as source of truth
   const coherenceRows = useMemo<CoherenceRow[]>(() => {
     const rows: CoherenceRow[] = [];
     const uploadedSet = new Set(docIds);
+    // Index crossref results by doc pair for efficient lookup
+    const crByPair = new Map<string, typeof crossRefResults>();
+    for (const cr of crossRefResults) {
+      const keyAB = `${cr.document_a}|${cr.document_b}`;
+      const keyBA = `${cr.document_b}|${cr.document_a}`;
+      if (!crByPair.has(keyAB)) crByPair.set(keyAB, []);
+      crByPair.get(keyAB)!.push(cr);
+      if (!crByPair.has(keyBA)) crByPair.set(keyBA, []);
+      crByPair.get(keyBA)!.push(cr);
+    }
 
     for (const pair of CHECK_PAIRS) {
       if (!uploadedSet.has(pair.a) && !uploadedSet.has(pair.b)) continue;
       const bothPresent = uploadedSet.has(pair.a) && uploadedSet.has(pair.b);
+      const pairResults = crByPair.get(`${pair.a}|${pair.b}`) || [];
 
       for (const field of pair.fields) {
-        // Find if there's a cross-ref result for this pair+field
-        const issue = crossRefResults.find(
-          cr =>
-            ((cr.document_a === pair.a && cr.document_b === pair.b) ||
-              (cr.document_a === pair.b && cr.document_b === pair.a)) &&
-            cr.field_checked.toLowerCase().includes(field.split(" ")[0].toLowerCase())
-        );
+        // Match: check if any crossref finding relates to this field
+        const fieldWords = field.toLowerCase().split(/\s+/);
+        const issue = pairResults.find(cr => {
+          const checked = cr.field_checked.toLowerCase();
+          // Match if any word from the field label appears in the field_checked,
+          // or if field_checked contains the full field name
+          return fieldWords.some(w => w.length > 2 && checked.includes(w)) || checked.includes(field.toLowerCase());
+        });
 
-        if (issue) {
-          rows.push({
-            docA: pair.a,
-            docB: pair.b,
-            field,
-            result: issue.severity === "critical" || issue.severity === "high" ? "mismatch" : "partial",
-            finding: issue.finding,
-          });
+        // Also check if the finding text mentions this field
+        const findingIssue = !issue ? pairResults.find(cr => {
+          const finding = cr.finding.toLowerCase();
+          return fieldWords.some(w => w.length > 3 && finding.includes(w));
+        }) : null;
+
+        const matched = issue || findingIssue;
+
+        if (matched) {
+          // Only show as "match" if the finding is explicitly a pass (no action needed)
+          const isPass = (matched.finding + ' ' + matched.recommendation).toLowerCase().includes('no action needed');
+          if (isPass) {
+            rows.push({ docA: pair.a, docB: pair.b, field, result: "match" });
+          } else {
+            rows.push({
+              docA: pair.a, docB: pair.b, field,
+              result: matched.severity === "critical" || matched.severity === "high" ? "mismatch" : "partial",
+              finding: matched.finding,
+            });
+          }
         } else if (bothPresent) {
           rows.push({ docA: pair.a, docB: pair.b, field, result: "match" });
         }
       }
     }
+
+    // Add any crossref results that don't match any CHECK_PAIRS field (catch-all)
+    const coveredPairFields = new Set(rows.map(r => `${r.docA}|${r.docB}|${r.field}`));
+    for (const cr of crossRefResults) {
+      const isPassCheck = (cr.finding + ' ' + (cr.recommendation || '')).toLowerCase();
+      if (isPassCheck.includes('no action needed') || isPassCheck.includes('no discrepancy')) continue;
+      
+      const alreadyCovered = rows.some(r =>
+        ((r.docA === cr.document_a && r.docB === cr.document_b) || (r.docA === cr.document_b && r.docB === cr.document_a)) &&
+        r.finding === cr.finding
+      );
+      if (!alreadyCovered) {
+        rows.push({
+          docA: cr.document_a, docB: cr.document_b,
+          field: cr.field_checked,
+          result: cr.severity === "critical" || cr.severity === "high" ? "mismatch" : "partial",
+          finding: cr.finding,
+        });
+      }
+    }
+
     return rows;
   }, [docIds, crossRefResults]);
 
-  // Sort recommendations by severity, filtering out passing checks
+  // Sort recommendations by severity, filtering out only explicit passing checks
   const sortedRecommendations = useMemo(() => {
     return [...crossRefResults]
       .filter(r => {
-        const lower = (r.finding + ' ' + r.recommendation).toLowerCase();
-        return !lower.includes('no action needed') && !lower.includes('match') && !lower.includes('no discrepancy');
+        if (r.resolved) return false;
+        const lower = (r.finding + ' ' + (r.recommendation || '')).toLowerCase();
+        // Only filter out explicit "no action needed" / "no discrepancy found" passes
+        return !lower.includes('no action needed') && !lower.includes('no discrepancy found');
       })
       .sort(
         (a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9)

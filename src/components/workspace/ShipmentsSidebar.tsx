@@ -167,7 +167,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
   };
 
   return (
-    <div className="w-[320px] min-w-[320px] shrink-0 border-r border-border bg-card/50 flex flex-col h-full">
+    <div style={{ width: 320, minWidth: 320, maxWidth: 320 }} className="shrink-0 border-r border-border bg-card/50 flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-3 border-b border-border">
         <h2 className="text-sm font-bold text-foreground">Shipments</h2>
@@ -258,12 +258,9 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
                                     e.stopPropagation();
                                     setDeleteTarget(s);
                                   }}
-                                  className="shrink-0 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                                  style={{
-                                    opacity: hoveredId === s.shipment_id ? 1 : 0,
-                                    transition: "opacity 0.15s",
-                                  }}
-                                  title="Delete shipment"
+                                    className="shrink-0 p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                                    style={{ opacity: 1 }}
+                                    title="Delete shipment"
                                 >
                                   <Trash2 size={12} />
                                 </button>
@@ -349,7 +346,7 @@ export function ShipmentsSidebar({ selectedId, onSelect, onNewShipment, deadline
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this shipment?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete {deleteTarget?.shipment_id} and all uploaded documents. This cannot be undone.
+              Delete {deleteTarget?.shipment_id} permanently? This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
