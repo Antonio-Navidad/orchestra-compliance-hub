@@ -351,14 +351,47 @@ export function DocumentCard({ doc, onUpload, onRequestFromSupplier, onUploadCor
 
           {/* Discrepancy boxes */}
           {doc.discrepancies && doc.discrepancies.length > 0 && (
-            <div className="space-y-1">
+            <div className="space-y-1.5">
+              <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Issues Detected ({doc.discrepancies.length})
+              </h4>
               {doc.discrepancies.map((d, i) => (
                 <button
                   key={i}
-                  onClick={() => onClickAlert?.(doc.id, d)}
-                  className="w-full text-left rounded-md bg-red-500/10 border border-red-500/20 p-2.5 text-[11px] text-red-600 dark:text-red-400 hover:bg-red-500/15 transition-colors active:scale-[0.99]"
+                  onClick={() => onClickAlert?.(doc.id, d.detail)}
+                  className={cn(
+                    "w-full text-left rounded-md border p-2.5 transition-colors active:scale-[0.99]",
+                    d.severity === 'critical' ? "bg-red-500/10 border-red-500/20 hover:bg-red-500/15" :
+                    d.severity === 'high' ? "bg-amber-500/10 border-amber-500/20 hover:bg-amber-500/15" :
+                    "bg-yellow-500/5 border-yellow-500/15 hover:bg-yellow-500/10"
+                  )}
                 >
-                  ✕ {d}
+                  <div className="flex items-start gap-2">
+                    <Badge className={cn(
+                      "text-[8px] px-1.5 py-0 shrink-0 mt-0.5 uppercase font-bold",
+                      d.severity === 'critical' ? "bg-red-500/20 text-red-600 border-red-500/30" :
+                      d.severity === 'high' ? "bg-amber-500/20 text-amber-600 border-amber-500/30" :
+                      "bg-yellow-500/20 text-yellow-700 border-yellow-500/30"
+                    )}>
+                      {d.severity}
+                    </Badge>
+                    <div className="min-w-0 flex-1">
+                      <span className={cn(
+                        "text-[11px] font-semibold block",
+                        d.severity === 'critical' ? "text-red-600 dark:text-red-400" :
+                        d.severity === 'high' ? "text-amber-600 dark:text-amber-400" :
+                        "text-yellow-700 dark:text-yellow-400"
+                      )}>
+                        {d.label}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground block mt-0.5">{d.detail}</span>
+                      {d.impact && (
+                        <span className="text-[9px] text-muted-foreground/70 block mt-0.5">
+                          Est. impact: {d.impact}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </button>
               ))}
             </div>

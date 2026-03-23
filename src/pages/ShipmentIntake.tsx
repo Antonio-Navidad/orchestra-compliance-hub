@@ -332,30 +332,34 @@ function ShipmentIntakeInner() {
   };
 
   const handleWizardComplete = async (result: WizardResult) => {
-    resetForm();
-    setSelectedShipmentId(null);
     setIsNewMode(false);
     setShowWizard(false);
 
     const modeId = WIZARD_MODE_MAP[result.shipmentMode] || 'ocean_import';
     handleModeChange(modeId);
 
+    // Use the user's custom reference — only fall back if truly empty
+    const shipRef = result.shipmentReference?.trim() || generateShipmentId();
+    const config = SHIPMENT_MODES.find(m => m.id === modeId)!;
+
     // Auto-fill from importer memory if known
     const knownImporter = importerMemory.getImporter(result.importerOfRecord);
 
-    const shipRef = result.shipmentReference || generateShipmentId();
-    const config = SHIPMENT_MODES.find(m => m.id === modeId)!;
+    const dest = ['ocean_export', 'air_export', 'land_mexico_export', 'land_canada_export'].includes(result.shipmentMode) ? '' : 'United States';
 
-    setForm(prev => ({
-      ...prev,
+    // Set form with the correct shipment_id directly — no separate resetForm call
+    setForm({
+      ...INITIAL_FORM,
       shipment_id: shipRef,
       description: result.title,
       consignee: result.importerOfRecord,
       origin_country: result.countryOfOrigin,
       port_of_entry: result.portOfEntry,
       mode: config.transportMode as TransportMode,
-      destination_country: ['ocean_export', 'air_export', 'land_mexico_export', 'land_canada_export'].includes(result.shipmentMode) ? '' : 'United States',
-    }));
+      destination_country: dest,
+    });
+    setLineItems([]);
+    setSelectedShipmentId(null);
 
     // Create the shipment in the database immediately so it appears in the sidebar
     try {
