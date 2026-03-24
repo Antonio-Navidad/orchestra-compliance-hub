@@ -45,9 +45,9 @@ serve(async (req) => {
       default:
         return jsonResponse({ error: `Unknown action: ${action}` }, 400);
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Make admin error:', error);
-    return jsonResponse({ error: error.message }, 500);
+    return jsonResponse({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
   }
 });
 

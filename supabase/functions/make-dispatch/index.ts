@@ -96,10 +96,11 @@ serve(async (req) => {
       default:
         return jsonResponse({ error: `Unknown action: ${action}` }, 400);
     }
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
     console.error('Make dispatch error:', error);
-    await logError(supabase, null, 'make-dispatch', null, 'DISPATCH_HANDLER_ERROR', error.message);
-    return jsonResponse({ error: error.message }, 500);
+    await logError(supabase, null, 'make-dispatch', null, 'DISPATCH_HANDLER_ERROR', msg);
+    return jsonResponse({ error: msg }, 500);
   }
 });
 
@@ -315,7 +316,7 @@ async function attemptDispatch(supabase: any, event: any): Promise<{ status: str
       attempt_number: attemptNum,
       status: 'failed',
       http_status: error instanceof DispatchError ? error.httpStatus : null,
-      error_message: error.message,
+      error_message: error instanceof Error ? error.message : 'Unknown error',
       duration_ms: durationMs,
     });
 
@@ -324,7 +325,7 @@ async function attemptDispatch(supabase: any, event: any): Promise<{ status: str
       .update({
         status: newStatus,
         attempts: attemptNum,
-        last_error: error.message,
+        last_error: error instanceof Error ? error.message : 'Unknown error',
         next_retry_at: nextRetryAt,
       })
       .eq('id', event.id);
@@ -332,7 +333,7 @@ async function attemptDispatch(supabase: any, event: any): Promise<{ status: str
     if (!canRetry) {
       // Dead letter → error log + replay queue
       await logError(supabase, event.workspace_id, 'make-dispatch', event.event_type,
-        'MAX_RETRIES_EXCEEDED', `Failed after ${attemptNum} attempts: ${error.message}`, event.id, event.payload);
+        'MAX_RETRIES_EXCEEDED', `Failed after ${attemptNum} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`, event.id, event.payload);
 
       // Auto-create replay queue entry
       await supabase.from('replay_queue').insert({
@@ -342,7 +343,7 @@ async function attemptDispatch(supabase: any, event: any): Promise<{ status: str
         replay_status: 'awaiting_review',
       });
 
-      await updateConnectorHealth(supabase, event.workspace_id, 'make_outbound', false, error.message);
+      await updateConnectorHealth(supabase, event.workspace_id, 'make_outbound', false, error instanceof Error ? error.message : 'Unknown error');
 
       await supabase.from('workspace_integration_settings')
         .update({ last_failed_sync: new Date().toISOString(), health_status: 'degraded' })
@@ -483,7 +484,7 @@ async function handleBulkDispatch(supabase: any, body: any) {
       results.push({ event_type: evt.event_type, ...resBody });
       processed++;
     } catch (e) {
-      results.push({ event_type: evt.event_type, error: e.message });
+      results.push({ event_type: evt.event_type, error: e instanceof Error ? e.message : 'Unknown error' });
       failed++;
     }
   }

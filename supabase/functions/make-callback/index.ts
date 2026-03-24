@@ -125,7 +125,7 @@ serve(async (req) => {
 
     // 5. Reject invalid signatures
     if (!signatureValid) {
-      await updateWebhookLog(supabase, webhookLogId, 'rejected', 'Signature verification failed');
+      await updateWebhookLog(supabase, webhookLogId!, 'rejected', 'Signature verification failed');
       await logIntegrationError(supabase, workspaceId, 'make-callback', callbackType,
         'INVALID_SIGNATURE', 'Webhook signature verification failed', payload);
       return jsonResponse({ error: 'Invalid signature' }, 401);
@@ -142,14 +142,14 @@ serve(async (req) => {
         .maybeSingle();
 
       if (existingKey) {
-        await updateWebhookLog(supabase, webhookLogId, 'duplicate');
+        await updateWebhookLog(supabase, webhookLogId!, 'duplicate');
         return jsonResponse({ duplicate: true, result: existingKey.result });
       }
     }
 
     // 7. Validate callback type
     if (!VALID_CALLBACK_TYPES.includes(callbackType)) {
-      await updateWebhookLog(supabase, webhookLogId, 'rejected', `Unknown callback type: ${callbackType}`);
+      await updateWebhookLog(supabase, webhookLogId!, 'rejected', `Unknown callback type: ${callbackType}`);
       return jsonResponse({ error: `Invalid callback type: ${callbackType}` }, 400);
     }
 
@@ -166,7 +166,7 @@ serve(async (req) => {
     }
 
     // 10. Mark processed
-    await updateWebhookLog(supabase, webhookLogId, 'processed');
+    await updateWebhookLog(supabase, webhookLogId!, 'processed');
 
     // 11. Update connector health
     await updateConnectorHealth(supabase, workspaceId, `make_inbound_${callbackType.split('.')[0]}`, true);
@@ -182,14 +182,15 @@ serve(async (req) => {
     });
 
     return jsonResponse({ success: true, callback_type: callbackType, result });
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
     console.error('Callback error:', error);
     if (webhookLogId) {
-      await updateWebhookLog(supabase, webhookLogId, 'error', error.message);
+      await updateWebhookLog(supabase, webhookLogId, 'error', msg);
     }
     await logIntegrationError(supabase, null, 'make-callback', null,
-      'CALLBACK_PROCESSING_ERROR', error.message);
-    return jsonResponse({ error: error.message }, 500);
+      'CALLBACK_PROCESSING_ERROR', msg);
+    return jsonResponse({ error: msg }, 500);
   }
 });
 
