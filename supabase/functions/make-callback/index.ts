@@ -125,7 +125,7 @@ serve(async (req) => {
 
     // 5. Reject invalid signatures
     if (!signatureValid) {
-      await updateWebhookLog(supabase, webhookLogId, 'rejected', 'Signature verification failed');
+      await updateWebhookLog(supabase, webhookLogId!, 'rejected', 'Signature verification failed');
       await logIntegrationError(supabase, workspaceId, 'make-callback', callbackType,
         'INVALID_SIGNATURE', 'Webhook signature verification failed', payload);
       return jsonResponse({ error: 'Invalid signature' }, 401);
