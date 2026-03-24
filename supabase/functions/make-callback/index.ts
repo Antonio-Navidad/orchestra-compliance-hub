@@ -142,7 +142,7 @@ serve(async (req) => {
         .maybeSingle();
 
       if (existingKey) {
-        await updateWebhookLog(supabase, webhookLogId, 'duplicate');
+        await updateWebhookLog(supabase, webhookLogId!, 'duplicate');
         return jsonResponse({ duplicate: true, result: existingKey.result });
       }
     }
