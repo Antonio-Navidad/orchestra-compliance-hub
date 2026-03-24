@@ -161,21 +161,16 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
     return sid;
   }, []);
 
-  // Create draft shipment on mount (if no existing shipment)
+  // ── CHANGE 1: createDraft — hard guard prevents new shipment when existingShipmentId exists ──
   const createDraft = useCallback(async () => {
-    // For existing shipment IDs, ensure the record exists and reuse it
+    // HARD RULE: if existingShipmentId was provided, always use it, never create a new shipment
     if (existingShipmentId) {
-      const ensuredExisting = await ensureDraftShipment(existingShipmentId);
-      if (!ensuredExisting) {
-        console.error("[createDraft] Failed to ensure existing shipment:", existingShipmentId);
-        return null;
-      }
-      setDraftShipmentId(ensuredExisting);
+      setDraftShipmentId(existingShipmentId);
       setDraftReady(true);
-      await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
-      return ensuredExisting;
+      return existingShipmentId;
     }
 
+    // Only generate a new ID if no existing shipment was provided
     const id = draftShipmentId || `ORC-${String(Math.floor(Math.random() * 9000) + 1000)}`;
 
     console.log("[createDraft] Ensuring draft shipment exists:", {
@@ -198,6 +193,8 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
   }, [draftShipmentId, existingShipmentId, user, queryClient, ensureDraftShipment]);
 
   // Run cross-reference after saving a document if 2+ verified docs exist
+  // NOTE: This function is kept for reference but is NO LONGER called from saveFileToLibrary.
+  // Cross-reference runs exactly once at the end of startProcessing.
   const runCrossRefAfterSave = useCallback(async (sid: string) => {
     try {
       const { data: allDocs } = await supabase
@@ -214,8 +211,6 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
 
       if (documents.length < 2) return;
 
-      console.log("[runCrossRefAfterSave] Comparing", documents.length, "docs for shipment", sid);
-
       const { data, error } = await supabase.functions.invoke("workspace-crossref", {
         body: { documents, shipmentMode: profileData.shipmentMode, commodityType: "", countryOfOrigin: profileData.countryOfOrigin },
       });
@@ -225,7 +220,6 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
       const discrepancies: any[] = data?.discrepancies || [];
       const activeUser = user ?? (await supabase.auth.getUser()).data.user ?? null;
 
-      // Clear old results and insert new ones
       await supabase.from("crossref_results").delete().eq("shipment_id", sid);
 
       if (discrepancies.length > 0) {
@@ -241,7 +235,6 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
           user_id: activeUser?.id || null,
         }));
         await supabase.from("crossref_results").insert(rows);
-        console.log("[runCrossRefAfterSave] Stored", rows.length, "crossref findings");
       }
 
       setCrossRefResults(discrepancies);
@@ -287,9 +280,11 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
     console.log("[saveFileToLibrary] Saved", docType, "to shipment", sid);
     setFiles(prev => prev.map(f => f.id === pf.id ? { ...f, savedToLibrary: true } : f));
 
-    // Trigger cross-reference after save
-    runCrossRefAfterSave(sid);
-  }, [user, runCrossRefAfterSave]);
+    // ── CHANGE 2: removed runCrossRefAfterSave(sid) call ──
+    // Cross-reference now runs exactly once at the end of startProcessing,
+    // not after every individual document save. This prevents multiple
+    // conflicting AI calls that produce inconsistent results.
+  }, [user]);
 
   const addFiles = useCallback((newFiles: File[]) => {
     const packetFiles: PacketFile[] = newFiles.map(f => ({
@@ -506,7 +501,6 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
 
       // Sync profile to draft
       if (draftShipmentId) {
-        // Use setTimeout to let profileData update first
         setTimeout(() => {
           setProfileData(current => {
             syncDraftProfile(draftShipmentId, current);
@@ -541,7 +535,10 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
         body: { documents, shipmentMode: profileData.shipmentMode, commodityType: "", countryOfOrigin: profileData.countryOfOrigin },
       });
       if (data?.discrepancies) setCrossRefResults(data.discrepancies);
-    } catch {}
+      return data?.discrepancies || [];
+    } catch {
+      return [];
+    }
   }, [profileData]);
 
   const startProcessing = useCallback(async (queuedFiles: PacketFile[]) => {
@@ -556,9 +553,68 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
     }));
     await Promise.allSettled(promises);
 
-    await runCrossRef();
+    // ── CHANGE 3: Run cross-reference exactly once after all documents finish ──
+    const findings = await runCrossRef();
+
+    // ── CHANGE 4: Save crossref results to DB exactly once — never re-run on page load ──
+    const targetSid = sid || draftShipmentId || existingShipmentId;
+    if (targetSid && findings && findings.length > 0) {
+      const activeUser = user ?? (await supabase.auth.getUser()).data.user ?? null;
+
+      // Clear any previous results and insert the fresh definitive set
+      await supabase.from("crossref_results").delete().eq("shipment_id", targetSid);
+
+      const rows = findings.map((d: CrossRefFinding) => ({
+        shipment_id: targetSid,
+        document_a_type: d.document_a,
+        document_b_type: d.document_b,
+        field_checked: d.field_checked,
+        severity: d.severity,
+        finding: d.finding,
+        recommendation: d.recommendation || "",
+        estimated_financial_impact_usd: d.estimated_financial_impact_usd || 0,
+        user_id: activeUser?.id || null,
+      }));
+
+      await supabase.from("crossref_results").insert(rows);
+      console.log("[startProcessing] Stored", rows.length, "crossref findings for", targetSid);
+
+      // Update document card status based on finding severity
+      // Documents with critical findings → red, high findings → amber, none → stays green
+      const docTypesWithCritical = new Set<string>(
+        findings
+          .filter((r: CrossRefFinding) => r.severity === "critical")
+          .flatMap((r: CrossRefFinding) => [r.document_a, r.document_b])
+      );
+      const docTypesWithHigh = new Set<string>(
+        findings
+          .filter((r: CrossRefFinding) => r.severity === "high")
+          .flatMap((r: CrossRefFinding) => [r.document_a, r.document_b])
+      );
+
+      for (const docType of docTypesWithCritical) {
+        await supabase
+          .from("document_library")
+          .update({ extraction_status: "critical_issues" })
+          .eq("shipment_id", targetSid)
+          .eq("document_type", docType);
+      }
+
+      for (const docType of docTypesWithHigh) {
+        if (!docTypesWithCritical.has(docType)) {
+          await supabase
+            .from("document_library")
+            .update({ extraction_status: "issues_found" })
+            .eq("shipment_id", targetSid)
+            .eq("document_type", docType);
+        }
+      }
+
+      console.log("[startProcessing] Document statuses updated — critical:", [...docTypesWithCritical], "high:", [...docTypesWithHigh]);
+    }
+
     detectMultipleShipments();
-  }, [processFile, createDraft, draftShipmentId, runCrossRef]);
+  }, [processFile, createDraft, draftShipmentId, existingShipmentId, runCrossRef, user]);
 
   const detectMultipleShipments = useCallback(() => {
     const importers = new Map<string, string[]>();
