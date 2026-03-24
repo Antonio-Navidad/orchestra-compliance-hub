@@ -149,7 +149,7 @@ serve(async (req) => {
 
     // 7. Validate callback type
     if (!VALID_CALLBACK_TYPES.includes(callbackType)) {
-      await updateWebhookLog(supabase, webhookLogId, 'rejected', `Unknown callback type: ${callbackType}`);
+      await updateWebhookLog(supabase, webhookLogId!, 'rejected', `Unknown callback type: ${callbackType}`);
       return jsonResponse({ error: `Invalid callback type: ${callbackType}` }, 400);
     }
 
