@@ -325,7 +325,7 @@ async function attemptDispatch(supabase: any, event: any): Promise<{ status: str
       .update({
         status: newStatus,
         attempts: attemptNum,
-        last_error: error.message,
+        last_error: error instanceof Error ? error.message : 'Unknown error',
         next_retry_at: nextRetryAt,
       })
       .eq('id', event.id);
