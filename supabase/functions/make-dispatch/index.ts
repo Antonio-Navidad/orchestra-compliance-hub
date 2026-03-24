@@ -333,7 +333,7 @@ async function attemptDispatch(supabase: any, event: any): Promise<{ status: str
     if (!canRetry) {
       // Dead letter → error log + replay queue
       await logError(supabase, event.workspace_id, 'make-dispatch', event.event_type,
-        'MAX_RETRIES_EXCEEDED', `Failed after ${attemptNum} attempts: ${error.message}`, event.id, event.payload);
+        'MAX_RETRIES_EXCEEDED', `Failed after ${attemptNum} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`, event.id, event.payload);
 
       // Auto-create replay queue entry
       await supabase.from('replay_queue').insert({
