@@ -96,10 +96,11 @@ serve(async (req) => {
       default:
         return jsonResponse({ error: `Unknown action: ${action}` }, 400);
     }
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
     console.error('Make dispatch error:', error);
-    await logError(supabase, null, 'make-dispatch', null, 'DISPATCH_HANDLER_ERROR', error.message);
-    return jsonResponse({ error: error.message }, 500);
+    await logError(supabase, null, 'make-dispatch', null, 'DISPATCH_HANDLER_ERROR', msg);
+    return jsonResponse({ error: msg }, 500);
   }
 });
 
