@@ -701,7 +701,6 @@ function ShipmentIntakeInner() {
                   size="sm"
                   className="text-[10px] h-7 gap-1 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10"
                   onClick={() => {
-                    // Pre-fill from previous shipment
                     if (importerSuggestion.htsCodesUsed.length > 0) {
                       updateField('hs_code', importerSuggestion.htsCodesUsed[0]);
                     }
@@ -828,8 +827,18 @@ function ShipmentIntakeInner() {
                             setDocs(prev => [...prev, { file, docType: docId, id: crypto.randomUUID() }]);
                           });
                         }}
+                        // ── FIX 1: Always set selectedShipmentId before opening intake ──
                         onOpenPacketIntake={() => {
-                          console.log('[DocumentsTab] Opening intake for shipment:', selectedShipmentId, 'form.shipment_id:', form.shipment_id);
+                          const targetId = selectedShipmentId || form.shipment_id;
+                          if (!targetId) {
+                            toast({
+                              title: "No shipment selected",
+                              description: "Please select or create a shipment first.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                          setSelectedShipmentId(targetId);
                           setShowPacketIntake(true);
                         }}
                       />
@@ -928,7 +937,6 @@ function ShipmentIntakeInner() {
                       </div>
                     </TabsContent>
 
-
                     {/* ─── Shipment Profile / Review Tab ─── */}
                     <TabsContent value="review" className="mt-4 space-y-4">
                       <Card>
@@ -1000,8 +1008,10 @@ function ShipmentIntakeInner() {
         onOpenChange={setShowWizard}
         onComplete={handleWizardComplete}
         existingImporters={existingImporters}
+        // ── FIX 2: Always set selectedShipmentId before opening intake from wizard ──
         onOpenPacketIntake={(draft: PacketIntakeDraft) => {
           setShowWizard(false);
+          const ref = draft?.shipmentReference || form.shipment_id;
           if (draft?.shipmentReference) {
             setForm(prev => ({
               ...prev,
@@ -1009,7 +1019,8 @@ function ShipmentIntakeInner() {
               description: draft.title || prev.description,
             }));
           }
-          setSelectedShipmentId(null);
+          // Always set the target ID — never null — before opening intake
+          setSelectedShipmentId(ref);
           setShowPacketIntake(true);
         }}
       />
@@ -1032,26 +1043,26 @@ function ShipmentIntakeInner() {
           if (profileData.etd) profileUpdate.planned_departure = profileData.etd;
           if (profileData.eta) profileUpdate.estimated_arrival = profileData.eta;
 
-          const targetId = sid || form.shipment_id;
+          const targetId = sid || selectedShipmentId || form.shipment_id;
 
           // Persist extracted profile to shipments table
           if (targetId && Object.keys(profileUpdate).length > 0) {
             await supabase.from("shipments").update(profileUpdate as any).eq("shipment_id", targetId);
           }
 
-          if (sid && sid === selectedShipmentId) {
+          if (targetId && targetId === selectedShipmentId) {
             // Existing shipment — docs were added, refresh data
             await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
             setDocRefreshKey(prev => prev + 1);
-            toast({ title: `Documents added to ${sid}`, description: "Cross-reference checks updated" });
-            handleSelectShipment(sid);
+            toast({ title: `Documents added to ${targetId}`, description: "Cross-reference checks updated" });
+            handleSelectShipment(targetId);
             setActiveTab('details');
-          } else if (sid) {
+          } else if (targetId) {
             // New shipment created via intake
             await queryClient.refetchQueries({ queryKey: ["shipments-sidebar-list"] });
             setDocRefreshKey(prev => prev + 1);
             await new Promise(resolve => setTimeout(resolve, 250));
-            handleSelectShipment(sid);
+            handleSelectShipment(targetId);
             setActiveTab('details');
           } else {
             setForm(prev => ({
