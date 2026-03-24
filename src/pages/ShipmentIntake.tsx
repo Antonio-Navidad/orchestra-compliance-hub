@@ -367,26 +367,37 @@ function ShipmentIntakeInner() {
 
     // Create the shipment in the database immediately so it appears in the sidebar
     try {
-      const dest = ['ocean_export', 'air_export', 'land_mexico_export', 'land_canada_export'].includes(result.shipmentMode) ? '' : 'United States';
-      const { error: insertErr } = await supabase.from("shipments").insert({
-        shipment_id: shipRef,
-        mode: config.transportMode,
-        description: result.title,
-        consignee: result.importerOfRecord || 'TBD',
-        hs_code: '',
-        declared_value: 0,
-        status: 'new' as any,
-        origin_country: result.countryOfOrigin || null,
-        destination_country: dest,
-        risk_score: 0,
-        risk_notes: null,
-      } as any);
+      // Guard: check if shipment already exists before inserting
+      const { data: existingShipment } = await supabase
+        .from("shipments")
+        .select("shipment_id")
+        .eq("shipment_id", shipRef)
+        .maybeSingle();
 
-      if (insertErr) {
-        console.error("[handleWizardComplete] DB insert error:", insertErr);
-        toast({ title: "Failed to create shipment", description: insertErr.message, variant: "destructive" });
+      if (existingShipment) {
+        console.log("[handleWizardComplete] Shipment already exists, skipping insert:", shipRef);
       } else {
-        console.log("[handleWizardComplete] Shipment inserted:", shipRef);
+        const dest = ['ocean_export', 'air_export', 'land_mexico_export', 'land_canada_export'].includes(result.shipmentMode) ? '' : 'United States';
+        const { error: insertErr } = await supabase.from("shipments").insert({
+          shipment_id: shipRef,
+          mode: config.transportMode,
+          description: result.title,
+          consignee: result.importerOfRecord || 'TBD',
+          hs_code: '',
+          declared_value: 0,
+          status: 'new' as any,
+          origin_country: result.countryOfOrigin || null,
+          destination_country: dest,
+          risk_score: 0,
+          risk_notes: null,
+        } as any);
+
+        if (insertErr) {
+          console.error("[handleWizardComplete] DB insert error:", insertErr);
+          toast({ title: "Failed to create shipment", description: insertErr.message, variant: "destructive" });
+        } else {
+          console.log("[handleWizardComplete] Shipment inserted:", shipRef);
+        }
       }
 
       setSelectedShipmentId(shipRef);
