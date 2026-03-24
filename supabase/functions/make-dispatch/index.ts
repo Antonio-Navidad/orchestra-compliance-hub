@@ -343,7 +343,7 @@ async function attemptDispatch(supabase: any, event: any): Promise<{ status: str
         replay_status: 'awaiting_review',
       });
 
-      await updateConnectorHealth(supabase, event.workspace_id, 'make_outbound', false, error.message);
+      await updateConnectorHealth(supabase, event.workspace_id, 'make_outbound', false, error instanceof Error ? error.message : 'Unknown error');
 
       await supabase.from('workspace_integration_settings')
         .update({ last_failed_sync: new Date().toISOString(), health_status: 'degraded' })
