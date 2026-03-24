@@ -316,7 +316,7 @@ async function attemptDispatch(supabase: any, event: any): Promise<{ status: str
       attempt_number: attemptNum,
       status: 'failed',
       http_status: error instanceof DispatchError ? error.httpStatus : null,
-      error_message: error.message,
+      error_message: error instanceof Error ? error.message : 'Unknown error',
       duration_ms: durationMs,
     });
 
