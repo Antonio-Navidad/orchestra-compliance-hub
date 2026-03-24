@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CheckCircle2, AlertTriangle, XCircle, Sparkles, DollarSign, Check } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, Sparkles, DollarSign, Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ExtractedDocData, CrossRefResult } from "@/hooks/useDocExtraction";
 
@@ -35,7 +35,7 @@ type CoherenceRow = {
   docA: string;
   docB: string;
   field: string;
-  result: "match" | "partial" | "mismatch";
+  result: "match" | "partial" | "mismatch" | "not_checked";
   finding?: string;
 };
 
@@ -48,6 +48,7 @@ const SEVERITY_COLORS: Record<string, string> = {
   low: "bg-muted text-muted-foreground",
 };
 
+// These are the field pairs we always check when both documents are present
 const CHECK_PAIRS: Array<{ a: string; b: string; fields: string[] }> = [
   { a: "commercial_invoice", b: "packing_list", fields: ["declared value", "total weight", "carton count", "line item descriptions"] },
   { a: "commercial_invoice", b: "bill_of_lading", fields: ["consignee name", "cargo description", "notify party"] },
@@ -64,75 +65,40 @@ export function AIVerificationTab({ extractedDocs, crossRefResults, onOpenDrawer
   const docIds = Object.keys(extractedDocs);
   const hasData = docIds.length >= 1;
 
-  // Build coherence matrix rows — uses saved crossref_results as source of truth
+  // ── FIX: Build coherence matrix using crossref_results as the SOLE source of truth ──
+  // Never show "Match" for a field unless BOTH documents are uploaded AND no issue was found.
+  // Never show "Match" as a default when we simply have no data about that field.
   const coherenceRows = useMemo<CoherenceRow[]>(() => {
     const rows: CoherenceRow[] = [];
     const uploadedSet = new Set(docIds);
-    // Index crossref results by doc pair for efficient lookup
-    const crByPair = new Map<string, typeof crossRefResults>();
+
+    // Index crossref results by document pair for fast lookup
+    const crByPair = new Map<string, CrossRefResult[]>();
     for (const cr of crossRefResults) {
-      const keyAB = `${cr.document_a}|${cr.document_b}`;
-      const keyBA = `${cr.document_b}|${cr.document_a}`;
-      if (!crByPair.has(keyAB)) crByPair.set(keyAB, []);
-      crByPair.get(keyAB)!.push(cr);
-      if (!crByPair.has(keyBA)) crByPair.set(keyBA, []);
-      crByPair.get(keyBA)!.push(cr);
+      const key = [cr.document_a, cr.document_b].sort().join("|");
+      if (!crByPair.has(key)) crByPair.set(key, []);
+      crByPair.get(key)!.push(cr);
     }
 
-    for (const pair of CHECK_PAIRS) {
-      if (!uploadedSet.has(pair.a) && !uploadedSet.has(pair.b)) continue;
-      const bothPresent = uploadedSet.has(pair.a) && uploadedSet.has(pair.b);
-      const pairResults = crByPair.get(`${pair.a}|${pair.b}`) || [];
-
-      for (const field of pair.fields) {
-        // Match: check if any crossref finding relates to this field
-        const fieldWords = field.toLowerCase().split(/\s+/);
-        const issue = pairResults.find(cr => {
-          const checked = cr.field_checked.toLowerCase();
-          // Match if any word from the field label appears in the field_checked,
-          // or if field_checked contains the full field name
-          return fieldWords.some(w => w.length > 2 && checked.includes(w)) || checked.includes(field.toLowerCase());
-        });
-
-        // Also check if the finding text mentions this field
-        const findingIssue = !issue ? pairResults.find(cr => {
-          const finding = cr.finding.toLowerCase();
-          return fieldWords.some(w => w.length > 3 && finding.includes(w));
-        }) : null;
-
-        const matched = issue || findingIssue;
-
-        if (matched) {
-          // Only show as "match" if the finding is explicitly a pass (no action needed)
-          const isPass = (matched.finding + ' ' + matched.recommendation).toLowerCase().includes('no action needed');
-          if (isPass) {
-            rows.push({ docA: pair.a, docB: pair.b, field, result: "match" });
-          } else {
-            rows.push({
-              docA: pair.a, docB: pair.b, field,
-              result: matched.severity === "critical" || matched.severity === "high" ? "mismatch" : "partial",
-              finding: matched.finding,
-            });
-          }
-        } else if (bothPresent) {
-          rows.push({ docA: pair.a, docB: pair.b, field, result: "match" });
-        }
-      }
-    }
-
-    // Add any crossref results that don't match any CHECK_PAIRS field (catch-all)
-    const coveredPairFields = new Set(rows.map(r => `${r.docA}|${r.docB}|${r.field}`));
+    // Add rows from crossref results first — these are real AI findings
     for (const cr of crossRefResults) {
-      const isPassCheck = (cr.finding + ' ' + (cr.recommendation || '')).toLowerCase();
-      if (isPassCheck.includes('no action needed') || isPassCheck.includes('no discrepancy')) continue;
-      
-      const alreadyCovered = rows.some(r =>
-        ((r.docA === cr.document_a && r.docB === cr.document_b) || (r.docA === cr.document_b && r.docB === cr.document_a)) &&
-        r.finding === cr.finding
-      );
-      if (!alreadyCovered) {
+      // Skip explicit pass checks
+      const text = (cr.finding + " " + (cr.recommendation || "")).toLowerCase();
+      const isExplicitPass = text.includes("no action needed") || text.includes("no discrepancy found") || text.includes("matches — no action");
+
+      if (isExplicitPass) {
+        // Show as green match
         rows.push({
-          docA: cr.document_a, docB: cr.document_b,
+          docA: cr.document_a,
+          docB: cr.document_b,
+          field: cr.field_checked,
+          result: "match",
+        });
+      } else {
+        // Show as actual issue
+        rows.push({
+          docA: cr.document_a,
+          docB: cr.document_b,
           field: cr.field_checked,
           result: cr.severity === "critical" || cr.severity === "high" ? "mismatch" : "partial",
           finding: cr.finding,
@@ -140,26 +106,59 @@ export function AIVerificationTab({ extractedDocs, crossRefResults, onOpenDrawer
       }
     }
 
+    // For CHECK_PAIRS where BOTH docs are uploaded but NO crossref result exists for a field,
+    // only show "Match" if we have actual AI crossref results for this pair (meaning the AI ran
+    // and found no issue for this specific field)
+    for (const pair of CHECK_PAIRS) {
+      const bothPresent = uploadedSet.has(pair.a) && uploadedSet.has(pair.b);
+      if (!bothPresent) continue;
+
+      const pairKey = [pair.a, pair.b].sort().join("|");
+      const pairResults = crByPair.get(pairKey) || [];
+
+      // Only add "Match" rows if the AI has actually run for this pair
+      // (evidenced by at least one crossref result existing for this document pair)
+      const aiRanForPair = pairResults.length > 0;
+      if (!aiRanForPair) continue;
+
+      for (const field of pair.fields) {
+        // Check if this field is already covered by a crossref result row
+        const alreadyCovered = rows.some(r => {
+          const sameDocPair = (r.docA === pair.a && r.docB === pair.b) ||
+                              (r.docA === pair.b && r.docB === pair.a);
+          if (!sameDocPair) return false;
+          const fieldWords = field.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+          return fieldWords.some(w => r.field.toLowerCase().includes(w));
+        });
+
+        if (!alreadyCovered) {
+          // AI ran for this pair and found no issue for this field = confirmed match
+          rows.push({ docA: pair.a, docB: pair.b, field, result: "match" });
+        }
+      }
+    }
+
     return rows;
   }, [docIds, crossRefResults]);
 
-  // Sort recommendations by severity, filtering out only explicit passing checks
+  // Sort recommendations by severity, filtering out explicit passing checks and resolved items
   const sortedRecommendations = useMemo(() => {
     return [...crossRefResults]
       .filter(r => {
         if (r.resolved) return false;
-        const lower = (r.finding + ' ' + (r.recommendation || '')).toLowerCase();
-        // Only filter out explicit "no action needed" / "no discrepancy found" passes
-        return !lower.includes('no action needed') && !lower.includes('no discrepancy found');
+        const lower = (r.finding + " " + (r.recommendation || "")).toLowerCase();
+        // Filter out explicit passes only
+        return !lower.includes("no action needed") && !lower.includes("no discrepancy found");
       })
-      .sort(
-        (a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9)
-      );
+      .sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9));
   }, [crossRefResults]);
 
   const handleResolve = (idx: number) => {
     setResolvedIds(prev => new Set(prev).add(idx));
   };
+
+  // ── FIX: distinguish between "no data yet" and "data loaded but empty" ──
+  const hasBeenAnalyzed = docIds.length >= 2 && crossRefResults !== undefined;
 
   if (!hasData) {
     return (
@@ -190,13 +189,21 @@ export function AIVerificationTab({ extractedDocs, crossRefResults, onOpenDrawer
           </CardTitle>
           <p className="text-[11px] text-muted-foreground">
             Cross-reference results for {docIds.length} uploaded document{docIds.length !== 1 ? "s" : ""}
-            {" · "}{coherenceRows.length} data points checked
+            {coherenceRows.length > 0 && ` · ${coherenceRows.length} data points checked`}
           </p>
         </CardHeader>
         <CardContent className="p-0">
-          {coherenceRows.length === 0 ? (
+          {docIds.length < 2 ? (
             <div className="px-6 py-8 text-center text-xs text-muted-foreground">
               Upload at least two documents to see cross-reference analysis.
+            </div>
+          ) : coherenceRows.length === 0 ? (
+            // ── FIX: show loading state instead of false "all clear" when no results yet ──
+            <div className="px-6 py-8 text-center">
+              <Loader2 className="mx-auto mb-2 text-muted-foreground animate-spin" size={20} />
+              <p className="text-xs text-muted-foreground">
+                Cross-reference analysis pending. Results will appear after documents are processed.
+              </p>
             </div>
           ) : (
             <div className="overflow-auto max-h-[360px]">
@@ -261,7 +268,16 @@ export function AIVerificationTab({ extractedDocs, crossRefResults, onOpenDrawer
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
-          {sortedRecommendations.length === 0 ? (
+          {/* ── FIX: show loading when docs exist but no results yet ── */}
+          {docIds.length >= 2 && crossRefResults.length === 0 ? (
+            <div className="py-8 text-center">
+              <Loader2 className="mx-auto mb-2 text-muted-foreground animate-spin" size={24} />
+              <p className="text-sm font-medium text-muted-foreground">Analyzing documents...</p>
+              <p className="text-[11px] text-muted-foreground/70 mt-1">
+                Cross-reference results will appear here once analysis is complete.
+              </p>
+            </div>
+          ) : sortedRecommendations.length === 0 ? (
             <div className="py-8 text-center">
               <CheckCircle2 className="mx-auto mb-2 text-emerald-500" size={28} />
               <p className="text-sm font-medium text-foreground">All clear</p>
@@ -345,6 +361,13 @@ function ResultBadge({ result, finding }: { result: CoherenceRow["result"]; find
     return (
       <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
         <CheckCircle2 size={13} /> Match
+      </span>
+    );
+  }
+  if (result === "not_checked") {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/50">
+        — Not checked
       </span>
     );
   }
