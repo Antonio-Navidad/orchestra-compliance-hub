@@ -44,8 +44,9 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Make.com test ping failed:", error.message);
-    return new Response(JSON.stringify({ ok: false, error: error.message }), {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    console.error("Make.com test ping failed:", msg);
+    return new Response(JSON.stringify({ ok: false, error: msg }), {
       status: 502,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

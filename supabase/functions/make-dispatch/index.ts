@@ -484,7 +484,7 @@ async function handleBulkDispatch(supabase: any, body: any) {
       results.push({ event_type: evt.event_type, ...resBody });
       processed++;
     } catch (e) {
-      results.push({ event_type: evt.event_type, error: e.message });
+      results.push({ event_type: evt.event_type, error: e instanceof Error ? e.message : 'Unknown error' });
       failed++;
     }
   }

@@ -21,8 +21,9 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Test callback error:', error.message);
-    return new Response(JSON.stringify({ ok: false, message: error.message }), {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Test callback error:', msg);
+    return new Response(JSON.stringify({ ok: false, message: msg }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -182,14 +182,15 @@ serve(async (req) => {
     });
 
     return jsonResponse({ success: true, callback_type: callbackType, result });
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
     console.error('Callback error:', error);
     if (webhookLogId) {
-      await updateWebhookLog(supabase, webhookLogId, 'error', error.message);
+      await updateWebhookLog(supabase, webhookLogId, 'error', msg);
     }
     await logIntegrationError(supabase, null, 'make-callback', null,
-      'CALLBACK_PROCESSING_ERROR', error.message);
-    return jsonResponse({ error: error.message }, 500);
+      'CALLBACK_PROCESSING_ERROR', msg);
+    return jsonResponse({ error: msg }, 500);
   }
 });
 
