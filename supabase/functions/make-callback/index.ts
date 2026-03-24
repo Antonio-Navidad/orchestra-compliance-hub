@@ -166,7 +166,7 @@ serve(async (req) => {
     }
 
     // 10. Mark processed
-    await updateWebhookLog(supabase, webhookLogId, 'processed');
+    await updateWebhookLog(supabase, webhookLogId!, 'processed');
 
     // 11. Update connector health
     await updateConnectorHealth(supabase, workspaceId, `make_inbound_${callbackType.split('.')[0]}`, true);
