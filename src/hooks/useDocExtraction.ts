@@ -10,6 +10,8 @@ export interface ExtractedDocData {
   fieldDetails: Array<{ field: string; value: any; confidence: number; source_location: string }>;
   warnings: string[];
   pgaFlags: Array<{ agency: string; requirement: string; mandatory: boolean; reason: string }>;
+  // ── FIX: store extraction_status from DB so getCardEnhancements can use it ──
+  extractionStatus?: string;
 }
 
 export interface CrossRefResult {
@@ -40,7 +42,7 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
   const extractedDocsRef = useRef(extractedDocs);
   extractedDocsRef.current = extractedDocs;
 
-  // Load cross-ref results from database
+  // Load cross-ref results from database — never re-run AI, just read saved results
   const loadCrossRefFromDB = useCallback(async () => {
     if (!shipmentId || shipmentId === 'draft') return;
     try {
@@ -68,6 +70,7 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
   }, [shipmentId]);
 
   // Load documents from document_library for this shipment
+  // ── FIX: now stores extraction_status so card colors are correct on load ──
   const loadFromLibrary = useCallback(async () => {
     if (!shipmentId || shipmentId === 'draft') return;
     console.log("[loadFromLibrary] Loading docs for shipmentId:", shipmentId);
@@ -97,6 +100,8 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
             fieldDetails,
             warnings: [],
             pgaFlags: [],
+            // ── FIX: store extraction_status from DB ──
+            extractionStatus: row.extraction_status || "complete",
           };
           if (row.file_name) {
             newFiles[docType] = new File([], row.file_name, { type: "application/pdf" });
@@ -111,21 +116,21 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       console.error("Failed to load document library:", err);
     }
     setLibraryLoaded(true);
-    // Load persisted cross-ref results
+
+    // ── FIX: only load saved crossref results from DB — never re-run AI on page load ──
+    // Cross-ref is only re-run when a new document is uploaded via extractDocument()
     await loadCrossRefFromDB();
   }, [shipmentId, loadCrossRefFromDB]);
 
-  // Trigger crossref after library loads
-  useEffect(() => {
-    if (libraryLoaded && shipmentId && shipmentId !== 'draft') {
-      runPersistentCrossRef();
-    }
-  }, [libraryLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  // ── FIX: removed runPersistentCrossRef from this useEffect ──
+  // Previously this re-ran the AI cross-reference on every page load,
+  // overwriting saved DB results with different findings each time.
+  // Now we just load what's already saved in the DB.
 
   // Reset library loaded flag when shipmentId changes
   useEffect(() => { setLibraryLoaded(false); }, [shipmentId]);
 
-  // Auto-load on shipmentId change (only if not already loaded)
+  // Auto-load on shipmentId change
   useEffect(() => { if (!libraryLoaded) loadFromLibrary(); }, [loadFromLibrary, libraryLoaded]);
 
   // Force reload — call after intake completes to re-fetch documents and crossref
@@ -133,11 +138,11 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
     setLibraryLoaded(false);
   }, []);
 
-  // Persistent cross-reference: queries ALL verified docs from document_library then calls edge function
-  const runPersistentCrossRef = useCallback(async () => {
+  // Run cross-reference via AI — only called when a new document is uploaded
+  // Results are saved to DB and won't be overwritten until the next upload
+  const runCrossRefAfterUpload = useCallback(async () => {
     if (!shipmentId || shipmentId === 'draft') return;
     try {
-      // Step 1: Get ALL verified docs from document_library for this shipment
       const { data: allDocs } = await supabase
         .from("document_library")
         .select("document_type, extracted_fields")
@@ -155,9 +160,8 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
 
       if (documents.length < 2) return;
 
-      console.log("[runPersistentCrossRef] Comparing", documents.length, "docs from document_library");
+      console.log("[runCrossRefAfterUpload] Comparing", documents.length, "docs");
 
-      // Step 2: Call workspace-crossref edge function
       const { data, error } = await supabase.functions.invoke("workspace-crossref", {
         body: { documents, shipmentMode, commodityType, countryOfOrigin },
       });
@@ -165,13 +169,10 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       if (error) throw error;
       const discrepancies: any[] = data?.discrepancies || [];
 
-      // Step 3: Get current user for RLS
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Step 4: Replace all crossref_results for this shipment with fresh results
-      await supabase.from("crossref_results")
-        .delete()
-        .eq("shipment_id", shipmentId);
+      // Save to DB — this is the single authoritative save
+      await supabase.from("crossref_results").delete().eq("shipment_id", shipmentId);
 
       if (discrepancies.length > 0) {
         const rows = discrepancies.map((d: any) => ({
@@ -186,9 +187,42 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
           user_id: user?.id || null,
         }));
         await supabase.from("crossref_results").insert(rows);
+
+        // Update document extraction_status based on finding severity
+        const docTypesWithCritical = new Set<string>(
+          discrepancies.filter((d: any) => d.severity === "critical")
+            .flatMap((d: any) => [d.document_a, d.document_b])
+        );
+        const docTypesWithHigh = new Set<string>(
+          discrepancies.filter((d: any) => d.severity === "high")
+            .flatMap((d: any) => [d.document_a, d.document_b])
+        );
+        for (const docType of docTypesWithCritical) {
+          await supabase.from("document_library")
+            .update({ extraction_status: "critical_issues" })
+            .eq("shipment_id", shipmentId)
+            .eq("document_type", docType);
+          // Update in-memory status too
+          setExtractedDocs(prev => prev[docType]
+            ? { ...prev, [docType]: { ...prev[docType], extractionStatus: "critical_issues" } }
+            : prev
+          );
+        }
+        for (const docType of docTypesWithHigh) {
+          if (!docTypesWithCritical.has(docType)) {
+            await supabase.from("document_library")
+              .update({ extraction_status: "issues_found" })
+              .eq("shipment_id", shipmentId)
+              .eq("document_type", docType);
+            setExtractedDocs(prev => prev[docType]
+              ? { ...prev, [docType]: { ...prev[docType], extractionStatus: "issues_found" } }
+              : prev
+            );
+          }
+        }
       }
 
-      // Step 5: Update in-memory state
+      // Update in-memory state
       setCrossRefResults(discrepancies.map((d: any) => ({
         severity: d.severity,
         document_a: d.document_a,
@@ -203,7 +237,7 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
         toast.info(`Cross-reference found ${discrepancies.length} issue(s)`);
       }
     } catch (err: any) {
-      console.error("[runPersistentCrossRef] Failed:", err);
+      console.error("[runCrossRefAfterUpload] Failed:", err);
     }
   }, [shipmentId, shipmentMode, commodityType, countryOfOrigin]);
 
@@ -212,11 +246,9 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
     setUploadedFiles(prev => ({ ...prev, [docId]: file }));
 
     try {
-      // Upload to storage
       const filePath = `${shipmentId}/${docId}/${file.name}`;
       await supabase.storage.from("shipment-documents").upload(filePath, file, { upsert: true });
 
-      // Call extraction edge function
       const formData = new FormData();
       formData.append("file", file);
       formData.append("documentType", docId);
@@ -236,13 +268,12 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
         fieldDetails: data.field_details || [],
         warnings: data.warnings || [],
         pgaFlags: data.pga_flags || [],
+        extractionStatus: "complete",
       };
 
       setExtractedDocs(prev => ({ ...prev, [docId]: extracted }));
-
       toast.success(`${docId.replace(/_/g, " ")} extracted successfully`);
 
-      // Save to document_library for persistence
       if (shipmentId && shipmentId !== 'draft') {
         try {
           const { data: { user } } = await supabase.auth.getUser();
@@ -265,12 +296,11 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
           console.error("[extractDocument] Failed to save to document_library:", libErr);
         }
 
-        // Save packing list internal errors as crossref_results (self-check findings)
+        // Save packing list internal errors
         const internalErrors: any[] = data.internal_errors || [];
         if (internalErrors.length > 0 && docId.includes("packing_list")) {
           try {
             const { data: { user } } = await supabase.auth.getUser();
-            // Delete previous self-check results for this doc
             await supabase.from("crossref_results")
               .delete()
               .eq("shipment_id", shipmentId)
@@ -292,7 +322,6 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
             }));
             await supabase.from("crossref_results").insert(rows);
 
-            // Add to in-memory crossref results
             setCrossRefResults(prev => [
               ...prev.filter(r => !(r.document_a === "packing_list" && r.document_b === "packing_list")),
               ...rows.map(r => ({
@@ -310,8 +339,8 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
           }
         }
 
-        // Trigger persistent cross-reference against ALL docs in document_library
-        runPersistentCrossRef();
+        // ── FIX: run cross-ref after upload (not on page load) ──
+        await runCrossRefAfterUpload();
       }
 
       return extracted;
@@ -326,7 +355,7 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
         return next;
       });
     }
-  }, [shipmentMode, commodityType, countryOfOrigin, shipmentId, runPersistentCrossRef]);
+  }, [shipmentMode, commodityType, countryOfOrigin, shipmentId, runCrossRefAfterUpload]);
 
   // Build card data from extraction results
   const getCardEnhancements = useCallback((docId: string): {
@@ -373,7 +402,6 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
     const allDocTypes = Object.keys(extractedDocs);
     for (const otherDoc of allDocTypes) {
       if (otherDoc === docId) continue;
-      // Check for actual issue findings (not passing checks)
       const hasIssue = crossRefResults.some(cr => {
         const involves = (cr.document_a === docId && cr.document_b === otherDoc) ||
                          (cr.document_b === docId && cr.document_a === otherDoc);
@@ -390,7 +418,7 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       }
     }
 
-    // Build structured discrepancy items, filtering out passing checks
+    // Build structured discrepancy items
     const allRelevantResults = crossRefResults
       .filter(cr => (cr.document_a === docId || cr.document_b === docId) && (cr.severity === "critical" || cr.severity === "high"))
       .filter(cr => {
@@ -410,22 +438,29 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       };
     });
 
-    const hasIssues = discrepancies.length > 0 || ext.warnings.length > 0;
-    const hasCritical = crossRefResults.some(cr =>
+    // ── FIX: use extraction_status from DB as authoritative source for card color ──
+    // This ensures cards show correct color even before crossref results are computed
+    const dbStatus = ext.extractionStatus || "complete";
+    const hasCriticalFromDB = dbStatus === "critical_issues";
+    const hasHighFromDB = dbStatus === "issues_found";
+
+    const hasCritical = hasCriticalFromDB || crossRefResults.some(cr =>
       (cr.document_a === docId || cr.document_b === docId) && cr.severity === "critical"
     );
-    const hasHigh = crossRefResults.some(cr =>
+    const hasHigh = hasHighFromDB || crossRefResults.some(cr =>
       (cr.document_a === docId || cr.document_b === docId) && cr.severity === "high"
     );
     const hasInternalErrors = selfChecks.length > 0;
-    // Never show "AI verified clean" if there are critical/high findings or internal errors
+    const hasIssues = discrepancies.length > 0 || ext.warnings.length > 0;
+
+    // ── FIX: never show green if DB status indicates issues ──
     const isClean = !hasCritical && !hasHigh && !hasInternalErrors && discrepancies.length === 0 && ext.warnings.length === 0;
 
     return {
       state: hasCritical ? "critical" as const :
              (hasHigh || hasInternalErrors || hasIssues) ? "issue" as const : "verified" as const,
       statusLine: hasCritical ? "AI extracted — critical issues" :
-                  hasHigh ? `AI extracted — ${discrepancies.length} high-severity issue(s)` :
+                  hasHigh ? `AI extracted — ${Math.max(discrepancies.length, 1)} issue(s) found` :
                   hasInternalErrors ? `AI extracted — ${selfChecks.length} internal error(s) detected` :
                   hasIssues ? `AI extracted — issues found` :
                   "Uploaded · AI verified clean",
@@ -436,23 +471,28 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
     };
   }, [extractedDocs, crossRefResults, processingDocs]);
 
+  // ── FIX: consistent score calculation ──
+  // Uses the same formula in both the checklist view and the intake view:
+  // (verified docs without critical issues) / (total required docs) * 100
+  // Capped at 85% if any critical finding exists
   const getScore = useCallback((totalRequired: number, uploadedDocTypes: string[]) => {
     let score = 0;
-    let maxScore = totalRequired;
 
     for (const docId of uploadedDocTypes) {
       const ext = extractedDocs[docId];
       if (!ext) {
-        score += 0.5;
+        score += 0.5; // uploaded but not yet extracted = partial credit
         continue;
       }
       const hasCritical = crossRefResults.some(
         cr => (cr.document_a === docId || cr.document_b === docId) && cr.severity === "critical"
       );
-      score += hasCritical ? 0.5 : 1;
+      const dbStatus = ext.extractionStatus || "complete";
+      const hasCriticalFromDB = dbStatus === "critical_issues";
+      score += (hasCritical || hasCriticalFromDB) ? 0.5 : 1;
     }
 
-    const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
+    const pct = totalRequired > 0 ? Math.round((score / totalRequired) * 100) : 0;
     const hasAnyCritical = crossRefResults.some(cr => cr.severity === "critical");
     return hasAnyCritical ? Math.min(pct, 85) : pct;
   }, [extractedDocs, crossRefResults]);
