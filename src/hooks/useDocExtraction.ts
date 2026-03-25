@@ -52,11 +52,15 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
         .eq("shipment_id", shipmentId);
       if (data && data.length > 0) {
         console.log("[loadCrossRef] Found", data.length, "cross-ref results in DB");
+        // Normalize to snake_case at read time so rows written before the
+        // workspace-crossref toSnakeCase fix (Title Case types) still match.
+        const toSnakeCase = (s: string) =>
+          (s || "").trim().toLowerCase().replace(/[\s\-]+/g, "_").replace(/[^a-z0-9_]/g, "");
         setCrossRefResults(data.map((r: any) => ({
           id: r.id,
           severity: r.severity,
-          document_a: r.document_a_type,
-          document_b: r.document_b_type,
+          document_a: toSnakeCase(r.document_a_type),
+          document_b: toSnakeCase(r.document_b_type),
           field_checked: r.field_checked,
           finding: r.finding,
           recommendation: r.recommendation || "",
@@ -384,8 +388,21 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       return { statusLine: "Processing with AI — extracting data..." };
     }
 
+    // Compute crossRef state before the !ext guard so that cards with findings
+    // always show the correct color even if extractedDocs hasn't loaded yet.
+    const hasCriticalCR = crossRefResults.some(cr =>
+      (cr.document_a === docId || cr.document_b === docId) && cr.severity === "critical"
+    );
+    const hasHighCR = crossRefResults.some(cr =>
+      (cr.document_a === docId || cr.document_b === docId) && cr.severity === "high"
+    );
+
     const ext = extractedDocs[docId];
-    if (!ext) return {};
+    if (!ext) {
+      if (hasCriticalCR) return { state: "critical" as const, statusLine: "AI extracted — critical issues" };
+      if (hasHighCR) return { state: "issue" as const, statusLine: "AI extracted — issues found" };
+      return {};
+    }
 
     const fields: ExtractedField[] = ext.fieldDetails.slice(0, 30).map(fd => ({
       label: fd.field.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
@@ -452,14 +469,9 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       };
     });
 
-    // Derive state purely from crossref_results — extraction_status in DB can be
-    // stale, so we trust the in-memory crossref set which is always authoritative.
-    const hasCritical = crossRefResults.some(cr =>
-      (cr.document_a === docId || cr.document_b === docId) && cr.severity === "critical"
-    );
-    const hasHigh = crossRefResults.some(cr =>
-      (cr.document_a === docId || cr.document_b === docId) && cr.severity === "high"
-    );
+    // Reuse the crossRef flags already computed above the !ext guard.
+    const hasCritical = hasCriticalCR;
+    const hasHigh = hasHighCR;
     const hasInternalErrors = selfChecks.length > 0;
     // Warnings are informational notes — they do not determine card state.
     const hasIssues = discrepancies.length > 0;
