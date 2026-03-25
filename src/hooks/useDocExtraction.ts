@@ -174,6 +174,20 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       // Save to DB — this is the single authoritative save
       await supabase.from("crossref_results").delete().eq("shipment_id", shipmentId);
 
+      // Reset every document in this shipment to 'complete' first so that
+      // documents not involved in any current finding are never left with a
+      // stale critical_issues / issues_found status from a previous run.
+      await supabase.from("document_library")
+        .update({ extraction_status: "complete" })
+        .eq("shipment_id", shipmentId);
+      setExtractedDocs(prev => {
+        const next = { ...prev };
+        for (const key of Object.keys(next)) {
+          next[key] = { ...next[key], extractionStatus: "complete" };
+        }
+        return next;
+      });
+
       if (discrepancies.length > 0) {
         const rows = discrepancies.map((d: any) => ({
           shipment_id: shipmentId,
@@ -438,23 +452,17 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       };
     });
 
-    // ── FIX: use extraction_status from DB as authoritative source for card color ──
-    // This ensures cards show correct color even before crossref results are computed
-    const dbStatus = ext.extractionStatus || "complete";
-    const hasCriticalFromDB = dbStatus === "critical_issues";
-    const hasHighFromDB = dbStatus === "issues_found";
-
-    const hasCritical = hasCriticalFromDB || crossRefResults.some(cr =>
+    // Derive state purely from crossref_results — extraction_status in DB can be
+    // stale, so we trust the in-memory crossref set which is always authoritative.
+    const hasCritical = crossRefResults.some(cr =>
       (cr.document_a === docId || cr.document_b === docId) && cr.severity === "critical"
     );
-    const hasHigh = hasHighFromDB || crossRefResults.some(cr =>
+    const hasHigh = crossRefResults.some(cr =>
       (cr.document_a === docId || cr.document_b === docId) && cr.severity === "high"
     );
     const hasInternalErrors = selfChecks.length > 0;
-    const hasIssues = discrepancies.length > 0 || ext.warnings.length > 0;
-
-    // ── FIX: never show green if DB status indicates issues ──
-    const isClean = !hasCritical && !hasHigh && !hasInternalErrors && discrepancies.length === 0 && ext.warnings.length === 0;
+    // Warnings are informational notes — they do not determine card state.
+    const hasIssues = discrepancies.length > 0;
 
     return {
       state: hasCritical ? "critical" as const :
@@ -487,9 +495,7 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       const hasCritical = crossRefResults.some(
         cr => (cr.document_a === docId || cr.document_b === docId) && cr.severity === "critical"
       );
-      const dbStatus = ext.extractionStatus || "complete";
-      const hasCriticalFromDB = dbStatus === "critical_issues";
-      score += (hasCritical || hasCriticalFromDB) ? 0.5 : 1;
+      score += hasCritical ? 0.5 : 1;
     }
 
     const pct = totalRequired > 0 ? Math.round((score / totalRequired) * 100) : 0;

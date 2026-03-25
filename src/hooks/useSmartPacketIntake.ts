@@ -563,59 +563,66 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
 
     // ── CHANGE 4: Save crossref results to DB exactly once — never re-run on page load ──
     const targetSid = sid || draftShipmentId || existingShipmentId;
-    if (targetSid && findings && findings.length > 0) {
+    if (targetSid) {
       const activeUser = user ?? (await supabase.auth.getUser()).data.user ?? null;
 
-      // Clear any previous results and insert the fresh definitive set
+      // Always clear old crossref results and reset every document to 'complete'
+      // first. This ensures documents not involved in any current finding are
+      // never left with a stale critical_issues / issues_found status from a
+      // previous run, even when the new run produces zero findings.
       await supabase.from("crossref_results").delete().eq("shipment_id", targetSid);
+      await supabase.from("document_library")
+        .update({ extraction_status: "complete" })
+        .eq("shipment_id", targetSid);
 
-      const rows = findings.map((d: CrossRefFinding) => ({
-        shipment_id: targetSid,
-        document_a_type: d.document_a,
-        document_b_type: d.document_b,
-        field_checked: d.field_checked,
-        severity: d.severity,
-        finding: d.finding,
-        recommendation: d.recommendation || "",
-        estimated_financial_impact_usd: d.estimated_financial_impact_usd || 0,
-        user_id: activeUser?.id || null,
-      }));
+      if (findings && findings.length > 0) {
+        const rows = findings.map((d: CrossRefFinding) => ({
+          shipment_id: targetSid,
+          document_a_type: d.document_a,
+          document_b_type: d.document_b,
+          field_checked: d.field_checked,
+          severity: d.severity,
+          finding: d.finding,
+          recommendation: d.recommendation || "",
+          estimated_financial_impact_usd: d.estimated_financial_impact_usd || 0,
+          user_id: activeUser?.id || null,
+        }));
 
-      await supabase.from("crossref_results").insert(rows);
-      console.log("[startProcessing] Stored", rows.length, "crossref findings for", targetSid);
+        await supabase.from("crossref_results").insert(rows);
+        console.log("[startProcessing] Stored", rows.length, "crossref findings for", targetSid);
 
-      // Update document card status based on finding severity
-      // Documents with critical findings → red, high findings → amber, none → stays green
-      const docTypesWithCritical = new Set<string>(
-        findings
-          .filter((r: CrossRefFinding) => r.severity === "critical")
-          .flatMap((r: CrossRefFinding) => [r.document_a, r.document_b])
-      );
-      const docTypesWithHigh = new Set<string>(
-        findings
-          .filter((r: CrossRefFinding) => r.severity === "high")
-          .flatMap((r: CrossRefFinding) => [r.document_a, r.document_b])
-      );
+        // Update only the documents directly named in findings
+        const docTypesWithCritical = new Set<string>(
+          findings
+            .filter((r: CrossRefFinding) => r.severity === "critical")
+            .flatMap((r: CrossRefFinding) => [r.document_a, r.document_b])
+        );
+        const docTypesWithHigh = new Set<string>(
+          findings
+            .filter((r: CrossRefFinding) => r.severity === "high")
+            .flatMap((r: CrossRefFinding) => [r.document_a, r.document_b])
+        );
 
-      for (const docType of docTypesWithCritical) {
-        await supabase
-          .from("document_library")
-          .update({ extraction_status: "critical_issues" })
-          .eq("shipment_id", targetSid)
-          .eq("document_type", docType);
-      }
-
-      for (const docType of docTypesWithHigh) {
-        if (!docTypesWithCritical.has(docType)) {
+        for (const docType of docTypesWithCritical) {
           await supabase
             .from("document_library")
-            .update({ extraction_status: "issues_found" })
+            .update({ extraction_status: "critical_issues" })
             .eq("shipment_id", targetSid)
             .eq("document_type", docType);
         }
-      }
 
-      console.log("[startProcessing] Document statuses updated — critical:", [...docTypesWithCritical], "high:", [...docTypesWithHigh]);
+        for (const docType of docTypesWithHigh) {
+          if (!docTypesWithCritical.has(docType)) {
+            await supabase
+              .from("document_library")
+              .update({ extraction_status: "issues_found" })
+              .eq("shipment_id", targetSid)
+              .eq("document_type", docType);
+          }
+        }
+
+        console.log("[startProcessing] Document statuses updated — critical:", [...docTypesWithCritical], "high:", [...docTypesWithHigh]);
+      }
     }
 
     detectMultipleShipments();
