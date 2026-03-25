@@ -138,14 +138,13 @@ ${item.description}`;
 // ─── Notify workspace owners whose active shipments are affected ───────────────
 
 async function notifyAffectedShipments(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   ruleId: string,
   affectedOrigins: string[],
   transportModes: string[],
   summary: string,
   severity: string,
 ): Promise<number> {
-  // Find active shipments matching origin/mode criteria
   let query = supabase
     .from("shipments")
     .select("id, workspace_id, shipment_number, country_of_origin, transport_mode")
@@ -161,8 +160,7 @@ async function notifyAffectedShipments(
   const { data: shipments, error } = await query;
   if (error || !shipments?.length) return 0;
 
-  // Build notification rows — one per affected shipment
-  const notifications = shipments.map((s: Record<string, unknown>) => ({
+  const notifications = (shipments as any[]).map((s) => ({
     workspace_id: s.workspace_id,
     shipment_id: s.id,
     type: "compliance_rule_change",
