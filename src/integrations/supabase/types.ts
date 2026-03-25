@@ -310,6 +310,71 @@ export type Database = {
           },
         ]
       }
+      compliance_rules_updates: {
+        Row: {
+          action_required: string
+          affected_hts_chapters: string[]
+          affected_origins: string[]
+          change_type: string
+          confirmed: boolean
+          created_at: string
+          detail: string
+          effective_date: string
+          id: string
+          parsed_by_model: string
+          severity: string
+          source: string
+          source_url: string | null
+          summary: string
+          superseded_by: string | null
+          transport_modes: string[]
+        }
+        Insert: {
+          action_required: string
+          affected_hts_chapters?: string[]
+          affected_origins?: string[]
+          change_type: string
+          confirmed?: boolean
+          created_at?: string
+          detail: string
+          effective_date: string
+          id?: string
+          parsed_by_model?: string
+          severity: string
+          source: string
+          source_url?: string | null
+          summary: string
+          superseded_by?: string | null
+          transport_modes?: string[]
+        }
+        Update: {
+          action_required?: string
+          affected_hts_chapters?: string[]
+          affected_origins?: string[]
+          change_type?: string
+          confirmed?: boolean
+          created_at?: string
+          detail?: string
+          effective_date?: string
+          id?: string
+          parsed_by_model?: string
+          severity?: string
+          source?: string
+          source_url?: string | null
+          summary?: string
+          superseded_by?: string | null
+          transport_modes?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_rules_updates_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "compliance_rules_updates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connector_health_status: {
         Row: {
           connector_name: string
