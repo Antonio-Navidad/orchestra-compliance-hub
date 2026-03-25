@@ -401,55 +401,6 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
     }
   }, [score, ensureDraftShipment]);
 
-  const processFile = useCallback(async (pf: PacketFile, sid: string) => {
-    // Step 1: Upload to storage
-    updateFile(pf.id, { status: "uploading" });
-    const filePath = `${sid}/packet/${pf.file.name}`;
-    await supabase.storage.from("shipment-documents").upload(filePath, pf.file, { upsert: true });
-
-    // Step 2: Identify
-    updateFile(pf.id, { status: "identifying" });
-    const identifyForm = new FormData();
-    identifyForm.append("file", pf.file);
-
-    const { data: idResult, error: idError } = await supabase.functions.invoke("packet-identify", {
-      body: identifyForm,
-    });
-
-    if (idError || idResult?.error) {
-      updateFile(pf.id, { status: "error", error: idError?.message || idResult?.error || "Identification failed" });
-      return;
-    }
-
-    const confidence = idResult.confidence || 0;
-    const docType = idResult.document_type || "unknown";
-
-    if (confidence < 0.50 || docType === "unknown") {
-      updateFile(pf.id, {
-        status: "unidentified", confidence,
-        reasoning: idResult.reasoning,
-        modeInference: idResult.shipment_mode_inference,
-        importerName: idResult.importer_name,
-        exporterName: idResult.exporter_name,
-      });
-      return;
-    }
-
-    if (confidence < 0.70) {
-      updateFile(pf.id, {
-        status: "awaiting_confirmation", documentType: docType, confidence,
-        reasoning: idResult.reasoning,
-        modeInference: idResult.shipment_mode_inference,
-        importerName: idResult.importer_name,
-        exporterName: idResult.exporter_name,
-        blOrAwbNumber: idResult.bl_or_awb_number,
-      });
-      return;
-    }
-
-    await extractFile(pf.id, pf.file, docType, idResult, sid);
-  }, [extractFile]);
-
   const extractFile = useCallback(async (
     fileId: string, file: File, docType: string, idResult?: any, sid?: string,
   ) => {
@@ -517,6 +468,55 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
       updateFile(fileId, { status: "error", error: err.message || "Extraction failed" });
     }
   }, [profileData.shipmentMode, profileData.countryOfOrigin, updateProfileFromExtraction, draftShipmentId, saveFileToLibrary, syncDraftProfile, files]);
+
+  const processFile = useCallback(async (pf: PacketFile, sid: string) => {
+    // Step 1: Upload to storage
+    updateFile(pf.id, { status: "uploading" });
+    const filePath = `${sid}/packet/${pf.file.name}`;
+    await supabase.storage.from("shipment-documents").upload(filePath, pf.file, { upsert: true });
+
+    // Step 2: Identify
+    updateFile(pf.id, { status: "identifying" });
+    const identifyForm = new FormData();
+    identifyForm.append("file", pf.file);
+
+    const { data: idResult, error: idError } = await supabase.functions.invoke("packet-identify", {
+      body: identifyForm,
+    });
+
+    if (idError || idResult?.error) {
+      updateFile(pf.id, { status: "error", error: idError?.message || idResult?.error || "Identification failed" });
+      return;
+    }
+
+    const confidence = idResult.confidence || 0;
+    const docType = idResult.document_type || "unknown";
+
+    if (confidence < 0.50 || docType === "unknown") {
+      updateFile(pf.id, {
+        status: "unidentified", confidence,
+        reasoning: idResult.reasoning,
+        modeInference: idResult.shipment_mode_inference,
+        importerName: idResult.importer_name,
+        exporterName: idResult.exporter_name,
+      });
+      return;
+    }
+
+    if (confidence < 0.70) {
+      updateFile(pf.id, {
+        status: "awaiting_confirmation", documentType: docType, confidence,
+        reasoning: idResult.reasoning,
+        modeInference: idResult.shipment_mode_inference,
+        importerName: idResult.importer_name,
+        exporterName: idResult.exporter_name,
+        blOrAwbNumber: idResult.bl_or_awb_number,
+      });
+      return;
+    }
+
+    await extractFile(pf.id, pf.file, docType, idResult, sid);
+  }, [extractFile, updateFile]);
 
   const confirmDocType = useCallback(async (fileId: string, confirmedType: string) => {
     const pf = files.find(f => f.id === fileId);
