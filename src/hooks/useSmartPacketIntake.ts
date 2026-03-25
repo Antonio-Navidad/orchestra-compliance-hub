@@ -113,6 +113,7 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
   const [draftShipmentId, setDraftShipmentId] = useState<string | null>(existingShipmentId || null);
   const [draftReady, setDraftReady] = useState(!!existingShipmentId);
   const extractedRef = useRef<Record<string, any>>({});
+  const draftIdRef = useRef<string | null>(existingShipmentId || null);
 
   // Keep draftShipmentId in sync when existingShipmentId changes (e.g. after reset)
   useEffect(() => {
@@ -170,8 +171,12 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
       return existingShipmentId;
     }
 
-    // Only generate a new ID if no existing shipment was provided
-    const id = draftShipmentId || `ORC-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+    // Use ref to ensure the same ID is returned even before state has committed,
+    // preventing concurrent calls from generating different random ORC IDs.
+    if (!draftIdRef.current) {
+      draftIdRef.current = draftShipmentId || `ORC-${String(Math.floor(Math.random() * 9000) + 1000)}`;
+    }
+    const id = draftIdRef.current;
 
     console.log("[createDraft] Ensuring draft shipment exists:", {
       id,
@@ -443,7 +448,7 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
     }
 
     await extractFile(pf.id, pf.file, docType, idResult, sid);
-  }, []);
+  }, [extractFile]);
 
   const extractFile = useCallback(async (
     fileId: string, file: File, docType: string, idResult?: any, sid?: string,
@@ -495,7 +500,7 @@ export function useSmartPacketIntake(existingShipmentId?: string) {
       if (shipmentIdForSave) {
         const pf = files.find(f => f.id === fileId) || { id: fileId, file, savedToLibrary: false } as any;
         if (!pf.savedToLibrary) {
-          saveFileToLibrary(pf, docType, data.extracted_data || {}, shipmentIdForSave);
+          await saveFileToLibrary(pf, docType, data.extracted_data || {}, shipmentIdForSave);
         }
       }
 

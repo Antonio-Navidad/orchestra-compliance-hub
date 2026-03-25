@@ -149,8 +149,8 @@ ${checkInstructions}
 Return format — ONLY include a row when you find an actual mismatch or missing required value:
 [{
   "severity": "critical" | "high" | "medium" | "low",
-  "document_a": "exact document_type string from the input",
-  "document_b": "exact document_type string from the input",
+  "document_a": "snake_case document type, e.g. commercial_invoice, packing_list, bill_of_lading",
+  "document_b": "snake_case document type, e.g. commercial_invoice, packing_list, bill_of_lading",
   "field_checked": "exact field name from the check list above",
   "finding": "precise description stating the actual value in document A and the actual value in document B and why this is a problem",
   "recommendation": "specific actionable step to resolve this before filing",
@@ -205,6 +205,17 @@ Do not return any field that matches. Do not explain your reasoning. Return only
       const jsonStr = jsonMatch ? jsonMatch[1] : messageContent.trim();
       discrepancies = JSON.parse(jsonStr);
       if (!Array.isArray(discrepancies)) discrepancies = [];
+
+      // Normalize document_a / document_b to snake_case so they match
+      // document_library.document_type and CROSS_REF_PAIRS keys regardless
+      // of whether the model returned Title Case or other variants.
+      const toSnakeCase = (s: string) =>
+        (s || "").trim().toLowerCase().replace(/[\s\-]+/g, "_").replace(/[^a-z0-9_]/g, "");
+      discrepancies = discrepancies.map((d: any) => ({
+        ...d,
+        document_a: toSnakeCase(d.document_a),
+        document_b: toSnakeCase(d.document_b),
+      }));
 
       // ── Post-processing: strip out any passing checks the model snuck in ──
       // This is a safety net — the prompt already instructs against this but
