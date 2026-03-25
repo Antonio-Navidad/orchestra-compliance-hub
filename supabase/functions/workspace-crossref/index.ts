@@ -29,7 +29,6 @@ const CROSS_REF_PAIRS: Array<{ a: string; b: string; fields: Array<{ name: strin
       { name: "total_gross_weight_kg", severity: "high", tolerance: "5% — flag if difference exceeds 5%" },
       { name: "total_packages_cartons", severity: "critical", tolerance: "exact match required" },
       { name: "cargo_description", severity: "medium", tolerance: "semantic match — BOL may be more general than invoice, flag only if clearly inconsistent" },
-      { name: "declared_value_usd", severity: "critical", tolerance: "must match — any difference is a critical finding" },
     ]
   },
   {
@@ -125,10 +124,9 @@ STRICT OUTPUT RULES:
 3. NEVER return a finding with "no action needed", "matches", "consistent", or "no discrepancy" in the finding text. Those are not findings.
 4. NEVER include a finding just to confirm something is correct.
 5. Each finding must state the ACTUAL VALUE from each document and WHY it is a problem.
-6. If a field is missing from one document, that is a finding only if it is required for customs clearance.
+6. If a field is null, not stated, zero, or absent in EITHER document, it is NOT a finding — skip it entirely. Only flag when BOTH documents contain an explicit non-null value AND those values differ.
 7. Zero quantity on a packing list line item is always a CRITICAL finding.
 8. Country of origin mismatches between any two documents are always CRITICAL.
-9. Declared value differences between invoice and bill of lading are always CRITICAL.
 
 SEVERITY RULES:
 - critical: Will cause CBP hold, entry rejection, or $5,000+ penalty if unfiled/uncorrected
@@ -216,6 +214,17 @@ Do not return any field that matches. Do not explain your reasoning. Return only
         document_a: toSnakeCase(d.document_a),
         document_b: toSnakeCase(d.document_b),
       }));
+
+      // Strip any finding where either value is null/absent — these are always
+      // false positives from optional fields not present on one document.
+      discrepancies = discrepancies.filter((d: any) => {
+        if (!d.finding) return false;
+        const f = d.finding.toLowerCase();
+        return !f.includes("not stated") && !f.includes("not present") &&
+               !f.includes(" null") && !f.includes("not provided") &&
+               !f.includes("not listed") && !f.includes("not found") &&
+               !f.includes("not included") && !f.includes("n/a");
+      });
 
       // ── Post-processing: strip out any passing checks the model snuck in ──
       // This is a safety net — the prompt already instructs against this but
