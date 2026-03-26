@@ -296,14 +296,11 @@ Return ONLY the JSON object. No markdown. No preamble.`;
     const messageContent = aiResponse.choices?.[0]?.message?.content;
     if (!messageContent) throw new Error("AI returned empty response");
 
-    // Parse JSON — strip markdown fences if model added them despite instructions
+    // Parse JSON — strip markdown fences, repair truncated output
     let result: any;
     try {
-      const jsonMatch = messageContent.match(/```json\s*([\s\S]*?)\s*```/) ||
-                        messageContent.match(/```\s*([\s\S]*?)\s*```/);
-      const jsonStr = jsonMatch ? jsonMatch[1] : messageContent.trim();
-      result = JSON.parse(jsonStr);
-    } catch {
+      result = robustJsonParse(messageContent);
+    } catch (parseErr) {
       console.error("Failed to parse extraction response:", messageContent.substring(0, 500));
       throw new Error("AI returned invalid JSON. Please try re-uploading the document.");
     }
