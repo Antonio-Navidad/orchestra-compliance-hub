@@ -271,7 +271,7 @@ Return ONLY the JSON object. No markdown. No preamble.`;
           { role: "system", content: systemPrompt },
           { role: "user", content: userContent },
         ],
-        max_tokens: 8192,
+        max_tokens: 16384,
         temperature: 0, // ── FIX: deterministic output — same document always extracts the same fields ──
       }),
     });
