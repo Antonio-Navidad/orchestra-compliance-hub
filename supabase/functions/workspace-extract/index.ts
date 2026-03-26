@@ -183,6 +183,85 @@ After extracting all data, perform these MANDATORY internal consistency checks a
 
 If ALL checks pass with no issues, return: "internal_errors": []`;
 
+/** Robust JSON parser that handles markdown fences, truncation, and common LLM quirks */
+function robustJsonParse(raw: string): any {
+  // Strip markdown code fences
+  let cleaned = raw
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .trim();
+
+  // Find JSON boundaries
+  const jsonStart = cleaned.search(/[\{\[]/);
+  if (jsonStart === -1) throw new Error("No JSON object found in response");
+
+  const openChar = cleaned[jsonStart];
+  const closeChar = openChar === "{" ? "}" : "]";
+  const jsonEnd = cleaned.lastIndexOf(closeChar);
+
+  if (jsonEnd <= jsonStart) {
+    // Truncated — try to repair by closing open structures
+    cleaned = cleaned.substring(jsonStart);
+    cleaned = repairTruncatedJson(cleaned);
+  } else {
+    cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
+  }
+
+  // First attempt
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Fix common LLM issues
+    cleaned = cleaned
+      .replace(/,\s*}/g, "}")       // trailing commas before }
+      .replace(/,\s*]/g, "]")       // trailing commas before ]
+      .replace(/[\x00-\x1F\x7F]/g, " ") // control characters
+      .replace(/\\'/g, "'");        // escaped single quotes
+
+    try {
+      return JSON.parse(cleaned);
+    } catch {
+      // Last resort: try repairing truncation
+      return JSON.parse(repairTruncatedJson(cleaned));
+    }
+  }
+}
+
+/** Attempt to close unclosed JSON brackets/braces to salvage truncated output */
+function repairTruncatedJson(text: string): string {
+  // Remove trailing incomplete key-value (e.g. `"key": ` with no value)
+  text = text.replace(/,\s*"[^"]*"\s*:\s*$/, "");
+  // Remove trailing comma
+  text = text.replace(/,\s*$/, "");
+
+  // Count open/close
+  let openBraces = 0, openBrackets = 0;
+  let inString = false, escape = false;
+  for (const ch of text) {
+    if (escape) { escape = false; continue; }
+    if (ch === "\\") { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "{") openBraces++;
+    else if (ch === "}") openBraces--;
+    else if (ch === "[") openBrackets++;
+    else if (ch === "]") openBrackets--;
+  }
+
+  // Close unclosed strings if we ended inside one
+  if (inString) text += '"';
+
+  // Remove any trailing incomplete value after last colon
+  text = text.replace(/,\s*"[^"]*"\s*:\s*"?[^"}\]]*$/, "");
+  text = text.replace(/,\s*$/, "");
+
+  // Close brackets/braces
+  while (openBrackets > 0) { text += "]"; openBrackets--; }
+  while (openBraces > 0) { text += "}"; openBraces--; }
+
+  return text;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
