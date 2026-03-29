@@ -5,6 +5,7 @@ import {
   getApplicableAlerts,
   buildCheckInstructions,
 } from "./complianceRules.ts";
+import { callAIText } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,8 +16,6 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const { documents, shipmentMode, commodityType, countryOfOrigin, declaredValueUsd, shipmentId } = await req.json();
 
@@ -106,41 +105,14 @@ Return format — ONLY include a row when you find an actual mismatch or missing
 If ALL fields match across ALL pairs, return an empty array: []
 Do not return any field that matches. Do not explain your reasoning. Return only the JSON array.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        max_tokens: 4096,
-        temperature: 0,
-      }),
+    // ── Call AI (Anthropic preferred, Lovable fallback) ────────────────────────
+    const messageContent = await callAIText({
+      systemPrompt,
+      userMessage: userPrompt,
+      anthropicModel: "claude-sonnet-4-5",
+      lovableModel: "google/gemini-2.5-flash",
+      maxTokens: 4096,
     });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("AI Gateway error:", response.status, errText);
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded", discrepancies: [] }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted", discrepancies: [] }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw new Error(`AI Gateway error: ${response.status}`);
-    }
-
-    const aiResponse = await response.json();
-    const messageContent = aiResponse.choices?.[0]?.message?.content;
     if (!messageContent) throw new Error("AI returned empty response");
 
     let discrepancies: any[];
