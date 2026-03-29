@@ -88,6 +88,7 @@ export default function ValidatePage() {
   const [shipmentCreated, setShipmentCreated] = useState(false);
 
   // ── Form state ──
+  const [shipmentName, setShipmentName] = useState("");
   const [consignee, setConsignee] = useState("");
 
   // ── OFAC screening ──
@@ -177,6 +178,7 @@ export default function ValidatePage() {
     const { error } = await supabase.from("shipments").insert({
       shipment_id: shipmentId,
       user_id: user.id,
+      shipment_name: shipmentName || consignee || "Untitled Shipment",
       consignee: consignee || "Pending",
       status: "new",
       hs_code: "0000.00",
@@ -287,6 +289,22 @@ export default function ValidatePage() {
           <p className="text-sm text-muted-foreground mt-1">
             Upload your documents below. Orchestra AI cross-references everything and returns
             a green / amber / red exceptions report in under 90 seconds.
+          </p>
+        </div>
+
+        {/* ── Shipment Name ── */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-foreground uppercase tracking-wider">
+            Shipment Name
+          </label>
+          <Input
+            placeholder="e.g. Amazon BOL-2025-001 or Colombia Import June"
+            value={shipmentName}
+            onChange={(e) => setShipmentName(e.target.value)}
+            disabled={phase === "done"}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            A label to identify this shipment in your history. You can always rename it later.
           </p>
         </div>
 
