@@ -384,18 +384,7 @@ export default function ValidatePage() {
 
         {/* ── Processing indicator ── */}
         {phase === "processing" && (
-          <div className="flex flex-col items-center gap-3 py-8">
-            <div className="relative">
-              <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              <Sparkles className="h-4 w-4 text-primary absolute -top-1 -right-1" />
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-semibold text-foreground">Analyzing your documents...</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Cross-matching fields · HTS pre-validation · PGA flag detection
-              </p>
-            </div>
-          </div>
+          <ValidationStepper slots={slots} isRunning={isRunning} />
         )}
 
         {/* ── Done state: summary + report CTA ── */}
@@ -535,6 +524,101 @@ function DocSlot({ slot, isUploaded, isProcessing, doc, accents, disabled, onFil
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── ValidationStepper ─────────────────────────────────────────────────────
+
+function ValidationStepper({
+  slots,
+  isRunning,
+}: {
+  slots: Record<string, import("@/hooks/useValidation").DocumentSlot>;
+  isRunning: boolean;
+}) {
+  const slotValues = Object.values(slots);
+  const totalDocs = slotValues.length;
+  const doneCount = slotValues.filter(s => s.status === "done").length;
+  const extractingCount = slotValues.filter(s => s.status === "extracting").length;
+
+  // Step states: "pending" | "active" | "done"
+  const uploadStep = totalDocs > 0 ? "done" : "pending";
+  const extractStep =
+    extractingCount > 0 ? "active"
+    : doneCount > 0     ? "done"
+    : "pending";
+  const crossRefStep =
+    isRunning       ? "active"
+    : doneCount >= 2 && !isRunning && extractingCount === 0 ? "done"
+    : "pending";
+
+  const steps: Array<{ label: string; sub: string; state: "pending" | "active" | "done" }> = [
+    { label: "Upload",           sub: `${totalDocs} document${totalDocs !== 1 ? "s" : ""} received`,  state: uploadStep },
+    { label: "OCR Extraction",   sub: `${doneCount} of ${totalDocs} extracted`,                        state: extractStep },
+    { label: "Cross-Reference",  sub: "Matching fields across documents",                              state: crossRefStep },
+    { label: "Report Ready",     sub: "Exceptions flagged and scored",                                 state: "pending" },
+  ];
+
+  return (
+    <div className="rounded-xl border bg-card p-6">
+      <div className="flex items-start gap-0">
+        {steps.map((step, i) => (
+          <div key={step.label} className="flex-1 flex flex-col items-center">
+            {/* connector + icon row */}
+            <div className="flex items-center w-full">
+              {/* left connector */}
+              <div className={cn(
+                "flex-1 h-0.5 transition-colors",
+                i === 0 ? "invisible" :
+                steps[i - 1].state === "done" ? "bg-primary" : "bg-border"
+              )} />
+              {/* icon */}
+              <div className={cn(
+                "h-9 w-9 rounded-full flex items-center justify-center border-2 transition-all shrink-0",
+                step.state === "done"   ? "bg-primary border-primary text-primary-foreground" :
+                step.state === "active" ? "bg-background border-primary text-primary" :
+                                         "bg-muted border-border text-muted-foreground"
+              )}>
+                {step.state === "done" ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : step.state === "active" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <span className="text-xs font-bold">{i + 1}</span>
+                )}
+              </div>
+              {/* right connector */}
+              <div className={cn(
+                "flex-1 h-0.5 transition-colors",
+                i === steps.length - 1 ? "invisible" :
+                step.state === "done" ? "bg-primary" : "bg-border"
+              )} />
+            </div>
+
+            {/* label */}
+            <div className="mt-2 text-center px-1">
+              <p className={cn(
+                "text-xs font-semibold",
+                step.state === "active" ? "text-primary" :
+                step.state === "done"   ? "text-foreground" : "text-muted-foreground"
+              )}>
+                {step.label}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{step.sub}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* current action message */}
+      <p className="text-center text-xs text-muted-foreground mt-5">
+        {extractingCount > 0
+          ? `Extracting ${extractingCount} document${extractingCount !== 1 ? "s" : ""}…`
+          : isRunning
+          ? "Cross-referencing fields · HTS pre-validation · PGA flag detection…"
+          : "Waiting for documents…"}
+      </p>
     </div>
   );
 }
