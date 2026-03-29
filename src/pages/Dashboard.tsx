@@ -63,18 +63,34 @@ const MODE_CFG: Record<string, { label: string; icon: any; cls: string }> = {
 };
 
 // ── Stat Card ─────────────────────────────────────────────────────────────────
-function StatCard({ label, value, sub, color }: { label: string; value: string | number; sub?: string; color: "blue" | "red" | "green" | "amber" }) {
+function StatCard({
+  label, value, sub, color, onClick, active,
+}: {
+  label: string; value: string | number; sub?: string;
+  color: "blue" | "red" | "green" | "amber";
+  onClick?: () => void;
+  active?: boolean;
+}) {
   const colors = {
-    blue:  "text-blue-600   bg-blue-50   border-blue-100",
-    red:   "text-red-600    bg-red-50    border-red-100",
-    green: "text-emerald-600 bg-emerald-50 border-emerald-100",
-    amber: "text-amber-600  bg-amber-50  border-amber-100",
+    blue:  { text: "text-blue-600",    ring: "ring-blue-300",    activeBg: "bg-blue-50"    },
+    red:   { text: "text-red-600",     ring: "ring-red-300",     activeBg: "bg-red-50"     },
+    green: { text: "text-emerald-600", ring: "ring-emerald-300", activeBg: "bg-emerald-50" },
+    amber: { text: "text-amber-600",   ring: "ring-amber-300",   activeBg: "bg-amber-50"   },
   };
+  const c = colors[color];
   return (
-    <div className="bg-card border rounded-xl p-5 flex flex-col gap-1">
+    <div
+      onClick={onClick}
+      className={cn(
+        "border rounded-xl p-5 flex flex-col gap-1 transition-all",
+        onClick ? "cursor-pointer hover:shadow-md hover:scale-[1.02]" : "",
+        active  ? `${c.activeBg} ring-2 ${c.ring}` : "bg-card",
+      )}
+    >
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className={cn("text-3xl font-bold", colors[color].split(" ")[0])}>{value}</p>
+      <p className={cn("text-3xl font-bold", c.text)}>{value}</p>
       {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+      {onClick && <p className="text-[10px] text-muted-foreground/60 mt-0.5">{active ? "↑ Filtering" : "Click to filter"}</p>}
     </div>
   );
 }
@@ -180,9 +196,12 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {isLoading ? Array.from({length:4}).map((_,i) => <Skeleton key={i} className="h-24 rounded-xl"/>) : (
             <>
-              <StatCard label="Total Shipments" value={stats.total}   color="blue"  sub={`${rows.length} shown`} />
-              <StatCard label="Blocked"          value={stats.blocked} color="red"   sub="Requires action" />
-              <StatCard label="Cleared"          value={stats.cleared} color="green" sub="Ready to file" />
+              <StatCard label="Total Shipments" value={stats.total}   color="blue"  sub={`${rows.length} shown`}
+                onClick={() => setFilter("all")} active={filter === "all"} />
+              <StatCard label="Blocked"          value={stats.blocked} color="red"   sub="Requires action"
+                onClick={() => setFilter(filter === "hold" ? "all" : "hold")} active={filter === "hold"} />
+              <StatCard label="Cleared"          value={stats.cleared} color="green" sub="Ready to file"
+                onClick={() => setFilter(filter === "clear" ? "all" : "clear")} active={filter === "clear"} />
               <StatCard label="Avg Readiness"    value={`${stats.avgScore}%`} color="amber" sub="Across all shipments" />
             </>
           )}
@@ -241,8 +260,13 @@ export default function Dashboard() {
                   const lane    = [s.origin_location, s.dest_location].filter(Boolean).join(" → ") || "—";
                   const name    = s.shipment_name || s.consignee || `SHP-${s.shipment_id.slice(0,8).toUpperCase()}`;
 
+                  const rowBorder = status === "hold" ? "border-l-4 border-l-red-500"
+                                  : status === "review" ? "border-l-4 border-l-amber-500"
+                                  : status === "clear"  ? "border-l-4 border-l-emerald-500"
+                                  : "border-l-4 border-l-transparent";
+
                   return (
-                    <tr key={s.shipment_id} className="hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/shipment/${s.shipment_id}`)}>
+                    <tr key={s.shipment_id} className={cn("hover:bg-muted/30 transition-colors cursor-pointer", rowBorder)} onClick={() => navigate(`/shipment/${s.shipment_id}`)}>
                       <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap max-w-[200px] truncate">{name}</td>
                       <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{lane}</td>
                       <td className="px-4 py-3">
