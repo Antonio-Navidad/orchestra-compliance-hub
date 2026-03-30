@@ -39,6 +39,7 @@ import WorkspaceHome from "./pages/WorkspaceHome";
 import NotFound from "./pages/NotFound";
 import GuidePage from "./pages/GuidePage";
 import CommandCenter from "./pages/CommandCenter";
+import ValidatePage from "./pages/ValidatePage";
 
 const queryClient = new QueryClient();
 
@@ -93,12 +94,15 @@ function WorkspacePurposeWrapper() {
           <Route path="/auth" element={<Auth />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/welcome" element={<WelcomeGate />} />
-          <Route path="/" element={<PurposeGate><WorkspaceHome /></PurposeGate>} />
-          <Route path="/dashboard" element={<PurposeGate><Dashboard /></PurposeGate>} />
+          {/* ── Core product — default landing after auth ── */}
+          <Route path="/" element={<ProtectedRoute><ValidatePage /></ProtectedRoute>} />
+          <Route path="/validate" element={<ProtectedRoute><ValidatePage /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/shipment/:id" element={<PurposeGate><ShipmentDetail /></PurposeGate>} />
           <Route path="/admin" element={<PurposeGate><AdminSettings /></PurposeGate>} />
           <Route path="/legal" element={<PurposeGate><LegalKnowledge /></PurposeGate>} />
           <Route path="/review" element={<PurposeGate><ReviewQueue /></PurposeGate>} />
+          <Route path="/ofac" element={<ProtectedRoute><ReviewQueue /></ProtectedRoute>} />
           <Route path="/pricing" element={<PurposeGate><Pricing /></PurposeGate>} />
           <Route path="/analytics" element={<PurposeGate><Analytics /></PurposeGate>} />
           <Route path="/brokers" element={<PurposeGate><BrokerScorecard /></PurposeGate>} />
