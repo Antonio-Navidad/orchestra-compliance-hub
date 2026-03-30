@@ -67,9 +67,12 @@ export const WorkspacePurposeContext = createContext<WorkspacePurposeContextValu
 export function useWorkspacePurposeState(): WorkspacePurposeContextValue {
   const [purpose, _setPurpose] = useState<WorkspacePurpose | null>(() => {
     try {
-      return localStorage.getItem(STORAGE_KEY) as WorkspacePurpose | null;
+      const stored = localStorage.getItem(STORAGE_KEY) as WorkspacePurpose | null;
+      if (stored) return stored;
+      localStorage.setItem(STORAGE_KEY, "compliance");
+      return "compliance";
     } catch {
-      return null;
+      return "compliance";
     }
   });
 
