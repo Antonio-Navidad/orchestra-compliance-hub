@@ -16,8 +16,9 @@ import { AuditTimeline } from "@/components/AuditTimeline";
 import { StatusWorkflow } from "@/components/StatusWorkflow";
 import { OutcomeRecorder } from "@/components/OutcomeRecorder";
 import { ETAPanel } from "@/components/ETAPanel";
+import { ExceptionsReport } from "@/components/ExceptionsReport";
 import { Shipment, Invoice, Manifest, TransportMode } from "@/types/orchestra";
-import { ArrowLeft, FileText, AlertTriangle, TrendingDown, Zap, Clock, ClipboardCheck, Send, BarChart3, Navigation } from "lucide-react";
+import { ArrowLeft, FileText, AlertTriangle, TrendingDown, Zap, Clock, ClipboardCheck, Send, BarChart3, Navigation, ShieldAlert } from "lucide-react";
 import { PacketScoreCard } from "@/components/PacketScoreCard";
 import { computePacketScore } from "@/lib/packetScore";
 import { EscalationPanel } from "@/components/EscalationPanel";
@@ -30,7 +31,7 @@ import { SendToBrokerPanel } from "@/components/SendToBrokerPanel";
 export default function ShipmentDetail() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
-  const initialTab = searchParams.get("tab") || "overview";
+  const initialTab = searchParams.get("tab") || "exceptions";
   const [activeTab, setActiveTab] = useState(initialTab);
   const { t } = useLanguage();
 
@@ -77,6 +78,59 @@ export default function ShipmentDetail() {
     enabled: !!id,
   });
 
+  // Load cross-ref results for exceptions report
+  const { data: crossRefResults = [] } = useQuery({
+    queryKey: ["crossref-results", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crossref_results" as any)
+        .select("*")
+        .eq("shipment_id", id);
+      if (error) return [];
+      const toSnake = (s: string) => (s || "").trim().toLowerCase().replace(/[\s\-]+/g, "_").replace(/[^a-z0-9_]/g, "");
+      return (data || []).map((r: any) => ({
+        id: r.id,
+        severity: r.severity,
+        document_a: toSnake(r.document_a_type),
+        document_b: toSnake(r.document_b_type),
+        field_checked: r.field_checked,
+        finding: r.finding,
+        recommendation: r.recommendation || "",
+        estimated_financial_impact_usd: Number(r.estimated_financial_impact_usd) || 0,
+        resolved: r.resolved,
+      }));
+    },
+    enabled: !!id,
+  });
+
+  // Load sanctions alerts for exceptions report
+  const { data: sanctionsAlerts = [] } = useQuery({
+    queryKey: ["sanctions-alerts", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("sanctions_alerts" as any)
+        .select("*")
+        .eq("shipment_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const latestAlert = sanctionsAlerts[0] as any;
+  const ofacStatusForReport = latestAlert
+    ? {
+        risk: latestAlert.risk_level as any,
+        entity: latestAlert.entity_name || "",
+        screened: true,
+      }
+    : null;
+
+  const uploadedDocTypes = shipmentDocs.map((d: any) =>
+    (d.document_type || "").toLowerCase().replace(/[\s\-]+/g, "_")
+  );
+
   const invoice = invoices[0];
   const manifest = manifests[0];
   const mismatches = invoice && manifest ? compareInvoiceManifest(invoice, manifest) : [];
@@ -101,8 +155,7 @@ export default function ShipmentDetail() {
   }
 
   const jurisdictionCode = (shipment as any).jurisdiction_code || "US";
-  
-  const uploadedDocTypes = shipmentDocs.map((d: any) => d.document_type);
+
   const packetScore = computePacketScore(
     uploadedDocTypes,
     shipment.mode as TransportMode,
@@ -207,6 +260,9 @@ export default function ShipmentDetail() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-secondary/50 border border-border flex-wrap h-auto gap-1 p-1">
+            <TabsTrigger value="exceptions" className="font-mono text-xs font-bold text-primary border border-primary/30 bg-primary/5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <ShieldAlert size={12} className="mr-1" /> Exceptions Report
+            </TabsTrigger>
             <TabsTrigger value="overview" className="font-mono text-xs">{t("detail.tab.overview")}</TabsTrigger>
             <TabsTrigger value="fix" className="font-mono text-xs">
               <Zap size={12} className="mr-1" /> {t("detail.tab.fixNow")}
@@ -232,6 +288,23 @@ export default function ShipmentDetail() {
               </TabsTrigger>
             )}
           </TabsList>
+
+          <TabsContent value="exceptions" className="mt-4">
+            <ExceptionsReport
+              shipmentId={shipment.shipment_id}
+              consignee={shipment.consignee}
+              shipperName={(shipment as any).shipper}
+              hsCode={shipment.hs_code}
+              declaredValue={shipment.declared_value}
+              mode={shipment.mode}
+              originCountry={(shipment as any).origin_country}
+              destinationCountry={(shipment as any).destination_country}
+              crossRefResults={crossRefResults}
+              ofacStatus={ofacStatusForReport}
+              uploadedDocTypes={uploadedDocTypes}
+              generatedAt={new Date().toISOString()}
+            />
+          </TabsContent>
 
           <TabsContent value="overview" className="mt-4 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

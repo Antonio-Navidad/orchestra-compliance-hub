@@ -3,14 +3,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CheckCircle2, AlertTriangle, XCircle, Sparkles, DollarSign, Check, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle, Sparkles, DollarSign, Check, Loader2, FileText, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ExtractedDocData, CrossRefResult } from "@/hooks/useDocExtraction";
+import { ExceptionsReport } from "./ExceptionsReport";
+import type { OfacStatus } from "./ExceptionsReport";
+import { PaywallModal } from "@/components/billing/PaywallModal";
+import { useCredits } from "@/hooks/useCredits";
 
 interface AIVerificationTabProps {
   extractedDocs: Record<string, ExtractedDocData>;
   crossRefResults: CrossRefResult[];
   onOpenDrawer?: (alertId: string, context?: Record<string, any>) => void;
+  shipmentRef?: string;
+  consignee?: string;
+  ofacStatus?: OfacStatus | null;
+  complianceScore?: number;
 }
 
 const DOC_LABELS: Record<string, string> = {
@@ -59,8 +67,25 @@ const CHECK_PAIRS: Array<{ a: string; b: string; fields: string[] }> = [
   { a: "entry_summary", b: "commercial_invoice", fields: ["declared value", "HTS codes", "importer name"] },
 ];
 
-export function AIVerificationTab({ extractedDocs, crossRefResults, onOpenDrawer }: AIVerificationTabProps) {
+export function AIVerificationTab({
+  extractedDocs,
+  crossRefResults,
+  onOpenDrawer,
+  shipmentRef,
+  consignee,
+  ofacStatus,
+  complianceScore,
+}: AIVerificationTabProps) {
   const [resolvedIds, setResolvedIds] = useState<Set<number>>(new Set());
+  const [reportOpen, setReportOpen] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+
+  const {
+    creditsRemaining,
+    isSubscribed,
+    isLoading: creditsLoading,
+    deductCredit,
+  } = useCredits();
 
   const docIds = Object.keys(extractedDocs);
   const hasData = docIds.length >= 1;
@@ -180,6 +205,58 @@ export function AIVerificationTab({ extractedDocs, crossRefResults, onOpenDrawer
 
   return (
     <div className="space-y-5">
+      {/* ─── Generate Report CTA ─── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs text-muted-foreground">
+            {Object.keys(extractedDocs).length} document{Object.keys(extractedDocs).length !== 1 ? "s" : ""} validated
+            {crossRefResults.length > 0 && ` · ${crossRefResults.filter(r => {
+              const t = (r.finding + " " + (r.recommendation || "")).toLowerCase();
+              return !t.includes("no action needed") && !t.includes("no discrepancy found");
+            }).length} exception${crossRefResults.length !== 1 ? "s" : ""} found`}
+          </p>
+          {/* Credits / subscription status pill */}
+          {!creditsLoading && (
+            isSubscribed ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-primary mt-0.5">
+                <Zap className="h-3 w-3" /> Unlimited validations
+              </span>
+            ) : (
+              <span className={cn(
+                "inline-flex items-center gap-1 text-[10px] font-semibold mt-0.5",
+                creditsRemaining === 0 ? "text-destructive" : creditsRemaining <= 2 ? "text-amber-600" : "text-muted-foreground"
+              )}>
+                <Sparkles className="h-3 w-3" />
+                {creditsRemaining} free validation{creditsRemaining !== 1 ? "s" : ""} remaining
+              </span>
+            )
+          )}
+        </div>
+        <Button
+          onClick={async () => {
+            if (Object.keys(extractedDocs).length === 0) return;
+            // Subscribers always get access
+            if (isSubscribed) {
+              setReportOpen(true);
+              return;
+            }
+            // Free tier: attempt to deduct a credit
+            const success = await deductCredit();
+            if (success) {
+              setReportOpen(true);
+            } else {
+              setPaywallOpen(true);
+            }
+          }}
+          disabled={Object.keys(extractedDocs).length === 0 || creditsLoading}
+          className="gap-2"
+          size="sm"
+        >
+          <FileText className="h-4 w-4" />
+          Generate Exceptions Report
+        </Button>
+      </div>
+
       {/* ─── Panel 1: Document Coherence Matrix ─── */}
       <Card>
         <CardHeader className="pb-2">
@@ -352,6 +429,25 @@ export function AIVerificationTab({ extractedDocs, crossRefResults, onOpenDrawer
       </Card>
 
       <Disclaimer />
+
+      {/* ─── Exceptions Report Modal ─── */}
+      <ExceptionsReport
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        shipmentRef={shipmentRef}
+        consignee={consignee}
+        crossRefResults={crossRefResults}
+        extractedDocs={extractedDocs}
+        ofacStatus={ofacStatus}
+        complianceScore={complianceScore}
+      />
+
+      {/* ─── Paywall Modal ─── */}
+      <PaywallModal
+        open={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        creditsUsed={5}
+      />
     </div>
   );
 }

@@ -56,6 +56,10 @@ const en = {
   "common.search": "Search",
 
   // Nav items
+  "nav.validate": "Validate Shipment",
+  "nav.history": "Validation History",
+  "navGroup.account": "ACCOUNT",
+  "nav.settings": "Settings",
   "nav.dashboard": "Dashboard",
   "nav.commandCenter": "Command Center",
   "nav.signOut": "Sign Out",

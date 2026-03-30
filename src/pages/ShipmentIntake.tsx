@@ -142,6 +142,14 @@ function ShipmentIntakeInner() {
   const [showGate, setShowGate] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showWizard, setShowWizard] = useState(false);
+
+  // ── OFAC / Sanctions screening ────────────────────────────────────────────
+  const [ofacStatus, setOfacStatus] = useState<{
+    risk: 'clear' | 'low' | 'medium' | 'high' | 'critical';
+    entity: string;
+    screened: boolean;
+  } | null>(null);
+  const [ofacLoading, setOfacLoading] = useState(false);
   const [deadlineDrawerOpen, setDeadlineDrawerOpen] = useState(false);
   const [deadlineDrawerData, setDeadlineDrawerData] = useState<AlertDrawerData | null>(null);
   const [isPaused, setIsPaused] = useState(false);
@@ -234,6 +242,57 @@ function ShipmentIntakeInner() {
       return names as string[];
     },
   });
+
+  // ── Auto-open wizard when user arrives with no shipments ──────────────────
+  const { data: shipmentCount } = useQuery({
+    queryKey: ["shipment-count-for-wizard"],
+    queryFn: async () => {
+      const { count } = await supabase.from("shipments").select("*", { count: "exact", head: true });
+      return count ?? 0;
+    },
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (shipmentCount === 0 && !showWizard && isNewMode && !selectedShipmentId) {
+      setShowWizard(true);
+    }
+  // Run once when shipmentCount first resolves
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shipmentCount]);
+
+  // ── OFAC screening — fire when consignee changes (debounced 1.5s) ─────────
+  useEffect(() => {
+    const name = form.consignee.trim();
+    if (name.length < 3) {
+      setOfacStatus(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setOfacLoading(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("sanctions-screen", {
+          body: { entities: [{ name, type: "company" }] },
+        });
+        if (cancelled) return;
+        if (!error && data?.summary) {
+          setOfacStatus({
+            risk: data.summary.overall_risk as 'clear' | 'low' | 'medium' | 'high' | 'critical',
+            entity: name,
+            screened: true,
+          });
+        }
+      } catch {
+        // Non-fatal — silently skip if Edge Function unavailable
+      }
+      if (!cancelled) setOfacLoading(false);
+    }, 1500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [form.consignee]);
 
   const { data: brokers = [] } = useQuery({
     queryKey: ["brokers"],
@@ -677,6 +736,38 @@ function ShipmentIntakeInner() {
           </div>
         )}
 
+        {/* OFAC / Sanctions screening banner */}
+        {(ofacLoading || ofacStatus) && form.consignee.trim().length >= 3 && (
+          <div className={`flex items-center gap-2.5 px-4 py-1.5 border-b border-border text-[11px] ${
+            ofacLoading ? 'bg-muted/30' :
+            ofacStatus?.risk === 'clear' || ofacStatus?.risk === 'low' ? 'bg-emerald-500/5' :
+            ofacStatus?.risk === 'medium' ? 'bg-amber-500/5' :
+            'bg-destructive/5'
+          }`}>
+            <ShieldCheck size={12} className={
+              ofacLoading ? 'text-muted-foreground animate-pulse' :
+              ofacStatus?.risk === 'clear' || ofacStatus?.risk === 'low' ? 'text-emerald-500' :
+              ofacStatus?.risk === 'medium' ? 'text-amber-500' :
+              'text-destructive'
+            } />
+            <span className={
+              ofacLoading ? 'text-muted-foreground' :
+              ofacStatus?.risk === 'clear' || ofacStatus?.risk === 'low' ? 'text-emerald-700 dark:text-emerald-400' :
+              ofacStatus?.risk === 'medium' ? 'text-amber-700 dark:text-amber-400 font-semibold' :
+              'text-destructive font-semibold'
+            }>
+              {ofacLoading
+                ? `OFAC/Sanctions screening "${form.consignee}"...`
+                : ofacStatus?.risk === 'clear' || ofacStatus?.risk === 'low'
+                  ? `✓ OFAC Clear — "${ofacStatus.entity}" not found on SDN or restricted-party lists`
+                  : ofacStatus?.risk === 'medium'
+                    ? `⚠ OFAC Review — "${ofacStatus.entity}" may require enhanced due diligence`
+                    : `🚨 OFAC MATCH — "${ofacStatus?.entity}" flagged on sanctions list — do not proceed without compliance review`
+              }
+            </span>
+          </div>
+        )}
+
         {/* Workspace top bar */}
         <div className="shrink-0 border-b border-border bg-card/60 backdrop-blur-sm px-4 py-2.5 space-y-1">
           <div className="flex items-center gap-3">
@@ -919,6 +1010,10 @@ function ShipmentIntakeInner() {
                       <AIVerificationTab
                         extractedDocs={docExtraction.extractedDocs}
                         crossRefResults={docExtraction.crossRefResults}
+                        shipmentRef={selectedShipmentId ? `SHP-${selectedShipmentId.slice(0, 8).toUpperCase()}` : "New Shipment"}
+                        consignee={form.consignee}
+                        ofacStatus={ofacStatus}
+                        complianceScore={docExtraction.getScore(5, Object.keys(docExtraction.extractedDocs))}
                         onOpenDrawer={(alertId, context) => {
                           setDeadlineDrawerData({
                             id: `crossref_${alertId}`,
