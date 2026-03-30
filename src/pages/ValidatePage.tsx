@@ -175,16 +175,19 @@ export default function ValidatePage() {
   // ── Auto-create a minimal shipment row on first upload ──
   const ensureShipmentExists = useCallback(async () => {
     if (shipmentCreated || !user?.id) return;
+    const label = shipmentName || consignee || "Untitled Shipment";
     const { error } = await supabase.from("shipments").insert({
       shipment_id: shipmentId,
-      user_id: user.id,
-      shipment_name: shipmentName || consignee || "Untitled Shipment",
+      shipment_name: label,
+      description: label,
+      mode: "ocean",
       consignee: consignee || "Pending",
-      status: "new",
+      status: "in_transit",
       hs_code: "0000.00",
     } as any);
     if (!error) setShipmentCreated(true);
-  }, [shipmentId, shipmentCreated, user?.id, consignee]);
+    else console.warn("[ValidatePage] shipment insert error:", error.message);
+  }, [shipmentId, shipmentCreated, user?.id, shipmentName, consignee]);
 
   // ── OFAC auto-screen on consignee change (debounced 1.5s) ──
   useEffect(() => {
