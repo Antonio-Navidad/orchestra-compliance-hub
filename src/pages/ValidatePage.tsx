@@ -194,15 +194,19 @@ export default function ValidatePage() {
   // ── When any doc starts processing → show processing phase ──
   const uploadedSlotIds = DOC_SLOTS.map((s) => s.id).filter((id) => id in extractedDocs);
   useEffect(() => {
-    if (phase === "upload" && (processingDocs.size > 0 || uploadedSlotIds.length >= 2)) {
+    if ((phase === "upload" || phase === "done") && (processingDocs.size > 0)) {
+      setPhase("processing");
+    }
+    if (phase === "upload" && uploadedSlotIds.length >= 2) {
       setPhase("processing");
     }
   }, [uploadedSlotIds.length, processingDocs.size, phase]);
 
-  // ── Auto-trigger crossref when 2+ docs are extracted ──
+  // ── Auto-trigger crossref when doc count changes (covers initial + re-uploads) ──
   const prevExtractedCount = useRef(0);
   useEffect(() => {
     const doneCount = Object.values(slots).filter((s) => s.status === "done").length;
+    // Re-run crossref any time the extracted count changes AND we have ≥2 docs
     if (doneCount >= 2 && doneCount !== prevExtractedCount.current && !isRunning) {
       prevExtractedCount.current = doneCount;
       runCrossRef();
@@ -267,10 +271,14 @@ export default function ValidatePage() {
         return;
       }
       setShipmentNameError(false);
+      // If slot already has a document, reset phase so we re-run crossref with updated set
+      if (phase === "done") {
+        setPhase("processing");
+      }
       await ensureShipmentExists();
       await validationExtract(slotId, file);
     },
-    [ensureShipmentExists, validationExtract, shipmentName, selectedMode]
+    [ensureShipmentExists, validationExtract, shipmentName, selectedMode, phase]
   );
 
   // ── Open the report (with credit check) ──
@@ -355,7 +363,7 @@ export default function ValidatePage() {
             placeholder="e.g. Amazon BOL-2025-001 or Colombia Import June"
             value={shipmentName}
             onChange={(e) => { setShipmentName(e.target.value); setShipmentNameError(false); }}
-            disabled={phase === "done"}
+            disabled={isRunning}
             className={shipmentNameError ? "border-destructive ring-1 ring-destructive" : ""}
           />
           {shipmentNameError ? (
@@ -390,14 +398,14 @@ export default function ValidatePage() {
                 <button
                   key={m.id}
                   type="button"
-                  disabled={phase === "done"}
+                  disabled={isRunning}
                   onClick={() => setSelectedMode(m.id)}
                   className={cn(
                     "rounded-xl border-2 p-3 text-left transition-all",
                     isSelected
                       ? accentMap[m.accent]
                       : "border-border bg-muted/20 hover:border-primary/40 hover:bg-muted/40",
-                    phase === "done" && "opacity-60 cursor-default"
+                    isRunning && "opacity-60 cursor-default"
                   )}
                 >
                   <Icon className={cn("h-5 w-5 mb-1.5", isSelected ? iconMap[m.accent] : "text-muted-foreground")} />
@@ -424,7 +432,7 @@ export default function ValidatePage() {
                 value={consignee}
                 onChange={(e) => setConsignee(e.target.value)}
                 className="pr-10"
-                disabled={phase === "done"}
+                disabled={isRunning}
               />
               {ofacLoading && (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
@@ -471,7 +479,7 @@ export default function ValidatePage() {
                   isProcessing={isProcessing}
                   doc={doc}
                   accents={accents}
-                  disabled={phase === "done"}
+                  disabled={isRunning}
                   onFile={(f) => handleFile(slot.id, f)}
                 />
               );
@@ -497,7 +505,7 @@ export default function ValidatePage() {
             {/* Summary bar */}
             <ExceptionsSummaryBar crossRefResults={crossRefResults} ofacStatus={ofacStatus} />
 
-            {/* CTA */}
+            {/* View Report CTA */}
             <Button
               onClick={handleOpenReport}
               size="lg"
@@ -513,25 +521,36 @@ export default function ValidatePage() {
             </Button>
 
             <p className="text-[11px] text-center text-muted-foreground">
-              Report includes print / PDF export · Your forwarder remains the agent of record
+              Add the packing list above to re-run analysis with all 3 documents · Report includes print / PDF export
             </p>
+          </div>
+        )}
 
-            <div className="flex items-center gap-3 pt-2">
+        {/* ── Persistent Save & Continue — visible once any doc is uploaded OR shipment is created ── */}
+        {(shipmentCreated || uploadedSlotIds.length > 0) && (
+          <div className="border-t pt-4 mt-2">
+            <div className="flex items-center gap-3">
               <Button
                 variant="outline"
                 onClick={handleReset}
-                className="flex-1 gap-2 text-sm"
+                className="gap-1.5 text-sm text-muted-foreground"
               >
                 <RotateCcw className="h-3.5 w-3.5" /> New Validation
               </Button>
               <Button
                 variant="default"
-                onClick={() => navigate("/dashboard")}
-                className="flex-1 gap-2 text-sm font-bold bg-primary"
+                onClick={async () => {
+                  await ensureShipmentExists();
+                  navigate("/dashboard");
+                }}
+                className="flex-1 gap-2 text-sm font-bold"
               >
-                View Dashboard <ArrowRight className="h-4 w-4" />
+                Save & Continue to Dashboard <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
+            <p className="text-[11px] text-muted-foreground mt-2 text-center">
+              Your shipment is saved. You can always return to add more documents or view the report later.
+            </p>
           </div>
         )}
 
@@ -590,13 +609,13 @@ function DocSlot({ slot, isUploaded, isProcessing, doc, accents, disabled, onFil
       className={cn(
         "relative rounded-xl border-2 p-4 transition-all cursor-pointer select-none",
         isUploaded
-          ? `${accents.border} ${accents.bg}`
+          ? `${accents.border} ${accents.bg} hover:opacity-90`
           : dragOver
           ? "border-primary bg-primary/5 scale-[1.02]"
           : "border-dashed border-border bg-muted/20 hover:border-primary/40 hover:bg-muted/40",
-        disabled && !isUploaded && "opacity-50 cursor-default"
+        disabled && "opacity-50 cursor-default"
       )}
-      onClick={() => !disabled && !isUploaded && inputRef.current?.click()}
+      onClick={() => !disabled && inputRef.current?.click()}
       onDragOver={(e) => { e.preventDefault(); if (!disabled) setDragOver(true); }}
       onDragLeave={() => setDragOver(false)}
       onDrop={handleDrop}
@@ -626,6 +645,9 @@ function DocSlot({ slot, isUploaded, isProcessing, doc, accents, disabled, onFil
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   {keyField ? `${keyField.field}: ${String(keyField.value).slice(0, 22)}` : "Extracted"}
                 </p>
+              )}
+              {!disabled && (
+                <p className="text-[9px] text-muted-foreground/50 mt-1">Click to replace</p>
               )}
             </div>
           </>
