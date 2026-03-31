@@ -32,6 +32,9 @@ import {
   Sparkles,
   Zap,
   RotateCcw,
+  Ship,
+  Truck,
+  ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -77,6 +80,37 @@ const OFAC_BADGE: Record<string, { label: string; cls: string }> = {
   critical: { label: "OFAC: Critical", cls: "bg-red-100 text-red-700 border-red-200" },
 };
 
+// ── Shipment mode config ─────────────────────────────────────────────────────
+
+const SHIPMENT_MODES = [
+  {
+    id: "ocean",
+    label: "Sea Freight",
+    sub: "Ocean / maritime import",
+    Icon: Ship,
+    accent: "blue",
+    countryHint: "Any origin",
+  },
+  {
+    id: "land_canada",
+    label: "Land Freight — Canada",
+    sub: "Cross-border truck / rail (USMCA)",
+    Icon: Truck,
+    accent: "emerald",
+    countryHint: "Origin: Canada",
+  },
+  {
+    id: "land_mexico",
+    label: "Land Freight — Mexico",
+    sub: "Cross-border truck / rail (USMCA)",
+    Icon: Truck,
+    accent: "amber",
+    countryHint: "Origin: Mexico",
+  },
+] as const;
+
+type ShipmentModeId = (typeof SHIPMENT_MODES)[number]["id"];
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ValidatePage() {
@@ -89,7 +123,9 @@ export default function ValidatePage() {
 
   // ── Form state ──
   const [shipmentName, setShipmentName] = useState("");
+  const [shipmentNameError, setShipmentNameError] = useState(false);
   const [consignee, setConsignee] = useState("");
+  const [selectedMode, setSelectedMode] = useState<ShipmentModeId | null>(null);
 
   // ── OFAC screening ──
   const [ofacStatus, setOfacStatus]   = useState<OfacStatus | null>(null);
@@ -107,11 +143,12 @@ export default function ValidatePage() {
   const { creditsRemaining, isSubscribed, isLoading: creditsLoading, deductCredit } = useCredits();
 
   // ── Doc validation (extract → crossref pipeline) ──
+  // Pass exact mode so the edge function applies the right USMCA / ocean rules
   const validation = useValidation({
     shipmentId,
-    shipmentMode: "ocean",
+    shipmentMode: selectedMode || "ocean",
     commodityType: "general",
-    countryOfOrigin: "",
+    countryOfOrigin: selectedMode === "land_canada" ? "CA" : selectedMode === "land_mexico" ? "MX" : "",
   });
 
   const { slots, result, isRunning, extractDocument: validationExtract, runCrossRef } = validation;
@@ -176,18 +213,19 @@ export default function ValidatePage() {
   const ensureShipmentExists = useCallback(async () => {
     if (shipmentCreated || !user?.id) return;
     const label = shipmentName || consignee || "Untitled Shipment";
+    const modeForDb = selectedMode === "land_canada" || selectedMode === "land_mexico" ? "land" : (selectedMode || "ocean");
     const { error } = await supabase.from("shipments").insert({
       shipment_id: shipmentId,
       shipment_name: label,
       description: label,
-      mode: "ocean",
+      mode: modeForDb,
       consignee: consignee || "Pending",
       status: "in_transit",
       hs_code: "0000.00",
     } as any);
     if (!error) setShipmentCreated(true);
     else console.warn("[ValidatePage] shipment insert error:", error.message);
-  }, [shipmentId, shipmentCreated, user?.id, shipmentName, consignee]);
+  }, [shipmentId, shipmentCreated, user?.id, shipmentName, consignee, selectedMode]);
 
   // ── OFAC auto-screen on consignee change (debounced 1.5s) ──
   useEffect(() => {
@@ -219,10 +257,20 @@ export default function ValidatePage() {
   // ── Handle file drop / selection for a slot ──
   const handleFile = useCallback(
     async (slotId: DocSlotId, file: File) => {
+      if (!shipmentName.trim()) {
+        setShipmentNameError(true);
+        toast.error("Please enter a shipment name before uploading documents.");
+        return;
+      }
+      if (!selectedMode) {
+        toast.error("Please select a shipment mode before uploading documents.");
+        return;
+      }
+      setShipmentNameError(false);
       await ensureShipmentExists();
       await validationExtract(slotId, file);
     },
-    [ensureShipmentExists, validationExtract]
+    [ensureShipmentExists, validationExtract, shipmentName, selectedMode]
   );
 
   // ── Open the report (with credit check) ──
@@ -237,6 +285,9 @@ export default function ValidatePage() {
   const handleReset = () => {
     setPhase("upload");
     setConsignee("");
+    setShipmentName("");
+    setShipmentNameError(false);
+    setSelectedMode(null);
     setOfacStatus(null);
     setReportOpen(false);
     navigate(0); // refresh to clear hook state
@@ -297,18 +348,68 @@ export default function ValidatePage() {
 
         {/* ── Shipment Name ── */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-foreground uppercase tracking-wider">
-            Shipment Name
+          <label className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1">
+            Shipment Name <span className="text-destructive">*</span>
           </label>
           <Input
             placeholder="e.g. Amazon BOL-2025-001 or Colombia Import June"
             value={shipmentName}
-            onChange={(e) => setShipmentName(e.target.value)}
+            onChange={(e) => { setShipmentName(e.target.value); setShipmentNameError(false); }}
             disabled={phase === "done"}
+            className={shipmentNameError ? "border-destructive ring-1 ring-destructive" : ""}
           />
-          <p className="text-[11px] text-muted-foreground">
-            A label to identify this shipment in your history. You can always rename it later.
-          </p>
+          {shipmentNameError ? (
+            <p className="text-[11px] text-destructive font-semibold">⚠ Shipment name is required before uploading.</p>
+          ) : (
+            <p className="text-[11px] text-muted-foreground">
+              A label to identify this shipment in your history. You can always rename it later.
+            </p>
+          )}
+        </div>
+
+        {/* ── Shipment Mode Selector ── */}
+        <div className="space-y-2">
+          <label className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1">
+            Shipment Mode <span className="text-destructive">*</span>
+          </label>
+          <div className="grid grid-cols-3 gap-3">
+            {SHIPMENT_MODES.map((m) => {
+              const { Icon } = m;
+              const isSelected = selectedMode === m.id;
+              const accentMap: Record<string, string> = {
+                blue:    "border-blue-400 bg-blue-50 ring-2 ring-blue-300",
+                emerald: "border-emerald-400 bg-emerald-50 ring-2 ring-emerald-300",
+                amber:   "border-amber-400 bg-amber-50 ring-2 ring-amber-300",
+              };
+              const iconMap: Record<string, string> = {
+                blue:    "text-blue-600",
+                emerald: "text-emerald-600",
+                amber:   "text-amber-600",
+              };
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  disabled={phase === "done"}
+                  onClick={() => setSelectedMode(m.id)}
+                  className={cn(
+                    "rounded-xl border-2 p-3 text-left transition-all",
+                    isSelected
+                      ? accentMap[m.accent]
+                      : "border-border bg-muted/20 hover:border-primary/40 hover:bg-muted/40",
+                    phase === "done" && "opacity-60 cursor-default"
+                  )}
+                >
+                  <Icon className={cn("h-5 w-5 mb-1.5", isSelected ? iconMap[m.accent] : "text-muted-foreground")} />
+                  <p className={cn("text-xs font-bold leading-tight", isSelected ? "text-foreground" : "text-foreground/80")}>{m.label}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{m.sub}</p>
+                </button>
+              );
+            })}
+          </div>
+          {!selectedMode && phase === "upload" && (
+            <p className="text-[11px] text-muted-foreground">Select the transport mode to ensure correct compliance rules are applied.</p>
+          )}
         </div>
 
         {/* ── Consignee + OFAC ── */}
@@ -414,6 +515,23 @@ export default function ValidatePage() {
             <p className="text-[11px] text-center text-muted-foreground">
               Report includes print / PDF export · Your forwarder remains the agent of record
             </p>
+
+            <div className="flex items-center gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={handleReset}
+                className="flex-1 gap-2 text-sm"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> New Validation
+              </Button>
+              <Button
+                variant="default"
+                onClick={() => navigate("/dashboard")}
+                className="flex-1 gap-2 text-sm font-bold bg-primary"
+              >
+                View Dashboard <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         )}
 
@@ -423,7 +541,7 @@ export default function ValidatePage() {
       <ExceptionsReport
         open={reportOpen}
         onClose={() => setReportOpen(false)}
-        shipmentRef={`SHP-${shipmentId.slice(0, 8).toUpperCase()}`}
+        shipmentRef={shipmentName.trim() || `SHP-${shipmentId.slice(0, 8).toUpperCase()}`}
         consignee={consignee}
         crossRefResults={crossRefResults}
         extractedDocs={extractedDocs}

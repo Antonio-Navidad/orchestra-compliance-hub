@@ -17,8 +17,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   LayoutDashboard, Plus, Search, Download, RefreshCw,
   CheckCircle2, AlertTriangle, XCircle, Shield,
-  ChevronDown, ArrowUpDown, Ship, Plane, Truck,
+  ChevronDown, ArrowUpDown, Ship, Plane, Truck, Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -122,6 +132,8 @@ export default function Dashboard() {
   const [search, setSearch]   = useState("");
   const [filter, setFilter]   = useState<DerivedStatus | "all">("all");
   const [exporting, setExporting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Shipment | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const { data: shipments = [], isLoading, refetch } = useQuery<Shipment[]>({
     queryKey: ["shipments", user?.id],
@@ -166,6 +178,23 @@ export default function Dashboard() {
     try { await exportToExcel(rows); }
     catch (e) { console.error(e); }
     finally { setExporting(false); }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await supabase.from("documents").delete().eq("shipment_id", deleteTarget.shipment_id);
+      await supabase.from("exceptions").delete().eq("shipment_id", deleteTarget.shipment_id);
+      const { error } = await supabase.from("shipments").delete().eq("shipment_id", deleteTarget.shipment_id);
+      if (error) throw error;
+      await refetch();
+      setDeleteTarget(null);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -302,9 +331,19 @@ export default function Dashboard() {
                         {format(new Date(s.created_at), "MMM d, yyyy")}
                       </td>
                       <td className="px-4 py-3">
-                        <Button variant="outline" size="sm" className="h-7 text-xs px-2.5" onClick={e => { e.stopPropagation(); navigate(`/shipment/${s.shipment_id}`); }}>
-                          View
-                        </Button>
+                        <div className="flex items-center gap-1.5">
+                          <Button variant="outline" size="sm" className="h-7 text-xs px-2.5" onClick={e => { e.stopPropagation(); navigate(`/shipment/${s.shipment_id}`); }}>
+                            View
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={e => { e.stopPropagation(); setDeleteTarget(s); }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -317,6 +356,32 @@ export default function Dashboard() {
           <p className="text-xs text-center text-muted-foreground">{rows.length} shipment{rows.length !== 1 ? "s" : ""} · Click any row to open details</p>
         )}
       </div>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Shipment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete{" "}
+              <span className="font-semibold text-foreground">
+                {deleteTarget?.shipment_name || deleteTarget?.consignee || "this shipment"}
+              </span>{" "}
+              and all associated documents and exceptions. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Deleting…" : "Delete Shipment"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

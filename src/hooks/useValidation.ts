@@ -246,14 +246,19 @@ export function useValidation({
       // Compute readiness score
       const criticalCount = findings.filter(f => f.severity === "critical").length;
       const highCount = findings.filter(f => f.severity === "high").length;
+      const mediumCount = findings.filter(f => f.severity === "medium").length;
+      const lowCount = findings.filter(f => f.severity === "low").length;
       let readinessScore = 100;
-      readinessScore -= criticalCount * 25;
-      readinessScore -= highCount * 10;
+      readinessScore -= criticalCount * 30;
+      readinessScore -= highCount * 15;
+      readinessScore -= mediumCount * 8;
+      readinessScore -= lowCount * 3;
       readinessScore = Math.max(0, Math.min(100, readinessScore));
 
       const status: "clean" | "review" | "hold" =
         criticalCount > 0 ? "hold" :
-        highCount > 0 ? "review" : "clean";
+        highCount > 0 ? "review" :
+        mediumCount > 0 ? "review" : "clean";
 
       const validationResult: ValidationResult = {
         findings,
@@ -362,14 +367,16 @@ export function useValidation({
 
       const criticalCount = findings.filter(f => f.severity === "critical").length;
       const highCount = findings.filter(f => f.severity === "high").length;
-      let readinessScore = 100 - criticalCount * 25 - highCount * 10;
+      const mediumCount = findings.filter(f => f.severity === "medium").length;
+      const lowCount = findings.filter(f => f.severity === "low").length;
+      let readinessScore = 100 - criticalCount * 30 - highCount * 15 - mediumCount * 8 - lowCount * 3;
       readinessScore = Math.max(0, readinessScore);
 
       setResult({
         findings,
         complianceWarnings: [],
         readinessScore,
-        status: criticalCount > 0 ? "hold" : highCount > 0 ? "review" : "clean",
+        status: criticalCount > 0 ? "hold" : (highCount > 0 || mediumCount > 0) ? "review" : "clean",
         validationRunId: null,
       });
     }
