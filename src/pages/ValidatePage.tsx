@@ -217,7 +217,8 @@ export default function ValidatePage() {
   const ensureShipmentExists = useCallback(async () => {
     if (shipmentCreated || !user?.id) return;
     const label = shipmentName || consignee || "Untitled Shipment";
-    const modeForDb = selectedMode === "land_canada" || selectedMode === "land_mexico" ? "land" : (selectedMode || "ocean");
+    // mode enum values in DB: "sea" | "land" | "air"  (NOT "ocean")
+    const modeForDb = selectedMode === "land_canada" || selectedMode === "land_mexico" ? "land" : "sea";
     const { error } = await supabase.from("shipments").insert({
       shipment_id: shipmentId,
       shipment_name: label,
@@ -226,6 +227,8 @@ export default function ValidatePage() {
       consignee: consignee || "Pending",
       status: "in_transit",
       hs_code: "0000.00",
+      declared_value: 0,
+      risk_score: 0,
     } as any);
     if (!error) setShipmentCreated(true);
     else console.warn("[ValidatePage] shipment insert error:", error.message);
