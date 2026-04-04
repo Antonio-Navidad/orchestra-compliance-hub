@@ -314,10 +314,10 @@ export function ExceptionsReport({
                                 {exc.field_checked}
                               </span>
                             </div>
-                            <p className="text-sm font-medium text-foreground mb-1">
+                            <p className="text-sm font-semibold text-gray-900 mb-1">
                               {exc.finding}
                             </p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-foreground/80">
                               <span className="font-medium">Action: </span>
                               {exc.recommendation}
                             </p>
@@ -385,17 +385,23 @@ export function ExceptionsReport({
           </div>
 
           {/* ── PGA Flags ── */}
-          {allPgaFlags.length > 0 && (
-            <>
-              <Separator className="mb-6" />
-              <div className="mb-6">
-                <h3 className="font-semibold text-xs uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
-                  <Flag className="h-4 w-4" />
-                  Partner Government Agency (PGA) Flags (
-                  {allPgaFlags.length})
-                </h3>
-                <div className="space-y-2">
-                  {allPgaFlags.map((flag, i) => (
+          <Separator className="mb-6" />
+          <div className="mb-6">
+            <h3 className="font-semibold text-xs uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+              <Flag className="h-4 w-4" />
+              Partner Government Agency (PGA) Flags
+              {allPgaFlags.length > 0 && ` (${allPgaFlags.length})`}
+            </h3>
+            {allPgaFlags.length === 0 ? (
+              <div className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+                <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                No PGA requirements detected for this shipment. Standard CBP entry only.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {allPgaFlags
+                  .filter((flag) => flag.agency || flag.requirement)
+                  .map((flag, i) => (
                     <div
                       key={i}
                       className={`flex items-start gap-3 p-3 rounded-lg border ${
@@ -404,18 +410,22 @@ export function ExceptionsReport({
                           : "bg-blue-50 border-blue-200"
                       }`}
                     >
-                      <Badge
-                        variant={flag.mandatory ? "destructive" : "outline"}
-                        className="text-xs mt-0.5 flex-shrink-0"
-                      >
-                        {flag.agency}
-                      </Badge>
+                      {flag.agency && (
+                        <Badge
+                          variant={flag.mandatory ? "destructive" : "outline"}
+                          className="text-xs mt-0.5 flex-shrink-0"
+                        >
+                          {flag.agency}
+                        </Badge>
+                      )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground">
-                          {flag.requirement}
-                        </p>
+                        {flag.requirement && (
+                          <p className="text-sm font-medium text-gray-900">
+                            {flag.requirement}
+                          </p>
+                        )}
                         {flag.reason && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
+                          <p className="text-xs text-gray-700 mt-0.5">
                             {flag.reason}
                           </p>
                         )}
@@ -427,10 +437,9 @@ export function ExceptionsReport({
                       </div>
                     </div>
                   ))}
-                </div>
               </div>
-            </>
-          )}
+            )}
+          </div>
 
           {/* ── Document Inventory ── */}
           {docCount > 0 && (
