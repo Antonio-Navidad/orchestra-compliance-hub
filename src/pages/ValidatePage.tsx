@@ -41,6 +41,7 @@ import {
   Lock,
   BadgeAlert,
   BookmarkPlus,
+  AlertOctagon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -87,6 +88,31 @@ const OFAC_BADGE: Record<string, { label: string; cls: string }> = {
   medium:   { label: "OFAC: Review",   cls: "bg-amber-100 text-amber-700 border-amber-200" },
   high:     { label: "OFAC: High risk", cls: "bg-red-100 text-red-700 border-red-200" },
   critical: { label: "OFAC: Critical", cls: "bg-red-100 text-red-700 border-red-200" },
+};
+
+// ── Urgency helpers (shared with Dashboard) ───────────────────────────────────
+type UrgencyTier = "overdue"|"arriving_today"|"critical_24h"|"urgent_48h"|"warn_72h"|"watch_7d"|"normal"|"unknown";
+function getUrgencyTier(d: string | null): UrgencyTier {
+  if (!d) return "unknown";
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff  = Math.round((new Date(d + "T00:00:00").getTime() - today.getTime()) / 86400000);
+  if (diff < 0)  return "overdue";
+  if (diff === 0) return "arriving_today";
+  if (diff <= 1) return "critical_24h";
+  if (diff <= 2) return "urgent_48h";
+  if (diff <= 3) return "warn_72h";
+  if (diff <= 7) return "watch_7d";
+  return "normal";
+}
+const URGENCY_BADGE_CFG: Record<UrgencyTier, { label: string; cls: string; icon?: any } | null> = {
+  overdue:       { label: "OVERDUE",  cls: "bg-red-100 text-red-800 border-red-300",      icon: null },
+  arriving_today:{ label: "TODAY",    cls: "bg-red-50  text-red-700 border-red-200",      icon: null },
+  critical_24h:  { label: "< 24h",   cls: "bg-red-50  text-red-700 border-red-200",      icon: null },
+  urgent_48h:    { label: "< 48h",   cls: "bg-amber-50 text-amber-700 border-amber-200", icon: null },
+  warn_72h:      { label: "< 72h",   cls: "bg-amber-50 text-amber-600 border-amber-100", icon: null },
+  watch_7d:      { label: "< 7 days",cls: "bg-blue-50 text-blue-600 border-blue-100",    icon: null },
+  normal:        null,
+  unknown:       null,
 };
 
 // ── Shipment mode config ─────────────────────────────────────────────────────
@@ -237,6 +263,8 @@ export default function ValidatePage() {
 
   // ── Form state ──
   const [shipmentName, setShipmentName] = useState("");
+  const [expectedShipDate, setExpectedShipDate] = useState("");
+  const [expectedArrivalDate, setExpectedArrivalDate] = useState("");
   const [shipmentNameError, setShipmentNameError] = useState(false);
   const [consignee, setConsignee] = useState("");
   const [selectedMode, setSelectedMode] = useState<ShipmentModeId | null>(null);
@@ -342,6 +370,8 @@ export default function ValidatePage() {
       status: "in_transit",
       hs_code: "0000.00",
       declared_value: 0,
+      expected_ship_date: expectedShipDate || null,
+      expected_arrival_date: expectedArrivalDate || null,
       risk_score: 0,
     } as any);
     if (!error) setShipmentCreated(true);
@@ -419,6 +449,8 @@ export default function ValidatePage() {
         status:        "draft" as any,
         hs_code:       "0000.00",
         declared_value: 0,
+        expected_ship_date: expectedShipDate || null,
+        expected_arrival_date: expectedArrivalDate || null,
         risk_score:    0,
       } as any);
       if (error) throw error;
@@ -640,6 +672,79 @@ export default function ValidatePage() {
           <p className="text-[11px] text-muted-foreground">
             OFAC sanctions screen auto-runs as you type. Takes 1–2 seconds.
           </p>
+        </div>
+
+        {/* ── Time-Sensitive Alert Banner ── */}
+        {expectedArrivalDate && (() => {
+          const tier = getUrgencyTier(expectedArrivalDate);
+          const isUrgent = ["overdue","arriving_today","critical_24h","urgent_48h","warn_72h"].includes(tier);
+          if (!isUrgent) return null;
+          const missingRequired = selectedMode
+            ? MODE_ADDITIONAL_SLOTS[selectedMode].filter(slot => slot.required && !(slot.id in extractedDocs))
+            : [];
+          const coreDocsMissing = DOC_SLOTS.filter(slot => !(slot.id in extractedDocs));
+          const allMissing = [...coreDocsMissing.map(d => d.label), ...missingRequired.map(d => d.label)];
+          if (allMissing.length === 0) return null;
+          const daysLeft = Math.round((new Date(expectedArrivalDate + "T00:00:00").getTime() - new Date().setHours(0,0,0,0)) / 86400000);
+          return (
+            <div className="rounded-lg border border-red-300 bg-red-50 p-3 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <AlertOctagon className="h-4 w-4 text-red-600 flex-shrink-0" />
+                <span className="text-xs font-bold text-red-800">
+                  TIME-CRITICAL — {daysLeft <= 0 ? "ARRIVAL TODAY OR OVERDUE" : `${daysLeft} DAY${daysLeft !== 1 ? "S" : ""} UNTIL ARRIVAL`}
+                </span>
+              </div>
+              <p className="text-[11px] text-red-700 pl-6">
+                The following documents must be filed before arrival:{" "}
+                <span className="font-semibold">{allMissing.join(", ")}</span>.
+                {tier === "critical_24h" && " ISF 10+2 requires 24hr advance filing — act immediately."}
+                {tier === "warn_72h" && " CBP entry must be filed before vessel arrives."}
+              </p>
+            </div>
+          );
+        })()}
+
+        {/* ── Expected Dates ── */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground uppercase tracking-wider">
+              Expected Ship Date
+            </label>
+            <Input
+              type="date"
+              value={expectedShipDate}
+              onChange={e => setExpectedShipDate(e.target.value)}
+              disabled={isRunning}
+              className="text-sm"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Date goods leave origin port/border.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+              Expected Arrival Date
+              {expectedArrivalDate && (() => {
+                const tier = getUrgencyTier(expectedArrivalDate);
+                const cfg  = URGENCY_BADGE_CFG[tier];
+                return cfg ? (
+                  <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded border inline-flex items-center gap-1", cfg.cls)}>
+                    {cfg.icon && <cfg.icon className="h-2.5 w-2.5"/>}{cfg.label}
+                  </span>
+                ) : null;
+              })()}
+            </label>
+            <Input
+              type="date"
+              value={expectedArrivalDate}
+              onChange={e => setExpectedArrivalDate(e.target.value)}
+              disabled={isRunning}
+              className="text-sm"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Sets 24/48/72hr document deadline alerts.
+            </p>
+          </div>
         </div>
 
         {/* ── Document Slots ── */}
