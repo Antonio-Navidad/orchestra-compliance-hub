@@ -35,6 +35,11 @@ import {
   Ship,
   Truck,
   ArrowRight,
+  Anchor,
+  ClipboardList,
+  Globe,
+  Lock,
+  BadgeAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -67,9 +72,12 @@ const DOC_SLOTS = [
 type DocSlotId = (typeof DOC_SLOTS)[number]["id"];
 
 const ACCENT_CLASSES: Record<string, { border: string; bg: string; icon: string }> = {
-  blue:    { border: "border-blue-200",   bg: "bg-blue-50/60",   icon: "text-blue-500"   },
+  blue:    { border: "border-blue-200",   bg: "bg-blue-50/60",    icon: "text-blue-500"    },
   emerald: { border: "border-emerald-200", bg: "bg-emerald-50/60", icon: "text-emerald-500" },
   violet:  { border: "border-violet-200", bg: "bg-violet-50/60",  icon: "text-violet-500"  },
+  amber:   { border: "border-amber-200",  bg: "bg-amber-50/60",   icon: "text-amber-500"   },
+  orange:  { border: "border-orange-200", bg: "bg-orange-50/60",  icon: "text-orange-500"  },
+  rose:    { border: "border-rose-200",   bg: "bg-rose-50/60",    icon: "text-rose-500"    },
 };
 
 const OFAC_BADGE: Record<string, { label: string; cls: string }> = {
@@ -110,6 +118,109 @@ const SHIPMENT_MODES = [
 ] as const;
 
 type ShipmentModeId = (typeof SHIPMENT_MODES)[number]["id"];
+
+// ── Additional required/recommended documents by mode ────────────────────────
+// These go beyond the core 3 and power mode-specific AI cross-reference checks.
+
+interface AdditionalDocSlot {
+  id: string;
+  label: string;
+  description: string;
+  Icon: React.ComponentType<{ className?: string }>;
+  accent: string;
+  required: boolean;        // true = required for full compliance, false = recommended
+  whyImportant: string;     // tooltip / badge text shown on the slot
+}
+
+const MODE_ADDITIONAL_SLOTS: Record<ShipmentModeId, AdditionalDocSlot[]> = {
+  ocean: [
+    {
+      id: "isf",
+      label: "ISF 10+2",
+      description: "Importer Security Filing",
+      Icon: Shield,
+      accent: "blue",
+      required: true,
+      whyImportant: "$5,000 fine per violation if data mismatches invoice",
+    },
+    {
+      id: "customs_bond",
+      label: "Customs Bond",
+      description: "Bond number, type, surety company",
+      Icon: Lock,
+      accent: "emerald",
+      required: true,
+      whyImportant: "Required for all commercial ocean imports",
+    },
+    {
+      id: "arrival_notice",
+      label: "Arrival Notice",
+      description: "Vessel, port of arrival, last free day",
+      Icon: Anchor,
+      accent: "violet",
+      required: false,
+      whyImportant: "Calculates D&D (demurrage) risk exposure",
+    },
+    {
+      id: "certificate_of_origin",
+      label: "Certificate of Origin",
+      description: "If claiming preferential duty rate",
+      Icon: Globe,
+      accent: "amber",
+      required: false,
+      whyImportant: "Required for GSP or trade agreement duty reduction",
+    },
+  ],
+  land_canada: [
+    {
+      id: "usmca_certification",
+      label: "USMCA Certification",
+      description: "9 mandatory data elements (Annex 5-A)",
+      Icon: ClipboardList,
+      accent: "emerald",
+      required: true,
+      whyImportant: "Required for 0% duty — 25% tariff without it",
+    },
+    {
+      id: "pars_document",
+      label: "PARS / ACI eManifest",
+      description: "Pre-Arrival Review System barcode",
+      Icon: Truck,
+      accent: "blue",
+      required: true,
+      whyImportant: "Enables expedited border crossing via CBSA",
+    },
+  ],
+  land_mexico: [
+    {
+      id: "usmca_certification",
+      label: "USMCA Certification",
+      description: "9 mandatory data elements (Annex 5-A)",
+      Icon: ClipboardList,
+      accent: "emerald",
+      required: true,
+      whyImportant: "Required for 0% duty — 25% tariff without it",
+    },
+    {
+      id: "paps_document",
+      label: "PAPS / ACE Manifest",
+      description: "Pre-Arrival Processing System number",
+      Icon: Truck,
+      accent: "blue",
+      required: true,
+      whyImportant: "Mandatory ACE filing for all commercial truck crossings",
+    },
+    {
+      id: "pedimento",
+      label: "Pedimento",
+      description: "Mexico export customs declaration",
+      Icon: FileText,
+      accent: "amber",
+      required: false,
+      whyImportant: "Value discrepancy triggers CBP + SAT audit",
+    },
+  ],
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -263,7 +374,7 @@ export default function ValidatePage() {
 
   // ── Handle file drop / selection for a slot ──
   const handleFile = useCallback(
-    async (slotId: DocSlotId, file: File) => {
+    async (slotId: string, file: File) => {
       if (!shipmentName.trim()) {
         setShipmentNameError(true);
         toast.error("Please enter a shipment name before uploading documents.");
@@ -489,13 +600,77 @@ export default function ValidatePage() {
             })}
           </div>
 
-          {/* Additional docs hint */}
-          {phase === "upload" && uploadedSlotIds.length > 0 && (
-            <p className="text-[11px] text-muted-foreground text-center pt-1">
-              You can also upload additional documents (ISF, Certificate of Origin, Air Waybill) for a more complete analysis.
-            </p>
-          )}
         </div>
+
+        {/* ── Mode-Specific Additional Documents ── */}
+        {selectedMode && MODE_ADDITIONAL_SLOTS[selectedMode]?.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <BadgeAlert className="h-4 w-4 text-amber-500" />
+              <label className="text-xs font-semibold text-foreground uppercase tracking-wider">
+                {selectedMode === "ocean" ? "Ocean" : selectedMode === "land_canada" ? "Canada" : "Mexico"} — Required &amp; Recommended Documents
+              </label>
+            </div>
+
+            {/* Required additional docs */}
+            {MODE_ADDITIONAL_SLOTS[selectedMode].filter(s => s.required).length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold text-destructive uppercase tracking-widest mb-2">
+                  Required for Full Compliance
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  {MODE_ADDITIONAL_SLOTS[selectedMode].filter(s => s.required).map((slot) => {
+                    const isUploaded = slot.id in extractedDocs;
+                    const isProcessing = processingDocs.has(slot.id);
+                    const doc = extractedDocs[slot.id];
+                    const accents = ACCENT_CLASSES[slot.accent] ?? ACCENT_CLASSES["blue"];
+                    return (
+                      <AdditionalDocSlotCard
+                        key={slot.id}
+                        slot={slot}
+                        isUploaded={isUploaded}
+                        isProcessing={isProcessing}
+                        doc={doc}
+                        accents={accents}
+                        disabled={isRunning}
+                        onFile={(f) => handleFile(slot.id, f)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Recommended additional docs */}
+            {MODE_ADDITIONAL_SLOTS[selectedMode].filter(s => !s.required).length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">
+                  Recommended — Enhances Analysis
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  {MODE_ADDITIONAL_SLOTS[selectedMode].filter(s => !s.required).map((slot) => {
+                    const isUploaded = slot.id in extractedDocs;
+                    const isProcessing = processingDocs.has(slot.id);
+                    const doc = extractedDocs[slot.id];
+                    const accents = ACCENT_CLASSES[slot.accent] ?? ACCENT_CLASSES["blue"];
+                    return (
+                      <AdditionalDocSlotCard
+                        key={slot.id}
+                        slot={slot}
+                        isUploaded={isUploaded}
+                        isProcessing={isProcessing}
+                        doc={doc}
+                        accents={accents}
+                        disabled={isRunning}
+                        onFile={(f) => handleFile(slot.id, f)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Processing indicator ── */}
         {phase === "processing" && (
@@ -668,6 +843,81 @@ function DocSlot({ slot, isUploaded, isProcessing, doc, accents, disabled, onFil
               <span>Click or drop</span>
             </div>
           </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── AdditionalDocSlotCard ─────────────────────────────────────────────────
+// Compact 2-column card for mode-specific docs — shows risk badge + why it matters.
+
+interface AdditionalDocSlotCardProps {
+  slot: AdditionalDocSlot;
+  isUploaded: boolean;
+  isProcessing: boolean;
+  doc: any;
+  accents: { border: string; bg: string; icon: string };
+  disabled: boolean;
+  onFile: (f: File) => void;
+}
+
+function AdditionalDocSlotCard({ slot, isUploaded, isProcessing, doc, accents, disabled, onFile }: AdditionalDocSlotCardProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const { Icon } = slot;
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (disabled) return;
+    const file = e.dataTransfer.files[0];
+    if (file) onFile(file);
+  };
+
+  return (
+    <div
+      className={cn(
+        "relative rounded-xl border-2 p-3 transition-all cursor-pointer select-none",
+        isUploaded
+          ? `${accents.border} ${accents.bg} hover:opacity-90`
+          : dragOver
+          ? "border-primary bg-primary/5 scale-[1.02]"
+          : "border-dashed border-border bg-muted/20 hover:border-primary/40 hover:bg-muted/40",
+        disabled && "opacity-50 cursor-default"
+      )}
+      onClick={() => !disabled && inputRef.current?.click()}
+      onDragOver={(e) => { e.preventDefault(); if (!disabled) setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={handleDrop}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".pdf,.png,.jpg,.jpeg,.tiff,.webp"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }}
+      />
+      <div className="flex items-start gap-2.5">
+        {isProcessing ? (
+          <Loader2 className={cn("h-5 w-5 animate-spin mt-0.5 flex-shrink-0", accents.icon)} />
+        ) : isUploaded ? (
+          <CheckCircle2 className={cn("h-5 w-5 mt-0.5 flex-shrink-0", accents.icon)} />
+        ) : (
+          <Icon className={cn("h-5 w-5 mt-0.5 flex-shrink-0", accents.icon)} />
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-bold text-foreground leading-tight">{slot.label}</p>
+          <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">{slot.description}</p>
+          <p className={cn(
+            "text-[9px] font-semibold mt-1 leading-tight",
+            slot.required ? "text-amber-600" : "text-muted-foreground/70"
+          )}>
+            {isUploaded ? "✓ Uploaded — click to replace" : `⚡ ${slot.whyImportant}`}
+          </p>
+        </div>
+        {!isUploaded && !isProcessing && (
+          <Upload className="h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0 mt-0.5" />
         )}
       </div>
     </div>
