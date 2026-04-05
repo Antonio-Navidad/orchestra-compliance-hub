@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   LayoutDashboard, Plus, Search, Download, RefreshCw,
   CheckCircle2, AlertTriangle, XCircle, Shield,
-  ChevronDown, ArrowUpDown, Ship, Plane, Truck, Trash2,
+  ChevronDown, ArrowUpDown, Ship, Plane, Truck, Trash2, PlayCircle,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -332,9 +332,20 @@ export default function Dashboard() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
-                          <Button variant="outline" size="sm" className="h-7 text-xs px-2.5" onClick={e => { e.stopPropagation(); navigate(`/shipment/${s.shipment_id}`); }}>
-                            View
-                          </Button>
+                          {status === "draft" ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs px-2.5 gap-1 text-primary border-primary/40 hover:bg-primary/10"
+                              onClick={e => { e.stopPropagation(); navigate(`/validate?draft=${s.shipment_id}`); }}
+                            >
+                              <PlayCircle className="h-3 w-3" /> Continue
+                            </Button>
+                          ) : (
+                            <Button variant="outline" size="sm" className="h-7 text-xs px-2.5" onClick={e => { e.stopPropagation(); navigate(`/shipment/${s.shipment_id}`); }}>
+                              View
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"

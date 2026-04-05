@@ -221,15 +221,25 @@ export function ExceptionsReport({
                 )}
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePrint}
-              className="print:hidden flex-shrink-0"
-            >
-              <Printer className="h-4 w-4 mr-1.5" />
-              Print / Save PDF
-            </Button>
+            <div className="flex gap-2 print:hidden flex-shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrint}
+              >
+                <Printer className="h-4 w-4 mr-1.5" />
+                Print / PDF
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handlePrint}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                <FileText className="h-4 w-4 mr-1.5" />
+                Export Broker Summary
+              </Button>
+            </div>
           </div>
 
           {/* ── Overall Status Banner ── */}
@@ -241,6 +251,14 @@ export function ExceptionsReport({
             />
             <span className={`font-bold text-sm tracking-wide ${status.text}`}>
               {status.label}
+            </span>
+          </div>
+
+          {/* ── Legal Safe Harbor Banner ── */}
+          <div className="flex items-start gap-2 p-3 mb-6 rounded-lg border border-blue-200 bg-blue-50 text-[11px] text-blue-800 leading-relaxed">
+            <Shield className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-blue-500" />
+            <span>
+              <strong>Audit Tool Disclosure (19 USC 1641):</strong> Orchestra AI is a pre-filing compliance audit tool — not a licensed customs broker. This report does not constitute "Customs Business." All findings, HTS guidance (provided at 6-digit level only), and classification suggestions must be reviewed and finalized by your licensed customs broker before CBP submission. Orchestra does not file entries, ISFs, or any regulatory submissions on your behalf.
             </span>
           </div>
 
@@ -338,7 +356,14 @@ export function ExceptionsReport({
             )}
           </div>
 
-          <Separator className="mb-6" />
+          {/* ── HTS Classification Caveat ── */}
+          {sortedExceptions.some(e => (e.field_checked || "").toLowerCase().includes("hts") || (e.finding || "").toLowerCase().includes("hts")) && (
+            <div className="mt-3 p-3 rounded-lg border border-amber-200 bg-amber-50 text-[11px] text-amber-800 leading-relaxed">
+              <strong>HTS Classification Note:</strong> Any tariff classification guidance in this report is provided at the 6-digit level only, for internal review purposes. Determination of the full 10-digit HTS subheading constitutes "Customs Business" under 19 USC 1641 and must be finalized by your licensed customs broker prior to CBP entry submission.
+            </div>
+          )}
+
+          <Separator className="mb-6 mt-6" />
 
           {/* ── OFAC Screening ── */}
           <div className="mb-6">
