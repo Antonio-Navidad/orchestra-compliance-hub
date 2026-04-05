@@ -10,6 +10,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { useValidation } from "@/hooks/useValidation";
 import { useCredits } from "@/hooks/useCredits";
 import type { CrossRefResult, ExtractedDocData } from "@/hooks/useDocExtraction";
@@ -253,6 +254,7 @@ const MODE_ADDITIONAL_SLOTS: Record<ShipmentModeId, AdditionalDocSlot[]> = {
 
 export default function ValidatePage() {
   const { user } = useAuth();
+  const { currentWorkspace } = useWorkspace();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -373,10 +375,11 @@ export default function ValidatePage() {
       expected_ship_date: expectedShipDate || null,
       expected_arrival_date: expectedArrivalDate || null,
       risk_score: 0,
+      workspace_id: currentWorkspace?.id ?? null,
     } as any);
     if (!error) setShipmentCreated(true);
-    else console.warn("[ValidatePage] shipment insert error:", error.message);
-  }, [shipmentId, shipmentCreated, user?.id, shipmentName, consignee, selectedMode]);
+    else console.warn("[ValidatePage] shipment insert error:", error.message, "workspace_id:", currentWorkspace?.id);
+  }, [shipmentId, shipmentCreated, user?.id, shipmentName, consignee, selectedMode, currentWorkspace?.id]);
 
   // ── OFAC auto-screen on consignee change (debounced 1.5s) ──
   useEffect(() => {
@@ -452,6 +455,7 @@ export default function ValidatePage() {
         expected_ship_date: expectedShipDate || null,
         expected_arrival_date: expectedArrivalDate || null,
         risk_score:    0,
+        workspace_id:  currentWorkspace?.id ?? null,
       } as any);
       if (error) throw error;
       setShipmentCreated(true);
@@ -463,7 +467,7 @@ export default function ValidatePage() {
     } finally {
       setSavingDraft(false);
     }
-  }, [shipmentId, shipmentName, consignee, selectedMode, user?.id, navigate]);
+  }, [shipmentId, shipmentName, consignee, selectedMode, user?.id, navigate, expectedShipDate, expectedArrivalDate, currentWorkspace?.id]);
 
   // ── Handle file drop / selection for a slot ──
   const handleFile = useCallback(
