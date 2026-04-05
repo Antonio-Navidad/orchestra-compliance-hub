@@ -66,12 +66,12 @@ function getUrgencyTier(arrivalDate: string | null): UrgencyTier {
 }
 
 const URGENCY_CFG: Record<UrgencyTier, { label: string; cls: string; icon?: any } | null> = {
-  overdue:       { label: "OVERDUE",    cls: "bg-red-100 text-red-800 border-red-300",     icon: AlertOctagon },
-  arriving_today:{ label: "TODAY",      cls: "bg-red-50  text-red-700 border-red-200",     icon: AlertOctagon },
-  critical_24h:  { label: "< 24h",     cls: "bg-red-50  text-red-700 border-red-200",     icon: Clock },
-  urgent_48h:    { label: "< 48h",     cls: "bg-amber-50 text-amber-700 border-amber-200", icon: Clock },
-  warn_72h:      { label: "< 72h",     cls: "bg-amber-50 text-amber-600 border-amber-100", icon: Clock },
-  watch_7d:      { label: "< 7 days",  cls: "bg-blue-50 text-blue-600 border-blue-100",   icon: CalendarDays },
+  overdue:       { label: "OVERDUE",    cls: "bg-red-900/50 text-red-300 border-red-700",     icon: AlertOctagon },
+  arriving_today:{ label: "TODAY",      cls: "bg-red-900/40 text-red-300 border-red-700",     icon: AlertOctagon },
+  critical_24h:  { label: "< 24h",     cls: "bg-red-900/40 text-red-300 border-red-700",     icon: Clock },
+  urgent_48h:    { label: "< 48h",     cls: "bg-amber-900/40 text-amber-300 border-amber-700", icon: Clock },
+  warn_72h:      { label: "< 72h",     cls: "bg-amber-900/30 text-amber-400 border-amber-800", icon: Clock },
+  watch_7d:      { label: "< 7 days",  cls: "bg-blue-900/30 text-blue-400 border-blue-800",   icon: CalendarDays },
   normal:        null,
   unknown:       null,
 };
@@ -91,16 +91,16 @@ function deriveStatus(s: Shipment): DerivedStatus {
 }
 
 const STATUS_CFG: Record<DerivedStatus, { label: string; cls: string; dot: string }> = {
-  clear:  { label: "Cleared",     cls: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
-  review: { label: "Review",      cls: "bg-amber-50   text-amber-700   border-amber-200",   dot: "bg-amber-500"   },
-  hold:   { label: "Blocked",     cls: "bg-red-50     text-red-700     border-red-200",     dot: "bg-red-500"     },
-  draft:  { label: "Draft",       cls: "bg-slate-50   text-slate-500   border-slate-200",   dot: "bg-slate-400"   },
+  clear:  { label: "Cleared",     cls: "bg-emerald-900/30 text-emerald-400 border-emerald-700", dot: "bg-emerald-500" },
+  review: { label: "Review",      cls: "bg-amber-900/30   text-amber-400   border-amber-700",   dot: "bg-amber-500"   },
+  hold:   { label: "Blocked",     cls: "bg-red-900/30     text-red-400     border-red-700",     dot: "bg-red-500"     },
+  draft:  { label: "Draft",       cls: "bg-slate-800/50   text-slate-400   border-slate-600",   dot: "bg-slate-500"   },
 };
 
 const MODE_CFG: Record<string, { label: string; icon: any; cls: string }> = {
-  ocean: { label: "Sea",   icon: Ship,  cls: "bg-blue-50 text-blue-700 border-blue-200" },
-  air:   { label: "Air",   icon: Plane, cls: "bg-purple-50 text-purple-700 border-purple-200" },
-  land:  { label: "Land",  icon: Truck, cls: "bg-orange-50 text-orange-700 border-orange-200" },
+  ocean: { label: "Sea",   icon: Ship,  cls: "bg-blue-900/30 text-blue-400 border-blue-700" },
+  air:   { label: "Air",   icon: Plane, cls: "bg-purple-900/30 text-purple-400 border-purple-700" },
+  land:  { label: "Land",  icon: Truck, cls: "bg-orange-900/30 text-orange-400 border-orange-700" },
 };
 
 // ── Stat Card ─────────────────────────────────────────────────────────────────
@@ -113,10 +113,10 @@ function StatCard({
   active?: boolean;
 }) {
   const colors = {
-    blue:  { text: "text-blue-600",    ring: "ring-blue-300",    activeBg: "bg-blue-50"    },
-    red:   { text: "text-red-600",     ring: "ring-red-300",     activeBg: "bg-red-50"     },
-    green: { text: "text-emerald-600", ring: "ring-emerald-300", activeBg: "bg-emerald-50" },
-    amber: { text: "text-amber-600",   ring: "ring-amber-300",   activeBg: "bg-amber-50"   },
+    blue:  { text: "text-blue-400",    ring: "ring-blue-700",    activeBg: "bg-blue-900/30"    },
+    red:   { text: "text-red-400",     ring: "ring-red-700",     activeBg: "bg-red-900/30"     },
+    green: { text: "text-emerald-400", ring: "ring-emerald-700", activeBg: "bg-emerald-900/30" },
+    amber: { text: "text-amber-400",   ring: "ring-amber-700",   activeBg: "bg-amber-900/30"   },
   };
   const c = colors[color];
   return (
@@ -359,7 +359,7 @@ export default function Dashboard() {
 
                   // Critical/overdue rows get a subtle background pulse
                   const urgencyBg = (urgency === "overdue" || urgency === "arriving_today" || urgency === "critical_24h")
-                    ? "bg-red-50/30" : "";
+                    ? "bg-red-950/20" : "";
 
                   return (
                     <tr key={s.shipment_id}
