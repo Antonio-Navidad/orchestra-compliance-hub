@@ -40,6 +40,8 @@ import NotFound from "./pages/NotFound";
 import GuidePage from "./pages/GuidePage";
 import CommandCenter from "./pages/CommandCenter";
 import ValidatePage from "./pages/ValidatePage";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfUse from "./pages/TermsOfUse";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +95,8 @@ function WorkspacePurposeWrapper() {
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfUse />} />
           <Route path="/welcome" element={<WelcomeGate />} />
           {/* ── Core product — default landing after auth ── */}
           <Route path="/" element={<ProtectedRoute><ValidatePage /></ProtectedRoute>} />

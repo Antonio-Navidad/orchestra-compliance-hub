@@ -86,7 +86,7 @@ export default function Auth() {
             ))}
           </div>
         </div>
-        <p className="text-[11px] font-mono" style={{color:"#475569"}}>Enterprise-grade encryption · SOC 2 Type II</p>
+        <p className="text-[11px] font-mono" style={{color:"#475569"}}>Enterprise-grade encryption · Secured by Supabase</p>
       </div>
 
       {/* RIGHT FORM */}
@@ -147,6 +147,11 @@ export default function Auth() {
               <Button variant="outline" className="w-full" onClick={()=>setView("login")}>Back to sign in</Button>
             </div>
           )}
+          <p className="text-center text-[10px] text-muted-foreground mt-6">
+            By signing up, you agree to our{" "}
+            <a href="/terms" className="text-primary hover:underline">Terms of Use</a>{" "}and{" "}
+            <a href="/privacy" className="text-primary hover:underline">Privacy Policy</a>.
+          </p>
         </div>
       </div>
     </div>
