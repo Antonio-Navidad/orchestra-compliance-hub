@@ -16,8 +16,10 @@ import { AuditTimeline } from "@/components/AuditTimeline";
 import { StatusWorkflow } from "@/components/StatusWorkflow";
 import { OutcomeRecorder } from "@/components/OutcomeRecorder";
 import { ETAPanel } from "@/components/ETAPanel";
+import { ExceptionsReport as WorkspaceExceptionsReport } from "@/components/workspace/ExceptionsReport";
+import type { ExtractedDocData } from "@/hooks/useDocExtraction";
 import { Shipment, Invoice, Manifest, TransportMode } from "@/types/orchestra";
-import { ArrowLeft, FileText, AlertTriangle, TrendingDown, Zap, Clock, ClipboardCheck, Send, BarChart3, Navigation } from "lucide-react";
+import { ArrowLeft, FileText, AlertTriangle, TrendingDown, Zap, Clock, ClipboardCheck, Send, BarChart3, Navigation, ShieldAlert, Shield, DollarSign, ChevronRight, XCircle } from "lucide-react";
 import { PacketScoreCard } from "@/components/PacketScoreCard";
 import { computePacketScore } from "@/lib/packetScore";
 import { EscalationPanel } from "@/components/EscalationPanel";
@@ -30,8 +32,9 @@ import { SendToBrokerPanel } from "@/components/SendToBrokerPanel";
 export default function ShipmentDetail() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
-  const initialTab = searchParams.get("tab") || "overview";
+  const initialTab = searchParams.get("tab") || "exceptions";
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [reportOpen, setReportOpen] = useState(false);
   const { t } = useLanguage();
 
   const { data: shipment, isLoading } = useQuery({
@@ -77,6 +80,89 @@ export default function ShipmentDetail() {
     enabled: !!id,
   });
 
+  // Load cross-ref results for exceptions report
+  const { data: crossRefResults = [] } = useQuery({
+    queryKey: ["crossref-results", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("crossref_results" as any)
+        .select("*")
+        .eq("shipment_id", id);
+      if (error) return [];
+      const toSnake = (s: string) => (s || "").trim().toLowerCase().replace(/[\s\-]+/g, "_").replace(/[^a-z0-9_]/g, "");
+      return (data || []).map((r: any) => ({
+        id: r.id,
+        severity: r.severity,
+        document_a: toSnake(r.document_a_type),
+        document_b: toSnake(r.document_b_type),
+        field_checked: r.field_checked,
+        finding: r.finding,
+        recommendation: r.recommendation || "",
+        estimated_financial_impact_usd: Number(r.estimated_financial_impact_usd) || 0,
+        resolved: r.resolved,
+      }));
+    },
+    enabled: !!id,
+  });
+
+  // Load sanctions alerts for exceptions report
+  const { data: sanctionsAlerts = [] } = useQuery({
+    queryKey: ["sanctions-alerts", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("sanctions_alerts" as any)
+        .select("*")
+        .eq("shipment_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const latestAlert = sanctionsAlerts[0] as any;
+  const ofacStatusForReport = latestAlert
+    ? {
+        risk: latestAlert.risk_level as any,
+        entity: latestAlert.entity_name || "",
+        screened: true,
+      }
+    : null;
+
+  const uploadedDocTypes = shipmentDocs.map((d: any) =>
+    (d.document_type || "").toLowerCase().replace(/[\s\-]+/g, "_")
+  );
+
+  // Load extracted documents for workspace ExceptionsReport
+  const { data: extractedDocsRaw = [] } = useQuery({
+    queryKey: ["extracted-docs", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("documents")
+        .select("document_type, extracted_data, extraction_status, file_name")
+        .eq("shipment_id", id!)
+        .eq("extraction_status", "complete");
+      if (error) return [];
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  const extractedDocs: Record<string, ExtractedDocData> = Object.fromEntries(
+    extractedDocsRaw.map((doc: any) => [
+      doc.document_type,
+      {
+        docId: doc.document_type,
+        documentType: doc.document_type,
+        extractedData: doc.extracted_data || {},
+        fieldDetails: [],
+        warnings: [],
+        pgaFlags: [],
+        extractionStatus: "complete",
+      } satisfies ExtractedDocData,
+    ])
+  );
+
   const invoice = invoices[0];
   const manifest = manifests[0];
   const mismatches = invoice && manifest ? compareInvoiceManifest(invoice, manifest) : [];
@@ -101,8 +187,7 @@ export default function ShipmentDetail() {
   }
 
   const jurisdictionCode = (shipment as any).jurisdiction_code || "US";
-  
-  const uploadedDocTypes = shipmentDocs.map((d: any) => d.document_type);
+
   const packetScore = computePacketScore(
     uploadedDocTypes,
     shipment.mode as TransportMode,
@@ -207,6 +292,9 @@ export default function ShipmentDetail() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-secondary/50 border border-border flex-wrap h-auto gap-1 p-1">
+            <TabsTrigger value="exceptions" className="font-mono text-xs font-bold text-primary border border-primary/30 bg-primary/5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <ShieldAlert size={12} className="mr-1" /> Exceptions Report
+            </TabsTrigger>
             <TabsTrigger value="overview" className="font-mono text-xs">{t("detail.tab.overview")}</TabsTrigger>
             <TabsTrigger value="fix" className="font-mono text-xs">
               <Zap size={12} className="mr-1" /> {t("detail.tab.fixNow")}
@@ -232,6 +320,112 @@ export default function ShipmentDetail() {
               </TabsTrigger>
             )}
           </TabsList>
+
+          <TabsContent value="exceptions" className="mt-4">
+            {/* ── Exceptions Summary Card ── */}
+            {(() => {
+              const criticals = crossRefResults.filter(e => e.severity === "critical").length;
+              const highs = crossRefResults.filter(e => e.severity === "high").length;
+              const mediums = crossRefResults.filter(e => e.severity === "medium").length;
+              const lows = crossRefResults.filter(e => e.severity === "low").length;
+              const totalRisk = crossRefResults
+                .filter(e => e.severity === "critical" || e.severity === "high")
+                .reduce((sum, e) => sum + (e.estimated_financial_impact_usd || 0), 0);
+              let score = 100 - criticals * 30 - highs * 15 - mediums * 8 - lows * 3;
+              score = Math.max(0, Math.min(100, score));
+
+              return (
+                <div className="space-y-3">
+                  {/* Status banner */}
+                  <div className={`flex items-center gap-3 p-4 rounded-lg border-2 ${
+                    criticals > 0 ? "bg-red-950/60 border-red-700" :
+                    highs > 0 ? "bg-orange-950/60 border-orange-700" :
+                    crossRefResults.length > 0 ? "bg-yellow-950/60 border-yellow-700" :
+                    "bg-green-950/60 border-green-700"
+                  }`}>
+                    {criticals > 0
+                      ? <XCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
+                      : <Shield className="h-5 w-5 text-green-400 flex-shrink-0" />}
+                    <span className={`font-bold text-sm tracking-wide ${
+                      criticals > 0 ? "text-red-300" :
+                      highs > 0 ? "text-orange-300" :
+                      crossRefResults.length > 0 ? "text-yellow-300" :
+                      "text-green-300"
+                    }`}>
+                      {criticals > 0 ? "HOLD — CRITICAL ISSUES MUST BE RESOLVED BEFORE FILING" :
+                       highs > 0    ? "REVIEW REQUIRED — RESOLVE EXCEPTIONS BEFORE FILING" :
+                       crossRefResults.length > 0 ? "REVIEW RECOMMENDED — LOW PRIORITY ITEMS FOUND" :
+                       "CLEARED — READY TO FILE"}
+                    </span>
+                  </div>
+
+                  {/* Stats row */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="border rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold">{crossRefResults.length}</div>
+                      <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">Exceptions</div>
+                    </div>
+                    <div className="border rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold">
+                        {totalRisk > 0 ? `$${totalRisk.toLocaleString()}` : "—"}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">Risk Exposure</div>
+                    </div>
+                    <div className="border rounded-lg p-3 text-center">
+                      <div className={`text-2xl font-bold ${
+                        score >= 80 ? "text-green-400" : score >= 50 ? "text-amber-400" : "text-red-400"
+                      }`}>
+                        {score > 0 ? `${score}%` : "0%"}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">Readiness</div>
+                    </div>
+                  </div>
+
+                  {/* Severity breakdown pills */}
+                  {crossRefResults.length > 0 && (
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {criticals > 0 && <span className="px-2 py-1 rounded bg-red-950/60 border border-red-700 text-red-300">{criticals} Critical</span>}
+                      {highs > 0    && <span className="px-2 py-1 rounded bg-orange-950/60 border border-orange-700 text-orange-300">{highs} High</span>}
+                      {mediums > 0  && <span className="px-2 py-1 rounded bg-yellow-950/60 border border-yellow-700 text-yellow-300">{mediums} Medium</span>}
+                      {lows > 0     && <span className="px-2 py-1 rounded bg-blue-950/60 border border-blue-700 text-blue-300">{lows} Low</span>}
+                    </div>
+                  )}
+
+                  {/* View full report button */}
+                  <button
+                    onClick={() => setReportOpen(true)}
+                    className="w-full flex items-center justify-between p-4 rounded-lg border border-primary/40 bg-primary/5 hover:bg-primary/10 transition-colors text-sm font-medium text-primary"
+                  >
+                    <span className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      View Full Pre-Filing Validation Report
+                    </span>
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })()}
+
+            {/* Workspace-grade full report dialog */}
+            <WorkspaceExceptionsReport
+              open={reportOpen}
+              onClose={() => setReportOpen(false)}
+              shipmentRef={shipment.shipment_id}
+              shipmentId={shipment.shipment_id}
+              workspaceId={(shipment as any).workspace_id ?? undefined}
+              consignee={shipment.consignee}
+              crossRefResults={crossRefResults}
+              extractedDocs={extractedDocs}
+              ofacStatus={ofacStatusForReport}
+              complianceScore={(() => {
+                const c = crossRefResults.filter(e => e.severity === "critical").length;
+                const h = crossRefResults.filter(e => e.severity === "high").length;
+                const m = crossRefResults.filter(e => e.severity === "medium").length;
+                const l = crossRefResults.filter(e => e.severity === "low").length;
+                return Math.max(0, Math.min(100, 100 - c * 30 - h * 15 - m * 8 - l * 3));
+              })()}
+            />
+          </TabsContent>
 
           <TabsContent value="overview" className="mt-4 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

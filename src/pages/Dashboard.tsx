@@ -5,7 +5,7 @@
  * Shipments table: Name, Lane, Mode, Status, Readiness %, Date, Actions
  * Excel export via SheetJS
  */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +17,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   LayoutDashboard, Plus, Search, Download, RefreshCw,
   CheckCircle2, AlertTriangle, XCircle, Shield,
-  ChevronDown, ArrowUpDown, Ship, Plane, Truck, Trash2,
+  ChevronDown, ArrowUpDown, Ship, Plane, Truck, Trash2, PlayCircle,
+  Pencil, Check, X, Clock, AlertOctagon, CalendarDays,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -34,16 +35,46 @@ import { format } from "date-fns";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Shipment {
-  shipment_id:    string;
-  shipment_name:  string | null;
-  consignee:      string;
-  origin_location:string | null;
-  dest_location:  string | null;
-  mode:           string | null;
-  status:         string;
-  readiness_score:number | null;
-  created_at:     string;
+  shipment_id:           string;
+  shipment_name:         string | null;
+  display_name:          string | null;
+  consignee:             string;
+  origin_location:       string | null;
+  dest_location:         string | null;
+  mode:                  string | null;
+  status:                string;
+  readiness_score:       number | null;
+  created_at:            string;
+  expected_ship_date:    string | null;
+  expected_arrival_date: string | null;
 }
+
+type UrgencyTier = "overdue" | "arriving_today" | "critical_24h" | "urgent_48h" | "warn_72h" | "watch_7d" | "normal" | "unknown";
+
+function getUrgencyTier(arrivalDate: string | null): UrgencyTier {
+  if (!arrivalDate) return "unknown";
+  const today = new Date(); today.setHours(0,0,0,0);
+  const arrival = new Date(arrivalDate + "T00:00:00");
+  const diffDays = Math.round((arrival.getTime() - today.getTime()) / 86400000);
+  if (diffDays < 0)  return "overdue";
+  if (diffDays === 0) return "arriving_today";
+  if (diffDays <= 1) return "critical_24h";
+  if (diffDays <= 2) return "urgent_48h";
+  if (diffDays <= 3) return "warn_72h";
+  if (diffDays <= 7) return "watch_7d";
+  return "normal";
+}
+
+const URGENCY_CFG: Record<UrgencyTier, { label: string; cls: string; icon?: any } | null> = {
+  overdue:       { label: "OVERDUE",    cls: "bg-red-900/50 text-red-300 border-red-700",     icon: AlertOctagon },
+  arriving_today:{ label: "TODAY",      cls: "bg-red-900/40 text-red-300 border-red-700",     icon: AlertOctagon },
+  critical_24h:  { label: "< 24h",     cls: "bg-red-900/40 text-red-300 border-red-700",     icon: Clock },
+  urgent_48h:    { label: "< 48h",     cls: "bg-amber-900/40 text-amber-300 border-amber-700", icon: Clock },
+  warn_72h:      { label: "< 72h",     cls: "bg-amber-900/30 text-amber-400 border-amber-800", icon: Clock },
+  watch_7d:      { label: "< 7 days",  cls: "bg-blue-900/30 text-blue-400 border-blue-800",   icon: CalendarDays },
+  normal:        null,
+  unknown:       null,
+};
 
 type DerivedStatus = "clear" | "review" | "hold" | "draft";
 
@@ -60,16 +91,16 @@ function deriveStatus(s: Shipment): DerivedStatus {
 }
 
 const STATUS_CFG: Record<DerivedStatus, { label: string; cls: string; dot: string }> = {
-  clear:  { label: "Cleared",     cls: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
-  review: { label: "Review",      cls: "bg-amber-50   text-amber-700   border-amber-200",   dot: "bg-amber-500"   },
-  hold:   { label: "Blocked",     cls: "bg-red-50     text-red-700     border-red-200",     dot: "bg-red-500"     },
-  draft:  { label: "Draft",       cls: "bg-slate-50   text-slate-500   border-slate-200",   dot: "bg-slate-400"   },
+  clear:  { label: "Cleared",     cls: "bg-emerald-900/30 text-emerald-400 border-emerald-700", dot: "bg-emerald-500" },
+  review: { label: "Review",      cls: "bg-amber-900/30   text-amber-400   border-amber-700",   dot: "bg-amber-500"   },
+  hold:   { label: "Blocked",     cls: "bg-red-900/30     text-red-400     border-red-700",     dot: "bg-red-500"     },
+  draft:  { label: "Draft",       cls: "bg-slate-800/50   text-slate-400   border-slate-600",   dot: "bg-slate-500"   },
 };
 
 const MODE_CFG: Record<string, { label: string; icon: any; cls: string }> = {
-  ocean: { label: "Sea",   icon: Ship,  cls: "bg-blue-50 text-blue-700 border-blue-200" },
-  air:   { label: "Air",   icon: Plane, cls: "bg-purple-50 text-purple-700 border-purple-200" },
-  land:  { label: "Land",  icon: Truck, cls: "bg-orange-50 text-orange-700 border-orange-200" },
+  ocean: { label: "Sea",   icon: Ship,  cls: "bg-blue-900/30 text-blue-400 border-blue-700" },
+  air:   { label: "Air",   icon: Plane, cls: "bg-purple-900/30 text-purple-400 border-purple-700" },
+  land:  { label: "Land",  icon: Truck, cls: "bg-orange-900/30 text-orange-400 border-orange-700" },
 };
 
 // ── Stat Card ─────────────────────────────────────────────────────────────────
@@ -82,10 +113,10 @@ function StatCard({
   active?: boolean;
 }) {
   const colors = {
-    blue:  { text: "text-blue-600",    ring: "ring-blue-300",    activeBg: "bg-blue-50"    },
-    red:   { text: "text-red-600",     ring: "ring-red-300",     activeBg: "bg-red-50"     },
-    green: { text: "text-emerald-600", ring: "ring-emerald-300", activeBg: "bg-emerald-50" },
-    amber: { text: "text-amber-600",   ring: "ring-amber-300",   activeBg: "bg-amber-50"   },
+    blue:  { text: "text-blue-400",    ring: "ring-blue-700",    activeBg: "bg-blue-900/30"    },
+    red:   { text: "text-red-400",     ring: "ring-red-700",     activeBg: "bg-red-900/30"     },
+    green: { text: "text-emerald-400", ring: "ring-emerald-700", activeBg: "bg-emerald-900/30" },
+    amber: { text: "text-amber-400",   ring: "ring-amber-700",   activeBg: "bg-amber-900/30"   },
   };
   const c = colors[color];
   return (
@@ -110,14 +141,17 @@ async function exportToExcel(rows: Shipment[]) {
   // @ts-ignore
   const XLSX = await import("https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs");
   const data = rows.map(r => ({
-    "Shipment Name": r.shipment_name || r.consignee,
-    "Consignee":     r.consignee,
-    "Origin":        r.origin_location || "—",
-    "Destination":   r.dest_location   || "—",
-    "Mode":          r.mode            || "—",
-    "Status":        deriveStatus(r),
-    "Readiness %":   r.readiness_score ?? "—",
-    "Date":          format(new Date(r.created_at), "yyyy-MM-dd"),
+    "Shipment Name":     r.display_name || r.shipment_name || r.consignee,
+    "Consignee":         r.consignee,
+    "Origin":            r.origin_location || "—",
+    "Destination":       r.dest_location   || "—",
+    "Mode":              r.mode            || "—",
+    "Status":            deriveStatus(r),
+    "Readiness %":       r.readiness_score ?? "—",
+    "Expected Ship Date":r.expected_ship_date    || "—",
+    "Expected Arrival":  r.expected_arrival_date || "—",
+    "Urgency":           r.expected_arrival_date ? getUrgencyTier(r.expected_arrival_date) : "—",
+    "Created":           format(new Date(r.created_at), "yyyy-MM-dd"),
   }));
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
@@ -129,18 +163,23 @@ async function exportToExcel(rows: Shipment[]) {
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate  = useNavigate();
-  const [search, setSearch]   = useState("");
-  const [filter, setFilter]   = useState<DerivedStatus | "all">("all");
+  const [search, setSearch]     = useState("");
+  const [filter, setFilter]     = useState<DerivedStatus | "all">("all");
   const [exporting, setExporting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Shipment | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Rename state
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [savingRename, setSavingRename] = useState(false);
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   const { data: shipments = [], isLoading, refetch } = useQuery<Shipment[]>({
     queryKey: ["shipments", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("shipments")
-        .select("shipment_id, shipment_name, consignee, origin_location, dest_location, mode, status, readiness_score, created_at")
+        .select("shipment_id, shipment_name, display_name, consignee, origin_location, dest_location, mode, status, readiness_score, created_at, expected_ship_date, expected_arrival_date")
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -148,6 +187,27 @@ export default function Dashboard() {
     },
     enabled: !!user?.id,
   });
+
+  const startRename = useCallback((s: Shipment, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRenamingId(s.shipment_id);
+    setRenameValue(s.display_name || s.shipment_name || "");
+    setTimeout(() => renameInputRef.current?.focus(), 50);
+  }, []);
+
+  const commitRename = useCallback(async () => {
+    if (!renamingId) return;
+    setSavingRename(true);
+    try {
+      await supabase.from("shipments")
+        .update({ display_name: renameValue.trim() || null } as any)
+        .eq("shipment_id", renamingId);
+      await refetch();
+    } finally {
+      setSavingRename(false);
+      setRenamingId(null);
+    }
+  }, [renamingId, renameValue, refetch]);
 
   // Stats
   const stats = useMemo(() => {
@@ -275,28 +335,69 @@ export default function Dashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/30">
-                  {["Shipment Name","Lane","Mode","Status","Readiness","Date",""].map(h => (
+                  {["Shipment Name","Lane","Mode","Status","Readiness","ETA / Urgency",""].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {rows.map(s => {
-                  const status  = deriveStatus(s);
-                  const cfg     = STATUS_CFG[status];
-                  const modeCfg = s.mode ? MODE_CFG[s.mode] : null;
-                  const ModeIcon= modeCfg?.icon;
-                  const lane    = [s.origin_location, s.dest_location].filter(Boolean).join(" → ") || "—";
-                  const name    = s.shipment_name || s.consignee || `SHP-${s.shipment_id.slice(0,8).toUpperCase()}`;
+                  const status    = deriveStatus(s);
+                  const cfg       = STATUS_CFG[status];
+                  const modeCfg   = s.mode ? MODE_CFG[s.mode] : null;
+                  const ModeIcon  = modeCfg?.icon;
+                  const lane      = [s.origin_location, s.dest_location].filter(Boolean).join(" → ") || "—";
+                  const name      = s.display_name || s.shipment_name || s.consignee || `SHP-${s.shipment_id.slice(0,8).toUpperCase()}`;
+                  const urgency   = getUrgencyTier(s.expected_arrival_date);
+                  const urgencyCfg= URGENCY_CFG[urgency];
+                  const isRenaming= renamingId === s.shipment_id;
 
-                  const rowBorder = status === "hold" ? "border-l-4 border-l-red-500"
+                  const rowBorder = status === "hold"   ? "border-l-4 border-l-red-500"
                                   : status === "review" ? "border-l-4 border-l-amber-500"
                                   : status === "clear"  ? "border-l-4 border-l-emerald-500"
                                   : "border-l-4 border-l-transparent";
 
+                  // Critical/overdue rows get a subtle background pulse
+                  const urgencyBg = (urgency === "overdue" || urgency === "arriving_today" || urgency === "critical_24h")
+                    ? "bg-red-950/20" : "";
+
                   return (
-                    <tr key={s.shipment_id} className={cn("hover:bg-muted/30 transition-colors cursor-pointer", rowBorder)} onClick={() => navigate(`/shipment/${s.shipment_id}`)}>
-                      <td className="px-4 py-3 font-medium text-foreground whitespace-nowrap max-w-[200px] truncate">{name}</td>
+                    <tr key={s.shipment_id}
+                      className={cn("hover:bg-muted/30 transition-colors cursor-pointer", rowBorder, urgencyBg)}
+                      onClick={() => !isRenaming && navigate(`/shipment/${s.shipment_id}`)}>
+
+                      {/* Shipment Name — inline rename */}
+                      <td className="px-4 py-3 font-medium text-foreground max-w-[220px]">
+                        {isRenaming ? (
+                          <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                            <Input
+                              ref={renameInputRef}
+                              value={renameValue}
+                              onChange={e => setRenameValue(e.target.value)}
+                              onKeyDown={e => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenamingId(null); }}
+                              className="h-7 text-xs px-2 py-0 w-36"
+                            />
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-emerald-600" onClick={commitRename} disabled={savingRename}>
+                              <Check className="h-3.5 w-3.5"/>
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={() => setRenamingId(null)}>
+                              <X className="h-3.5 w-3.5"/>
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 group">
+                            <span className="truncate max-w-[160px]">{name}</span>
+                            <button
+                              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                              onClick={e => startRename(s, e)}
+                              title="Rename shipment"
+                            >
+                              <Pencil className="h-3 w-3"/>
+                            </button>
+                          </div>
+                        )}
+                      </td>
+
                       <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{lane}</td>
                       <td className="px-4 py-3">
                         {modeCfg ? (
@@ -315,32 +416,52 @@ export default function Dashboard() {
                         {s.readiness_score != null ? (
                           <div className="flex items-center gap-2">
                             <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
-                              <div
-                                className="h-full rounded-full"
-                                style={{
-                                  width: `${s.readiness_score}%`,
-                                  backgroundColor: s.readiness_score >= 80 ? "#10b981" : s.readiness_score >= 50 ? "#f59e0b" : "#ef4444",
-                                }}
-                              />
+                              <div className="h-full rounded-full" style={{
+                                width: `${s.readiness_score}%`,
+                                backgroundColor: s.readiness_score >= 80 ? "#10b981" : s.readiness_score >= 50 ? "#f59e0b" : "#ef4444",
+                              }}/>
                             </div>
                             <span className="text-xs text-muted-foreground font-medium">{s.readiness_score}%</span>
                           </div>
                         ) : <span className="text-muted-foreground text-xs">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                        {format(new Date(s.created_at), "MMM d, yyyy")}
+
+                      {/* ETA + Urgency */}
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1">
+                          {s.expected_arrival_date ? (
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(s.expected_arrival_date + "T00:00:00"), "MMM d, yyyy")}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground/50">No ETA set</span>
+                          )}
+                          {urgencyCfg && (
+                            <span className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-bold w-fit", urgencyCfg.cls)}>
+                              {urgencyCfg.icon && <urgencyCfg.icon className="h-2.5 w-2.5"/>}
+                              {urgencyCfg.label}
+                            </span>
+                          )}
+                        </div>
                       </td>
+
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5">
-                          <Button variant="outline" size="sm" className="h-7 text-xs px-2.5" onClick={e => { e.stopPropagation(); navigate(`/shipment/${s.shipment_id}`); }}>
-                            View
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                          {status === "draft" ? (
+                            <Button variant="outline" size="sm"
+                              className="h-7 text-xs px-2.5 gap-1 text-primary border-primary/40 hover:bg-primary/10"
+                              onClick={e => { e.stopPropagation(); navigate(`/validate?draft=${s.shipment_id}`); }}>
+                              <PlayCircle className="h-3 w-3" /> Continue
+                            </Button>
+                          ) : (
+                            <Button variant="outline" size="sm" className="h-7 text-xs px-2.5"
+                              onClick={e => { e.stopPropagation(); navigate(`/shipment/${s.shipment_id}`); }}>
+                              View
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="sm"
                             className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                            onClick={e => { e.stopPropagation(); setDeleteTarget(s); }}
-                          >
+                            onClick={e => { e.stopPropagation(); setDeleteTarget(s); }}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>

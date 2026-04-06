@@ -5,6 +5,7 @@ import {
   CreditCard, Lightbulb, Truck, Plane, Ship,
   AlertTriangle, Bell, GitBranch, Box, Route, Layers,
   HelpCircle, FileSearch, KanbanSquare,
+  Shield, History,
 } from "lucide-react";
 import type { WorkspacePurpose } from "@/hooks/useWorkspacePurpose";
 
@@ -221,13 +222,31 @@ const ENTERPRISE_NAV: NavGroup[] = [
   },
 ];
 
+// ── Core forwarder-focused nav (used as the primary/default experience) ─────
+const FORWARDER_NAV: NavGroup[] = [
+  {
+    labelKey: "navGroup.quickActions",
+    items: [
+      { titleKey: "nav.validate",  url: "/",          icon: Shield },
+      { titleKey: "nav.history",   url: "/dashboard", icon: History },
+    ],
+  },
+  {
+    labelKey: "navGroup.account",
+    items: [
+      { titleKey: "nav.pricing",  url: "/pricing",  icon: CreditCard },
+      { titleKey: "nav.settings", url: "/admin",    icon: Settings },
+    ],
+  },
+];
+
 export function getNavigationForPurpose(purpose: WorkspacePurpose | null): NavGroup[] {
   switch (purpose) {
     case "marketplace": return MARKETPLACE_NAV;
-    case "compliance": return COMPLIANCE_NAV;
+    case "compliance":  return COMPLIANCE_NAV;
     case "route_planning": return ROUTE_PLANNING_NAV;
-    case "operations": return OPERATIONS_NAV;
-    case "enterprise": return ENTERPRISE_NAV;
-    default: return OPERATIONS_NAV;
+    case "operations":  return OPERATIONS_NAV;
+    case "enterprise":  return ENTERPRISE_NAV;
+    default: return FORWARDER_NAV;
   }
 }
