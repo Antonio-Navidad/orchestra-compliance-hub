@@ -290,6 +290,7 @@ export default function ValidatePage() {
   // Pass exact mode so the edge function applies the right USMCA / ocean rules
   const validation = useValidation({
     shipmentId,
+    workspaceId: currentWorkspace?.id,
     shipmentMode: selectedMode || "ocean",
     commodityType: "general",
     countryOfOrigin: selectedMode === "land_canada" ? "CA" : selectedMode === "land_mexico" ? "MX" : "",
@@ -924,11 +925,15 @@ export default function ValidatePage() {
         open={reportOpen}
         onClose={() => setReportOpen(false)}
         shipmentRef={shipmentName.trim() || `SHP-${shipmentId.slice(0, 8).toUpperCase()}`}
+        shipmentId={shipmentId}
+        workspaceId={currentWorkspace?.id}
         consignee={consignee}
         crossRefResults={crossRefResults}
         extractedDocs={extractedDocs}
         ofacStatus={ofacStatus}
         complianceScore={result?.readinessScore}
+        totalExposureUsd={result?.total_exposure_usd}
+        totalExposureSummary={result?.total_exposure_summary}
       />
 
       <PaywallModal

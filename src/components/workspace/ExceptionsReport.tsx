@@ -43,6 +43,8 @@ export interface ExceptionsReportProps {
   extractedDocs: Record<string, ExtractedDocData>;
   ofacStatus?: OfacStatus | null;
   complianceScore?: number;
+  totalExposureUsd?: number;
+  totalExposureSummary?: string;
 }
 
 type FeedbackAction = "confirmed" | "dismissed" | "overridden" | "escalated";
@@ -126,6 +128,8 @@ export function ExceptionsReport({
   extractedDocs,
   ofacStatus,
   complianceScore,
+  totalExposureUsd,
+  totalExposureSummary,
 }: ExceptionsReportProps) {
   const reportRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -257,9 +261,18 @@ export function ExceptionsReport({
   <div class="safe-harbor"><strong>Audit Tool Disclosure (19 USC 1641):</strong> Orchestra AI is a pre-filing compliance audit tool — not a licensed customs broker. This report does not constitute "Customs Business." All findings must be reviewed by your licensed customs broker before CBP submission.</div>
   <div class="stats">
     <div class="stat"><div class="stat-num">${sortedExceptions.length}</div><div class="stat-lbl">Exceptions Found</div></div>
-    <div class="stat"><div class="stat-num">${totalRisk > 0 ? `$${totalRisk.toLocaleString()}` : "—"}</div><div class="stat-lbl">Estimated Risk Exposure</div></div>
+    <div class="stat"><div class="stat-num">${totalRisk > 0 ? `$${totalRisk.toLocaleString()}` : "—"}</div><div class="stat-lbl">Crit/High Risk Only</div></div>
     <div class="stat"><div class="stat-num">${docCount}</div><div class="stat-lbl">Documents Validated</div></div>
   </div>
+  ${(totalExposureUsd && totalExposureUsd > 0) ? `
+  <div style="background:#fee2e2;border:2px solid #b91c1c;border-radius:6px;padding:12px 16px;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <strong style="color:#7f1d1d;font-size:13px;">⚠ Total Potential Loss Exposure</strong>
+      <strong style="color:#7f1d1d;font-size:20px;">$${totalExposureUsd.toLocaleString()}</strong>
+    </div>
+    ${totalExposureSummary ? `<p style="font-size:11px;color:#991b1b;margin:0 0 4px;">${totalExposureSummary}</p>` : ""}
+    <p style="font-size:10px;color:#b91c1c;margin:0;font-style:italic;">Based on CBP penalty formulas: 19 USC 1592, 19 CFR 113.13, 19 CFR 149, IEEPA tariff exposure.</p>
+  </div>` : ""}
   <h2 style="font-size:14px;font-weight:700;margin-bottom:8px;">Exceptions (${sortedExceptions.length})</h2>
   ${sortedExceptions.length === 0
     ? '<p style="color:#059669;font-size:12px;">✓ No cross-document exceptions detected. All fields validated successfully.</p>'
@@ -298,10 +311,12 @@ export function ExceptionsReport({
       ["REPORT TOTALS"],
       ["Total Exceptions", sortedExceptions.length],
       ["Critical / High", sortedExceptions.filter(e => e.severity === "critical" || e.severity === "high").length],
-      ["Estimated Risk Exposure ($)", totalRisk],
+      ["Crit/High Risk Exposure ($)", totalRisk],
+      totalExposureUsd ? ["Total Potential Loss Exposure ($)", totalExposureUsd] : [],
+      totalExposureSummary ? ["Exposure Breakdown", totalExposureSummary] : [],
       ["Documents Validated", docCount],
       ["Overall Status", overallStatus.toUpperCase()],
-      complianceScore !== undefined ? ["Compliance Score", `${complianceScore}%`] : [],
+      complianceScore !== undefined ? ["Readiness Score", complianceScore > 0 ? `${complianceScore}%` : "Filing Blocked"] : [],
     ].filter(r => r.length > 0);
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -346,8 +361,15 @@ export function ExceptionsReport({
                   {generatedAt}
                 </span>
                 {complianceScore !== undefined && (
-                  <span className="flex items-center gap-1 font-semibold">
-                    Compliance Score: {complianceScore}%
+                  <span className={`flex items-center gap-1 font-semibold px-2 py-0.5 rounded text-xs ${
+                    complianceScore >= 80 ? "bg-green-950/60 text-green-300 border border-green-700" :
+                    complianceScore >= 50 ? "bg-amber-950/60 text-amber-300 border border-amber-700" :
+                    complianceScore > 0   ? "bg-red-950/60 text-red-300 border border-red-700" :
+                                            "bg-red-950/80 text-red-200 border border-red-600"
+                  }`}>
+                    {complianceScore > 0
+                      ? `Readiness: ${complianceScore}%`
+                      : "⛔ Filing Blocked — Resolve Criticals"}
                   </span>
                 )}
               </div>
@@ -394,7 +416,7 @@ export function ExceptionsReport({
           </div>
 
           {/* ── Quick Stats ── */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-3 gap-4 mb-4">
             <div className="border rounded-lg p-4 text-center">
               <div className="text-3xl font-bold text-foreground">
                 {sortedExceptions.length}
@@ -408,7 +430,7 @@ export function ExceptionsReport({
                 {totalRisk > 0 ? `$${totalRisk.toLocaleString()}` : "—"}
               </div>
               <div className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">
-                Estimated Risk Exposure
+                Crit/High Risk Only
               </div>
             </div>
             <div className="border rounded-lg p-4 text-center">
@@ -420,6 +442,31 @@ export function ExceptionsReport({
               </div>
             </div>
           </div>
+
+          {/* ── Total Potential Loss Exposure ── */}
+          {(totalExposureUsd !== undefined && totalExposureUsd > 0) && (
+            <div className="mb-4 p-4 rounded-lg border-2 border-red-700 bg-red-950/40">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-red-400" />
+                  <span className="text-sm font-bold text-red-300 uppercase tracking-wide">
+                    Total Potential Loss Exposure
+                  </span>
+                </div>
+                <span className="text-2xl font-black text-red-200">
+                  ${totalExposureUsd.toLocaleString()}
+                </span>
+              </div>
+              {totalExposureSummary && (
+                <p className="text-xs text-red-300/80 leading-relaxed mt-1">
+                  {totalExposureSummary}
+                </p>
+              )}
+              <p className="text-[10px] text-red-400/60 mt-2 italic">
+                Based on CBP penalty formulas: 19 USC 1592, 19 CFR 113.13, 19 CFR 149, IEEPA tariff exposure. Actual penalties depend on fraud vs. negligence determination.
+              </p>
+            </div>
+          )}
 
           <Separator className="mb-6" />
 

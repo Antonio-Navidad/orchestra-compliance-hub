@@ -306,12 +306,17 @@ ${extractionSchema ? `Required schema for extracted_data:\n${JSON.stringify(extr
 
 ${isPackingList ? PACKING_LIST_VALIDATION_PROMPT : ""}`;
 
+    const isCommercialInvoice = documentType.includes("commercial_invoice");
+    const pgaFlagsInstruction = isCommercialInvoice
+      ? `- "pga_flags": array of { "agency": string, "requirement": string, "mandatory": boolean, "reason": string } — ONLY include a PGA flag if a formal regulatory filing, permit, or prior notice is ACTUALLY REQUIRED by a U.S. Partner Government Agency for this specific commodity. Do NOT flag advisory-only requirements, general import cautions, or requirements that apply only to certain sub-classifications. Common examples that require actual filings: FDA Prior Notice for food/drugs, USDA APHIS permit for plants/animals, EPA Form 3520 for vehicles/engines, CPSC certification for children's products with HTS 9503. Maximum 5 flags. If the commodity is generic electronics, commercial goods, or industrial equipment with no food/drug/plant/animal/vehicle content, return an empty array [].`
+      : `- "pga_flags": [] — PGA analysis is only performed on commercial invoices. Return an empty array for this document type.`;
+
     const userText = `Extract all customs-relevant data from this ${documentType.replace(/_/g, " ")}. Return a single JSON object with these exact keys:
 - "extracted_data": object matching the schema above
 - "field_details": array of { "field": string, "value": any, "confidence": number (0-100), "source_location": string describing where in the document this was found }
 - "document_type_detected": string — what type of document this actually is
 - "warnings": array of strings — readability issues, missing required sections, unclear values
-- "pga_flags": array of { "agency": string, "requirement": string, "mandatory": boolean, "reason": string } — PGA requirements based on commodity and HTS codes (commercial invoice only)
+${pgaFlagsInstruction}
 ${isPackingList ? '- "internal_errors": array as specified in the validation instructions above' : ''}
 
 Return ONLY the JSON object. No markdown. No preamble.`;

@@ -49,6 +49,9 @@ export interface ValidationResult {
   readinessScore: number;  // 0–100
   status: "clean" | "review" | "hold";
   validationRunId: string | null;
+  total_exposure_usd: number;
+  total_exposure_summary: string;
+  workspace_accuracy_pct: number | null;
 }
 
 interface UseValidationOptions {
@@ -189,6 +192,7 @@ export function useValidation({
           countryOfOrigin,
           declaredValueUsd,
           shipmentId,
+          workspaceId: workspaceId || null,
         },
       });
 
@@ -196,6 +200,9 @@ export function useValidation({
 
       const findings: ValidationFinding[] = data?.discrepancies || [];
       const complianceWarnings: any[] = data?.compliance_warnings || [];
+      const total_exposure_usd: number = data?.total_exposure_usd || 0;
+      const total_exposure_summary: string = data?.total_exposure_summary || "";
+      const workspace_accuracy_pct: number | null = data?.workspace_accuracy_pct ?? null;
 
       // ── Save findings to `exceptions` table ──────────────────────────────────
       // Delete old findings for this shipment first
@@ -266,6 +273,9 @@ export function useValidation({
         readinessScore,
         status,
         validationRunId,
+        total_exposure_usd,
+        total_exposure_summary,
+        workspace_accuracy_pct,
       };
 
       setResult(validationResult);
@@ -378,6 +388,9 @@ export function useValidation({
         readinessScore,
         status: criticalCount > 0 ? "hold" : (highCount > 0 || mediumCount > 0) ? "review" : "clean",
         validationRunId: null,
+        total_exposure_usd: 0,
+        total_exposure_summary: "",
+        workspace_accuracy_pct: null,
       });
     }
   }, [shipmentId]);
