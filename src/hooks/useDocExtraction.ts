@@ -274,7 +274,16 @@ export function useDocExtraction({ shipmentMode, commodityType, countryOfOrigin,
       formData.append("commodityType", commodityType);
       formData.append("countryOfOrigin", countryOfOrigin);
 
-      const { data, error } = await supabase.functions.invoke("workspace-extract", { body: formData });
+      // Explicitly attach the session JWT — supabase.functions.invoke does NOT
+      // automatically include the Authorization header when the body is FormData
+      // (known SDK issue). Without this the edge function returns 401.
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data, error } = await supabase.functions.invoke("workspace-extract", {
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        },
+      });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
