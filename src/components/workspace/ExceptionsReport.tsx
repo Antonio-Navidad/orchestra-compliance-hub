@@ -150,6 +150,14 @@ export function ExceptionsReport({
         override_reason: action === "overridden" ? "User marked as acceptable" : null,
         was_correct:   action === "confirmed" ? true : action === "dismissed" ? false : null,
       } as any);
+
+      // Immediately re-aggregate workspace intelligence so the next crossref
+      // run benefits from this verdict — fire-and-forget, non-blocking
+      if (workspaceId) {
+        supabase.functions.invoke("aggregate-intelligence", {
+          body: { workspace_id: workspaceId },
+        }).catch(() => {/* non-blocking */});
+      }
     } catch (_) {
       // Non-blocking — intelligence capture should never break the report UX
     }
