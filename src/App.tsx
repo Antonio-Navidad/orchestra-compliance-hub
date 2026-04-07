@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { WorkspacePurposeContext, useWorkspacePurposeState, useWorkspacePurpose } from "@/hooks/useWorkspacePurpose";
+import { WorkspaceContext, useWorkspaceProvider } from "@/hooks/useWorkspace";
 import { AppLayout } from "@/components/AppLayout";
 import { LanguageProvider } from "@/hooks/useLanguage";
 import { LanguageBanner } from "@/components/LanguageBanner";
@@ -88,8 +89,10 @@ const App = () => (
 
 function WorkspacePurposeWrapper() {
   const purposeState = useWorkspacePurposeState();
+  const workspaceState = useWorkspaceProvider();
 
   return (
+    <WorkspaceContext.Provider value={workspaceState}>
     <WorkspacePurposeContext.Provider value={purposeState}>
       <BrowserRouter>
         <Routes>
@@ -133,6 +136,7 @@ function WorkspacePurposeWrapper() {
         </Routes>
       </BrowserRouter>
     </WorkspacePurposeContext.Provider>
+    </WorkspaceContext.Provider>
   );
 }
 
