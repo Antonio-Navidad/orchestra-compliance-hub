@@ -211,11 +211,13 @@ export function ExceptionsReport({
     const anyDocCritical = Object.values(extractedDocs).some(
       (d) => d.extractionStatus === "critical_issues"
     );
+    // Mandatory PGA filings (FCC, CPSC, FDA, etc.) block clearance — "Required before filing" means review at minimum
+    const hasMandatoryPga = allPgaFlags.some((f) => f.mandatory);
 
     if (hasCritical || ofacDangerous || anyDocCritical) return "hold";
-    if (hasHighOrAbove || sortedExceptions.length > 0) return "review";
+    if (hasHighOrAbove || sortedExceptions.length > 0 || hasMandatoryPga) return "review";
     return "clear";
-  }, [sortedExceptions, ofacStatus, extractedDocs]);
+  }, [sortedExceptions, ofacStatus, extractedDocs, allPgaFlags]);
 
   const totalRisk = useMemo(
     () =>
@@ -228,6 +230,16 @@ export function ExceptionsReport({
   );
 
   const docCount = Object.keys(extractedDocs).length;
+
+  // Effective readiness: penalise for mandatory PGA flags (each one -15%, floor 60%)
+  // A shipment with outstanding federal agency requirements is not 100% ready
+  const effectiveReadiness = useMemo(() => {
+    if (complianceScore === undefined) return undefined;
+    const mandatoryCount = allPgaFlags.filter((f) => f.mandatory).length;
+    if (mandatoryCount === 0) return complianceScore;
+    const penalty = Math.min(mandatoryCount * 15, 40);
+    return Math.max(complianceScore - penalty, 60);
+  }, [complianceScore, allPgaFlags]);
 
   const handleExportPDF = () => {
     const statusLabel = overallStatusConfig[overallStatus].label;
@@ -263,7 +275,7 @@ export function ExceptionsReport({
     shipmentRef ? `Shipment: ${shipmentRef}` : "",
     consignee   ? `Consignee: ${consignee}` : "",
     `Generated: ${generatedAt}`,
-    complianceScore !== undefined ? `Compliance Score: ${complianceScore}%` : "",
+    effectiveReadiness !== undefined ? `Compliance Score: ${effectiveReadiness}%` : "",
   ].filter(Boolean).join("&nbsp;&nbsp;|&nbsp;&nbsp;")}</div>
   <div class="status-${overallStatus}">${statusLabel}</div>
   <div class="safe-harbor"><strong>Audit Tool Disclosure (19 USC 1641):</strong> Orchestra AI is a pre-filing compliance audit tool — not a licensed customs broker. This report does not constitute "Customs Business." All findings must be reviewed by your licensed customs broker before CBP submission.</div>
@@ -324,7 +336,7 @@ export function ExceptionsReport({
       totalExposureSummary ? ["Exposure Breakdown", totalExposureSummary] : [],
       ["Documents Validated", docCount],
       ["Overall Status", overallStatus.toUpperCase()],
-      complianceScore !== undefined ? ["Readiness Score", complianceScore > 0 ? `${complianceScore}%` : "Filing Blocked"] : [],
+      effectiveReadiness !== undefined ? ["Readiness Score", effectiveReadiness > 0 ? `${effectiveReadiness}%` : "Filing Blocked"] : [],
     ].filter(r => r.length > 0);
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -368,15 +380,15 @@ export function ExceptionsReport({
                   <Calendar className="h-3.5 w-3.5" />
                   {generatedAt}
                 </span>
-                {complianceScore !== undefined && (
+                {effectiveReadiness !== undefined && (
                   <span className={`flex items-center gap-1 font-semibold px-2 py-0.5 rounded text-xs ${
-                    complianceScore >= 80 ? "bg-green-950/60 text-green-300 border border-green-700" :
-                    complianceScore >= 50 ? "bg-amber-950/60 text-amber-300 border border-amber-700" :
-                    complianceScore > 0   ? "bg-red-950/60 text-red-300 border border-red-700" :
-                                            "bg-red-950/80 text-red-200 border border-red-600"
+                    effectiveReadiness >= 80 ? "bg-green-950/60 text-green-300 border border-green-700" :
+                    effectiveReadiness >= 50 ? "bg-amber-950/60 text-amber-300 border border-amber-700" :
+                    effectiveReadiness > 0   ? "bg-red-950/60 text-red-300 border border-red-700" :
+                                               "bg-red-950/80 text-red-200 border border-red-600"
                   }`}>
-                    {complianceScore > 0
-                      ? `Readiness: ${complianceScore}%`
+                    {effectiveReadiness > 0
+                      ? `Readiness: ${effectiveReadiness}%`
                       : "⛔ Filing Blocked — Resolve Criticals"}
                   </span>
                 )}
