@@ -274,6 +274,22 @@ export function useValidation({
         highCount > 0 ? "review" :
         mediumCount > 0 ? "review" : "clean";
 
+      const dbStatus = status === "clean" ? "clear" : status;
+
+      // Write readiness_score + overall_status back to validation_run
+      if (validationRunId) {
+        await supabase.from("validation_runs").update({
+          readiness_score: readinessScore,
+          overall_status: dbStatus,
+        }).eq("id", validationRunId);
+      }
+
+      // Also update the shipment row so Dashboard shows live data immediately
+      await supabase.from("shipments").update({
+        readiness_score: readinessScore,
+        status: dbStatus === "hold" ? "flagged" : dbStatus === "review" ? "in_transit" : "cleared",
+      } as any).eq("shipment_id", shipmentId);
+
       const validationResult: ValidationResult = {
         findings,
         complianceWarnings,

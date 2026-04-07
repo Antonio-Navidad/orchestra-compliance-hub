@@ -5,7 +5,7 @@
  * Shipments table: Name, Lane, Mode, Status, Readiness %, Date, Actions
  * Excel export via SheetJS
  */
-import { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useMemo, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,8 +17,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   LayoutDashboard, Plus, Search, Download, RefreshCw,
   CheckCircle2, AlertTriangle, XCircle, Shield,
-  ChevronDown, ArrowUpDown, Ship, Plane, Truck, Trash2, PlayCircle,
-  Pencil, Check, X, Clock, AlertOctagon, CalendarDays,
+  ChevronDown, ChevronRight, ArrowUpDown, Ship, Plane, Truck, Trash2, PlayCircle,
+  Pencil, Check, X, Clock, AlertOctagon, CalendarDays, AlertCircle, FileWarning,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -77,6 +77,37 @@ const URGENCY_CFG: Record<UrgencyTier, { label: string; cls: string; icon?: any 
 };
 
 type DerivedStatus = "clear" | "review" | "hold" | "draft";
+
+// ── Exception / ValidationRun types ──────────────────────────────────────────
+interface Exception {
+  id: string;
+  shipment_id: string;
+  severity: string;
+  category: string | null;
+  field_name: string | null;
+  source_document: string | null;
+  found_value: string | null;
+  expected_value: string | null;
+  description: string | null;
+  is_blocker: boolean;
+  resolved: boolean;
+}
+
+interface ValidationRun {
+  id: string;
+  shipment_id: string;
+  overall_status: string | null;
+  readiness_score: number | null;
+  triggered_at: string;
+}
+
+const SEVERITY_CFG: Record<string, { cls: string; dot: string; label: string; icon: any }> = {
+  critical: { cls: "bg-red-900/40 text-red-300 border-red-700",    dot: "bg-red-500",    label: "Critical", icon: XCircle },
+  high:     { cls: "bg-orange-900/30 text-orange-400 border-orange-700", dot: "bg-orange-500", label: "High",  icon: AlertOctagon },
+  medium:   { cls: "bg-amber-900/30 text-amber-400 border-amber-700",    dot: "bg-amber-500",  label: "Medium", icon: AlertTriangle },
+  low:      { cls: "bg-blue-900/20 text-blue-400 border-blue-800",       dot: "bg-blue-500",   label: "Low",   icon: AlertCircle },
+  info:     { cls: "bg-slate-800/50 text-slate-400 border-slate-600",    dot: "bg-slate-500",  label: "Info",  icon: AlertCircle },
+};
 
 function deriveStatus(s: Shipment): DerivedStatus {
   if (s.status === "cleared") return "clear";
@@ -174,6 +205,16 @@ export default function Dashboard() {
   const [savingRename, setSavingRename] = useState(false);
   const renameInputRef = useRef<HTMLInputElement>(null);
 
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const toggleRow = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
   const { data: shipments = [], isLoading, refetch } = useQuery<Shipment[]>({
     queryKey: ["shipments", user?.id],
     queryFn: async () => {
@@ -187,6 +228,51 @@ export default function Dashboard() {
     },
     enabled: !!user?.id,
   });
+
+  // ── Exceptions per shipment ───────────────────────────────────────────────
+  const { data: allExceptions = [] } = useQuery<Exception[]>({
+    queryKey: ["exceptions", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exceptions")
+        .select("id, shipment_id, severity, category, field_name, source_document, found_value, expected_value, description, is_blocker, resolved")
+        .order("severity");
+      if (error) throw error;
+      return (data ?? []) as Exception[];
+    },
+    enabled: !!user?.id,
+  });
+
+  // ── Latest validation run per shipment ────────────────────────────────────
+  const { data: validationRuns = [] } = useQuery<ValidationRun[]>({
+    queryKey: ["validation_runs", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("validation_runs")
+        .select("id, shipment_id, overall_status, readiness_score, triggered_at")
+        .order("triggered_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as ValidationRun[];
+    },
+    enabled: !!user?.id,
+  });
+
+  const exceptionsByShipment = useMemo(() => {
+    const map = new Map<string, Exception[]>();
+    allExceptions.forEach(ex => {
+      if (!map.has(ex.shipment_id)) map.set(ex.shipment_id, []);
+      map.get(ex.shipment_id)!.push(ex);
+    });
+    return map;
+  }, [allExceptions]);
+
+  const latestRunByShipment = useMemo(() => {
+    const map = new Map<string, ValidationRun>();
+    validationRuns.forEach(r => {
+      if (!map.has(r.shipment_id)) map.set(r.shipment_id, r);
+    });
+    return map;
+  }, [validationRuns]);
 
   const startRename = useCallback((s: Shipment, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -335,14 +421,23 @@ export default function Dashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/30">
-                  {["Shipment Name","Lane","Mode","Status","Readiness","ETA / Urgency",""].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  {["","Shipment Name","Lane","Mode","Status","Readiness","Findings","ETA / Urgency",""].map((h,i) => (
+                    <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {rows.map(s => {
-                  const status    = deriveStatus(s);
+                  const run        = latestRunByShipment.get(s.shipment_id);
+                  const exceptions = exceptionsByShipment.get(s.shipment_id) || [];
+                  const isExpanded = expandedRows.has(s.shipment_id);
+
+                  // Use real AI status from validation_run if available, else derive from shipment fields
+                  const aiStatus: DerivedStatus = run?.overall_status === "hold"   ? "hold"
+                                                : run?.overall_status === "review" ? "review"
+                                                : run?.overall_status === "clear"  ? "clear"
+                                                : deriveStatus(s);
+                  const status    = aiStatus;
                   const cfg       = STATUS_CFG[status];
                   const modeCfg   = s.mode ? MODE_CFG[s.mode] : null;
                   const ModeIcon  = modeCfg?.icon;
@@ -351,20 +446,42 @@ export default function Dashboard() {
                   const urgency   = getUrgencyTier(s.expected_arrival_date);
                   const urgencyCfg= URGENCY_CFG[urgency];
                   const isRenaming= renamingId === s.shipment_id;
+                  const readiness = run?.readiness_score ?? s.readiness_score;
+
+                  // Counts by severity
+                  const critCount   = exceptions.filter(e => e.severity === "critical").length;
+                  const highCount   = exceptions.filter(e => e.severity === "high").length;
+                  const medCount    = exceptions.filter(e => e.severity === "medium").length;
+                  const totalCount  = exceptions.length;
 
                   const rowBorder = status === "hold"   ? "border-l-4 border-l-red-500"
                                   : status === "review" ? "border-l-4 border-l-amber-500"
                                   : status === "clear"  ? "border-l-4 border-l-emerald-500"
                                   : "border-l-4 border-l-transparent";
 
-                  // Critical/overdue rows get a subtle background pulse
                   const urgencyBg = (urgency === "overdue" || urgency === "arriving_today" || urgency === "critical_24h")
                     ? "bg-red-950/20" : "";
 
                   return (
-                    <tr key={s.shipment_id}
+                    <React.Fragment key={s.shipment_id}>
+                    <tr
                       className={cn("hover:bg-muted/30 transition-colors cursor-pointer", rowBorder, urgencyBg)}
                       onClick={() => !isRenaming && navigate(`/shipment/${s.shipment_id}`)}>
+
+                      {/* Expand toggle */}
+                      <td className="pl-3 pr-1 py-3 w-8">
+                        {totalCount > 0 && (
+                          <button
+                            onClick={e => toggleRow(s.shipment_id, e)}
+                            className="text-muted-foreground hover:text-foreground transition-colors"
+                            title={isExpanded ? "Collapse findings" : "Expand findings"}
+                          >
+                            {isExpanded
+                              ? <ChevronDown className="h-4 w-4" />
+                              : <ChevronRight className="h-4 w-4" />}
+                          </button>
+                        )}
+                      </td>
 
                       {/* Shipment Name — inline rename */}
                       <td className="px-4 py-3 font-medium text-foreground max-w-[220px]">
@@ -413,17 +530,47 @@ export default function Dashboard() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        {s.readiness_score != null ? (
+                        {readiness != null ? (
                           <div className="flex items-center gap-2">
                             <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
                               <div className="h-full rounded-full" style={{
-                                width: `${s.readiness_score}%`,
-                                backgroundColor: s.readiness_score >= 80 ? "#10b981" : s.readiness_score >= 50 ? "#f59e0b" : "#ef4444",
+                                width: `${readiness}%`,
+                                backgroundColor: readiness >= 80 ? "#10b981" : readiness >= 50 ? "#f59e0b" : "#ef4444",
                               }}/>
                             </div>
-                            <span className="text-xs text-muted-foreground font-medium">{s.readiness_score}%</span>
+                            <span className="text-xs text-muted-foreground font-medium">{readiness}%</span>
                           </div>
                         ) : <span className="text-muted-foreground text-xs">—</span>}
+                      </td>
+
+                      {/* Findings summary badges */}
+                      <td className="px-4 py-3">
+                        {totalCount > 0 ? (
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {critCount > 0 && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border text-[10px] font-bold bg-red-900/40 text-red-300 border-red-700">
+                                <XCircle className="h-2.5 w-2.5"/>{critCount} Crit
+                              </span>
+                            )}
+                            {highCount > 0 && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border text-[10px] font-bold bg-orange-900/30 text-orange-400 border-orange-700">
+                                <AlertOctagon className="h-2.5 w-2.5"/>{highCount} High
+                              </span>
+                            )}
+                            {medCount > 0 && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border text-[10px] font-bold bg-amber-900/30 text-amber-400 border-amber-700">
+                                <AlertTriangle className="h-2.5 w-2.5"/>{medCount} Med
+                              </span>
+                            )}
+                            {(totalCount - critCount - highCount - medCount) > 0 && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border text-[10px] font-bold bg-slate-800/50 text-slate-400 border-slate-600">
+                                +{totalCount - critCount - highCount - medCount}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">{run ? "—" : "No scan"}</span>
+                        )}
                       </td>
 
                       {/* ETA + Urgency */}
@@ -467,6 +614,68 @@ export default function Dashboard() {
                         </div>
                       </td>
                     </tr>
+
+                    {/* ── Expandable exceptions panel ── */}
+                    {isExpanded && totalCount > 0 && (
+                      <tr className={cn("bg-muted/10", rowBorder)}>
+                        <td colSpan={9} className="px-6 pb-4 pt-2">
+                          <div className="rounded-lg border border-border/60 overflow-hidden">
+                            <div className="flex items-center gap-2 px-4 py-2 bg-muted/30 border-b border-border/60">
+                              <FileWarning className="h-3.5 w-3.5 text-muted-foreground"/>
+                              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                AI Compliance Findings — {totalCount} issue{totalCount !== 1 ? "s" : ""} flagged
+                              </span>
+                            </div>
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-border/40 bg-muted/20">
+                                  <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-20">Severity</th>
+                                  <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-28">Category</th>
+                                  <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-32">Field</th>
+                                  <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Finding</th>
+                                  <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-28">Document</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border/30">
+                                {exceptions
+                                  .sort((a, b) => {
+                                    const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+                                    return (order[a.severity] ?? 5) - (order[b.severity] ?? 5);
+                                  })
+                                  .map(ex => {
+                                    const sev = SEVERITY_CFG[ex.severity] ?? SEVERITY_CFG.info;
+                                    const SevIcon = sev.icon;
+                                    return (
+                                      <tr key={ex.id} className="hover:bg-muted/20 transition-colors">
+                                        <td className="px-3 py-2.5">
+                                          <span className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-bold", sev.cls)}>
+                                            <SevIcon className="h-2.5 w-2.5"/>{sev.label}
+                                          </span>
+                                        </td>
+                                        <td className="px-3 py-2.5 text-muted-foreground">{ex.category || "—"}</td>
+                                        <td className="px-3 py-2.5 font-mono text-[11px] text-foreground/80">{ex.field_name || "—"}</td>
+                                        <td className="px-3 py-2.5">
+                                          <p className="text-foreground/90">{ex.description || "—"}</p>
+                                          {(ex.found_value || ex.expected_value) && (
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                                              {ex.found_value && <span>Found: <span className="text-red-400">{ex.found_value}</span></span>}
+                                              {ex.found_value && ex.expected_value && <span className="mx-1">·</span>}
+                                              {ex.expected_value && <span>Expected: <span className="text-emerald-400">{ex.expected_value}</span></span>}
+                                            </p>
+                                          )}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-muted-foreground text-[10px]">{ex.source_document?.replace(/_/g, " ") || "—"}</td>
+                                      </tr>
+                                    );
+                                  })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </>
+                    </React.Fragment>
                   );
                 })}
               </tbody>
