@@ -2,10 +2,9 @@
  * Dashboard — Shipments command center
  *
  * 4 stat cards: Total / Blocked / Cleared / Avg Readiness
- * Shipments table: Name, Lane, Mode, Status, Readiness %, Date, Actions
- * Excel export via SheetJS
+ * Shipments table with AI findings, severity badges, expandable exceptions panel
  */
-import { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useMemo, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,8 +16,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   LayoutDashboard, Plus, Search, Download, RefreshCw,
   CheckCircle2, AlertTriangle, XCircle, Shield,
-  ChevronDown, ArrowUpDown, Ship, Plane, Truck, Trash2, PlayCircle,
-  Pencil, Check, X, Clock, AlertOctagon, CalendarDays,
+  ChevronDown, ChevronRight, ArrowUpDown, Ship, Plane, Truck, Trash2, PlayCircle,
+  Pencil, Check, X, Clock, AlertOctagon, CalendarDays, AlertCircle, FileWarning,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -47,6 +46,28 @@ interface Shipment {
   created_at:            string;
   expected_ship_date:    string | null;
   expected_arrival_date: string | null;
+}
+
+interface Exception {
+  id: string;
+  shipment_id: string;
+  severity: string;
+  category: string | null;
+  field_name: string | null;
+  source_document: string | null;
+  found_value: string | null;
+  expected_value: string | null;
+  description: string | null;
+  is_blocker: boolean;
+  resolved: boolean;
+}
+
+interface ValidationRun {
+  id: string;
+  shipment_id: string;
+  overall_status: string | null;
+  readiness_score: number | null;
+  triggered_at: string;
 }
 
 type UrgencyTier = "overdue" | "arriving_today" | "critical_24h" | "urgent_48h" | "warn_72h" | "watch_7d" | "normal" | "unknown";
@@ -101,6 +122,14 @@ const MODE_CFG: Record<string, { label: string; icon: any; cls: string }> = {
   ocean: { label: "Sea",   icon: Ship,  cls: "bg-blue-900/30 text-blue-400 border-blue-700" },
   air:   { label: "Air",   icon: Plane, cls: "bg-purple-900/30 text-purple-400 border-purple-700" },
   land:  { label: "Land",  icon: Truck, cls: "bg-orange-900/30 text-orange-400 border-orange-700" },
+};
+
+const SEVERITY_CFG: Record<string, { cls: string; dot: string; label: string }> = {
+  critical: { cls: "bg-red-900/40 text-red-300 border-red-700",       dot: "bg-red-500",    label: "Critical" },
+  high:     { cls: "bg-orange-900/40 text-orange-300 border-orange-700", dot: "bg-orange-500", label: "High"   },
+  medium:   { cls: "bg-amber-900/40 text-amber-300 border-amber-700",  dot: "bg-amber-500",  label: "Medium"   },
+  low:      { cls: "bg-blue-900/30 text-blue-300 border-blue-700",     dot: "bg-blue-400",   label: "Low"      },
+  info:     { cls: "bg-slate-800/50 text-slate-400 border-slate-600",  dot: "bg-slate-400",  label: "Info"     },
 };
 
 // ── Stat Card ─────────────────────────────────────────────────────────────────
@@ -163,17 +192,28 @@ async function exportToExcel(rows: Shipment[]) {
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate  = useNavigate();
-  const [search, setSearch]     = useState("");
-  const [filter, setFilter]     = useState<DerivedStatus | "all">("all");
+  const [search, setSearch]       = useState("");
+  const [filter, setFilter]       = useState<DerivedStatus | "all">("all");
   const [exporting, setExporting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Shipment | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [deleting, setDeleting]   = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   // Rename state
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
+  const [renamingId, setRenamingId]     = useState<string | null>(null);
+  const [renameValue, setRenameValue]   = useState("");
   const [savingRename, setSavingRename] = useState(false);
   const renameInputRef = useRef<HTMLInputElement>(null);
 
+  const toggleRow = useCallback((id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  // ── Queries ──────────────────────────────────────────────────────────────
   const { data: shipments = [], isLoading, refetch } = useQuery<Shipment[]>({
     queryKey: ["shipments", user?.id],
     queryFn: async () => {
@@ -188,6 +228,52 @@ export default function Dashboard() {
     enabled: !!user?.id,
   });
 
+  const { data: allExceptions = [] } = useQuery<Exception[]>({
+    queryKey: ["exceptions", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exceptions")
+        .select("id, shipment_id, severity, category, field_name, source_document, found_value, expected_value, description, is_blocker, resolved")
+        .order("severity");
+      if (error) throw error;
+      return (data ?? []) as Exception[];
+    },
+    enabled: !!user?.id,
+  });
+
+  const { data: validationRuns = [] } = useQuery<ValidationRun[]>({
+    queryKey: ["validation_runs", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("validation_runs")
+        .select("id, shipment_id, overall_status, readiness_score, triggered_at")
+        .order("triggered_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as ValidationRun[];
+    },
+    enabled: !!user?.id,
+  });
+
+  // ── Derived maps ─────────────────────────────────────────────────────────
+  const exceptionsByShipment = useMemo(() => {
+    const map = new Map<string, Exception[]>();
+    for (const ex of allExceptions) {
+      const list = map.get(ex.shipment_id) ?? [];
+      list.push(ex);
+      map.set(ex.shipment_id, list);
+    }
+    return map;
+  }, [allExceptions]);
+
+  const latestRunByShipment = useMemo(() => {
+    const map = new Map<string, ValidationRun>();
+    for (const run of validationRuns) {
+      if (!map.has(run.shipment_id)) map.set(run.shipment_id, run);
+    }
+    return map;
+  }, [validationRuns]);
+
+  // ── Rename handlers ───────────────────────────────────────────────────────
   const startRename = useCallback((s: Shipment, e: React.MouseEvent) => {
     e.stopPropagation();
     setRenamingId(s.shipment_id);
@@ -209,7 +295,7 @@ export default function Dashboard() {
     }
   }, [renamingId, renameValue, refetch]);
 
-  // Stats
+  // ── Stats ─────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
     const total   = shipments.length;
     const blocked = shipments.filter(s => deriveStatus(s) === "hold").length;
@@ -219,7 +305,7 @@ export default function Dashboard() {
     return { total, blocked, cleared, avgScore };
   }, [shipments]);
 
-  // Filtered + searched rows
+  // ── Filtered + searched rows ──────────────────────────────────────────────
   const rows = useMemo(() => {
     return shipments.filter(s => {
       const matchStatus = filter === "all" || deriveStatus(s) === filter;
@@ -335,15 +421,26 @@ export default function Dashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/30">
-                  {["Shipment Name","Lane","Mode","Status","Readiness","ETA / Urgency",""].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  {["","Shipment Name","Lane","Mode","Status","Readiness","ETA / Urgency","Findings",""].map((h, i) => (
+                    <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {rows.map(s => {
-                  const status    = deriveStatus(s);
-                  const cfg       = STATUS_CFG[status];
+                  const run        = latestRunByShipment.get(s.shipment_id);
+                  const exceptions = exceptionsByShipment.get(s.shipment_id) ?? [];
+                  const isExpanded = expandedRows.has(s.shipment_id);
+
+                  // Use AI status if available, fall back to derived
+                  const aiStatus: DerivedStatus =
+                    run?.overall_status === "hold"   ? "hold"   :
+                    run?.overall_status === "review" ? "review" :
+                    run?.overall_status === "clear"  ? "clear"  :
+                    deriveStatus(s);
+
+                  const readiness = run?.readiness_score ?? s.readiness_score;
+                  const cfg       = STATUS_CFG[aiStatus];
                   const modeCfg   = s.mode ? MODE_CFG[s.mode] : null;
                   const ModeIcon  = modeCfg?.icon;
                   const lane      = [s.origin_location, s.dest_location].filter(Boolean).join(" → ") || "—";
@@ -352,121 +449,234 @@ export default function Dashboard() {
                   const urgencyCfg= URGENCY_CFG[urgency];
                   const isRenaming= renamingId === s.shipment_id;
 
-                  const rowBorder = status === "hold"   ? "border-l-4 border-l-red-500"
-                                  : status === "review" ? "border-l-4 border-l-amber-500"
-                                  : status === "clear"  ? "border-l-4 border-l-emerald-500"
+                  const rowBorder = aiStatus === "hold"   ? "border-l-4 border-l-red-500"
+                                  : aiStatus === "review" ? "border-l-4 border-l-amber-500"
+                                  : aiStatus === "clear"  ? "border-l-4 border-l-emerald-500"
                                   : "border-l-4 border-l-transparent";
 
-                  // Critical/overdue rows get a subtle background pulse
                   const urgencyBg = (urgency === "overdue" || urgency === "arriving_today" || urgency === "critical_24h")
                     ? "bg-red-950/20" : "";
 
+                  // Severity counts for badge summary
+                  const activeExceptions = exceptions.filter(e => !e.resolved);
+                  const criticalCount = activeExceptions.filter(e => e.severity === "critical").length;
+                  const highCount     = activeExceptions.filter(e => e.severity === "high").length;
+                  const mediumCount   = activeExceptions.filter(e => e.severity === "medium").length;
+                  const totalCount    = activeExceptions.length;
+
                   return (
-                    <tr key={s.shipment_id}
-                      className={cn("hover:bg-muted/30 transition-colors cursor-pointer", rowBorder, urgencyBg)}
-                      onClick={() => !isRenaming && navigate(`/shipment/${s.shipment_id}`)}>
-
-                      {/* Shipment Name — inline rename */}
-                      <td className="px-4 py-3 font-medium text-foreground max-w-[220px]">
-                        {isRenaming ? (
-                          <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-                            <Input
-                              ref={renameInputRef}
-                              value={renameValue}
-                              onChange={e => setRenameValue(e.target.value)}
-                              onKeyDown={e => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenamingId(null); }}
-                              className="h-7 text-xs px-2 py-0 w-36"
-                            />
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-emerald-600" onClick={commitRename} disabled={savingRename}>
-                              <Check className="h-3.5 w-3.5"/>
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={() => setRenamingId(null)}>
-                              <X className="h-3.5 w-3.5"/>
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 group">
-                            <span className="truncate max-w-[160px]">{name}</span>
+                    <React.Fragment key={s.shipment_id}>
+                      <tr
+                        className={cn("hover:bg-muted/30 transition-colors cursor-pointer", rowBorder, urgencyBg)}
+                        onClick={() => !isRenaming && navigate(`/shipment/${s.shipment_id}`)}
+                      >
+                        {/* Expand toggle */}
+                        <td className="px-2 py-3 w-8">
+                          {totalCount > 0 && (
                             <button
-                              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
-                              onClick={e => startRename(s, e)}
-                              title="Rename shipment"
+                              onClick={(e) => toggleRow(s.shipment_id, e)}
+                              className="text-muted-foreground hover:text-foreground transition-colors"
+                              title={isExpanded ? "Hide findings" : "Show findings"}
                             >
-                              <Pencil className="h-3 w-3"/>
+                              {isExpanded
+                                ? <ChevronDown className="h-4 w-4" />
+                                : <ChevronRight className="h-4 w-4" />
+                              }
                             </button>
-                          </div>
-                        )}
-                      </td>
+                          )}
+                        </td>
 
-                      <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{lane}</td>
-                      <td className="px-4 py-3">
-                        {modeCfg ? (
-                          <Badge variant="outline" className={cn("gap-1 text-[11px]", modeCfg.cls)}>
-                            {ModeIcon && <ModeIcon className="h-3 w-3"/>}{modeCfg.label}
-                          </Badge>
-                        ) : <span className="text-muted-foreground">—</span>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-semibold", cfg.cls)}>
-                          <span className={cn("h-1.5 w-1.5 rounded-full", cfg.dot)} />
-                          {cfg.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {s.readiness_score != null ? (
-                          <div className="flex items-center gap-2">
-                            <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
-                              <div className="h-full rounded-full" style={{
-                                width: `${s.readiness_score}%`,
-                                backgroundColor: s.readiness_score >= 80 ? "#10b981" : s.readiness_score >= 50 ? "#f59e0b" : "#ef4444",
-                              }}/>
+                        {/* Shipment Name — inline rename */}
+                        <td className="px-4 py-3 font-medium text-foreground max-w-[220px]">
+                          {isRenaming ? (
+                            <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                              <Input
+                                ref={renameInputRef}
+                                value={renameValue}
+                                onChange={e => setRenameValue(e.target.value)}
+                                onKeyDown={e => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenamingId(null); }}
+                                className="h-7 text-xs px-2 py-0 w-36"
+                              />
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-emerald-600" onClick={commitRename} disabled={savingRename}>
+                                <Check className="h-3.5 w-3.5"/>
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={() => setRenamingId(null)}>
+                                <X className="h-3.5 w-3.5"/>
+                              </Button>
                             </div>
-                            <span className="text-xs text-muted-foreground font-medium">{s.readiness_score}%</span>
+                          ) : (
+                            <div className="flex items-center gap-1.5 group">
+                              <span className="truncate max-w-[160px]">{name}</span>
+                              <button
+                                className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                                onClick={e => startRename(s, e)}
+                                title="Rename shipment"
+                              >
+                                <Pencil className="h-3 w-3"/>
+                              </button>
+                            </div>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{lane}</td>
+                        <td className="px-4 py-3">
+                          {modeCfg ? (
+                            <Badge variant="outline" className={cn("gap-1 text-[11px]", modeCfg.cls)}>
+                              {ModeIcon && <ModeIcon className="h-3 w-3"/>}{modeCfg.label}
+                            </Badge>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-semibold", cfg.cls)}>
+                            <span className={cn("h-1.5 w-1.5 rounded-full", cfg.dot)} />
+                            {cfg.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {readiness != null ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
+                                <div className="h-full rounded-full" style={{
+                                  width: `${readiness}%`,
+                                  backgroundColor: readiness >= 80 ? "#10b981" : readiness >= 50 ? "#f59e0b" : "#ef4444",
+                                }}/>
+                              </div>
+                              <span className="text-xs text-muted-foreground font-medium">{readiness}%</span>
+                            </div>
+                          ) : <span className="text-muted-foreground text-xs">—</span>}
+                        </td>
+
+                        {/* ETA + Urgency */}
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
+                            {s.expected_arrival_date ? (
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(s.expected_arrival_date + "T00:00:00"), "MMM d, yyyy")}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground/50">No ETA set</span>
+                            )}
+                            {urgencyCfg && (
+                              <span className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-bold w-fit", urgencyCfg.cls)}>
+                                {urgencyCfg.icon && <urgencyCfg.icon className="h-2.5 w-2.5"/>}
+                                {urgencyCfg.label}
+                              </span>
+                            )}
                           </div>
-                        ) : <span className="text-muted-foreground text-xs">—</span>}
-                      </td>
+                        </td>
 
-                      {/* ETA + Urgency */}
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col gap-1">
-                          {s.expected_arrival_date ? (
-                            <span className="text-xs text-muted-foreground">
-                              {format(new Date(s.expected_arrival_date + "T00:00:00"), "MMM d, yyyy")}
-                            </span>
+                        {/* Findings summary badges */}
+                        <td className="px-4 py-3">
+                          {totalCount > 0 ? (
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {criticalCount > 0 && (
+                                <span className={cn("inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border text-[10px] font-bold", SEVERITY_CFG.critical.cls)}>
+                                  <span className={cn("h-1.5 w-1.5 rounded-full", SEVERITY_CFG.critical.dot)} />
+                                  {criticalCount}
+                                </span>
+                              )}
+                              {highCount > 0 && (
+                                <span className={cn("inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border text-[10px] font-bold", SEVERITY_CFG.high.cls)}>
+                                  <span className={cn("h-1.5 w-1.5 rounded-full", SEVERITY_CFG.high.dot)} />
+                                  {highCount}
+                                </span>
+                              )}
+                              {mediumCount > 0 && (
+                                <span className={cn("inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border text-[10px] font-bold", SEVERITY_CFG.medium.cls)}>
+                                  <span className={cn("h-1.5 w-1.5 rounded-full", SEVERITY_CFG.medium.dot)} />
+                                  {mediumCount}
+                                </span>
+                              )}
+                            </div>
                           ) : (
-                            <span className="text-xs text-muted-foreground/50">No ETA set</span>
+                            <span className="text-xs text-muted-foreground/50">—</span>
                           )}
-                          {urgencyCfg && (
-                            <span className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-bold w-fit", urgencyCfg.cls)}>
-                              {urgencyCfg.icon && <urgencyCfg.icon className="h-2.5 w-2.5"/>}
-                              {urgencyCfg.label}
-                            </span>
-                          )}
-                        </div>
-                      </td>
+                        </td>
 
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          {status === "draft" ? (
-                            <Button variant="outline" size="sm"
-                              className="h-7 text-xs px-2.5 gap-1 text-primary border-primary/40 hover:bg-primary/10"
-                              onClick={e => { e.stopPropagation(); navigate(`/validate?draft=${s.shipment_id}`); }}>
-                              <PlayCircle className="h-3 w-3" /> Continue
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            {aiStatus === "draft" ? (
+                              <Button variant="outline" size="sm"
+                                className="h-7 text-xs px-2.5 gap-1 text-primary border-primary/40 hover:bg-primary/10"
+                                onClick={e => { e.stopPropagation(); navigate(`/validate?draft=${s.shipment_id}`); }}>
+                                <PlayCircle className="h-3 w-3" /> Continue
+                              </Button>
+                            ) : (
+                              <Button variant="outline" size="sm" className="h-7 text-xs px-2.5"
+                                onClick={e => { e.stopPropagation(); navigate(`/shipment/${s.shipment_id}`); }}>
+                                View
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="sm"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              onClick={e => { e.stopPropagation(); setDeleteTarget(s); }}>
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
-                          ) : (
-                            <Button variant="outline" size="sm" className="h-7 text-xs px-2.5"
-                              onClick={e => { e.stopPropagation(); navigate(`/shipment/${s.shipment_id}`); }}>
-                              View
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="sm"
-                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                            onClick={e => { e.stopPropagation(); setDeleteTarget(s); }}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Expandable exceptions panel */}
+                      {isExpanded && totalCount > 0 && (
+                        <tr className={cn("bg-muted/10", rowBorder)}>
+                          <td colSpan={9} className="px-6 py-4">
+                            <div className="rounded-lg border border-border/50 overflow-hidden">
+                              <div className="flex items-center gap-2 px-4 py-2.5 bg-muted/20 border-b border-border/50">
+                                <AlertCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                  AI Findings · {totalCount} issue{totalCount !== 1 ? "s" : ""} detected
+                                </span>
+                              </div>
+                              <table className="w-full text-xs">
+                                <thead>
+                                  <tr className="border-b border-border/30 bg-muted/10">
+                                    <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Severity</th>
+                                    <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Category</th>
+                                    <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Field</th>
+                                    <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Description</th>
+                                    <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Found</th>
+                                    <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Expected</th>
+                                    <th className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Source</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border/20">
+                                  {activeExceptions.map(ex => {
+                                    const sev = SEVERITY_CFG[ex.severity] ?? SEVERITY_CFG.info;
+                                    return (
+                                      <tr key={ex.id} className="hover:bg-muted/20">
+                                        <td className="px-3 py-2">
+                                          <span className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-bold", sev.cls)}>
+                                            <span className={cn("h-1.5 w-1.5 rounded-full", sev.dot)} />
+                                            {sev.label}
+                                          </span>
+                                        </td>
+                                        <td className="px-3 py-2 text-muted-foreground">{ex.category || "—"}</td>
+                                        <td className="px-3 py-2 font-mono text-muted-foreground">{ex.field_name || "—"}</td>
+                                        <td className="px-3 py-2 text-foreground max-w-[280px]">
+                                          <span className="line-clamp-2">{ex.description || "—"}</span>
+                                        </td>
+                                        <td className="px-3 py-2 font-mono text-red-400 max-w-[120px]">
+                                          <span className="truncate block">{ex.found_value || "—"}</span>
+                                        </td>
+                                        <td className="px-3 py-2 font-mono text-emerald-400 max-w-[120px]">
+                                          <span className="truncate block">{ex.expected_value || "—"}</span>
+                                        </td>
+                                        <td className="px-3 py-2 text-muted-foreground/70">
+                                          <div className="flex items-center gap-1">
+                                            <FileWarning className="h-3 w-3 shrink-0" />
+                                            <span className="truncate max-w-[100px]">{ex.source_document || "—"}</span>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
@@ -474,7 +684,7 @@ export default function Dashboard() {
           )}
         </div>
         {rows.length > 0 && (
-          <p className="text-xs text-center text-muted-foreground">{rows.length} shipment{rows.length !== 1 ? "s" : ""} · Click any row to open details</p>
+          <p className="text-xs text-center text-muted-foreground">{rows.length} shipment{rows.length !== 1 ? "s" : ""} · Click any row to open details · Click arrow to expand AI findings</p>
         )}
       </div>
 
