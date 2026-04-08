@@ -674,7 +674,6 @@ export default function Dashboard() {
                         </td>
                       </tr>
                     )}
-                    </>
                     </React.Fragment>
                   );
                 })}
