@@ -5,7 +5,41 @@ import {
   getApplicableAlerts,
   buildCheckInstructions,
 } from "./complianceRules.ts";
-import { callAIText } from "../_shared/ai-client.ts";
+// ── Inlined AI client (cross-directory imports fail at runtime on Supabase) ──
+const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+function getGatewayKey(): string {
+  const key = Deno.env.get("LOVABLE_API_KEY");
+  if (!key) throw new Error("LOVABLE_API_KEY is not configured");
+  return key;
+}
+
+async function callGateway(model: string, messages: object[], maxTokens: number, apiKey: string): Promise<string | null> {
+  const res = await fetch(GATEWAY_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model, temperature: 0, max_tokens: maxTokens, messages }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Gateway error (${model}): ${res.status} — ${err.substring(0, 300)}`);
+  }
+  const json = await res.json();
+  return json?.choices?.[0]?.message?.content ?? null;
+}
+
+async function callAIText(opts: { systemPrompt: string; userMessage: string; anthropicModel: string; lovableModel: string; maxTokens?: number }): Promise<string | null> {
+  const { systemPrompt, userMessage, anthropicModel, lovableModel, maxTokens = 4096 } = opts;
+  const apiKey = getGatewayKey();
+  const messages = [{ role: "system", content: systemPrompt }, { role: "user", content: userMessage }];
+  try {
+    return await callGateway(anthropicModel, messages, maxTokens, apiKey);
+  } catch (primaryErr) {
+    console.warn(`Primary model (${anthropicModel}) failed, trying fallback:`, primaryErr);
+    return await callGateway(lovableModel, messages, maxTokens, apiKey);
+  }
+}
+// ── End inlined AI client ─────────────────────────────────────────────────────
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
