@@ -244,9 +244,11 @@ export function useValidation({
           category: "cross_reference",
           field_name: f.field_checked,
           source_document: f.document_a,
+          target_document: f.document_b,
           found_value: f.finding,
           expected_value: f.recommendation,
           description: f.finding,
+          estimated_financial_impact_usd: f.estimated_financial_impact_usd || 0,
           is_blocker: f.severity === "critical",
           resolved: false,
         }));

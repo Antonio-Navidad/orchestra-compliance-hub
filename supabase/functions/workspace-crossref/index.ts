@@ -5,41 +5,44 @@ import {
   getApplicableAlerts,
   buildCheckInstructions,
 } from "./complianceRules.ts";
-// ── Inlined AI client (cross-directory imports fail at runtime on Supabase) ──
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+// ── Anthropic API client (direct, no gateway dependency) ─────────────────────
+const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
+const ANTHROPIC_VERSION = "2023-06-01";
 
-function getGatewayKey(): string {
-  const key = Deno.env.get("LOVABLE_API_KEY");
-  if (!key) throw new Error("LOVABLE_API_KEY is not configured");
+function getAnthropicKey(): string {
+  const key = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!key) throw new Error("ANTHROPIC_API_KEY is not configured");
   return key;
 }
 
-async function callGateway(model: string, messages: object[], maxTokens: number, apiKey: string): Promise<string | null> {
-  const res = await fetch(GATEWAY_URL, {
+async function callAIText(opts: { systemPrompt: string; userMessage: string; anthropicModel: string; lovableModel: string; maxTokens?: number }): Promise<string | null> {
+  const { systemPrompt, userMessage, anthropicModel, maxTokens = 4096 } = opts;
+  const apiKey = getAnthropicKey();
+
+  const res = await fetch(ANTHROPIC_API_URL, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, temperature: 0, max_tokens: maxTokens, messages }),
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": ANTHROPIC_VERSION,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: anthropicModel,
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userMessage }],
+    }),
   });
+
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Gateway error (${model}): ${res.status} — ${err.substring(0, 300)}`);
+    throw new Error(`Anthropic API error ${res.status}: ${err.substring(0, 400)}`);
   }
-  const json = await res.json();
-  return json?.choices?.[0]?.message?.content ?? null;
-}
 
-async function callAIText(opts: { systemPrompt: string; userMessage: string; anthropicModel: string; lovableModel: string; maxTokens?: number }): Promise<string | null> {
-  const { systemPrompt, userMessage, anthropicModel, lovableModel, maxTokens = 4096 } = opts;
-  const apiKey = getGatewayKey();
-  const messages = [{ role: "system", content: systemPrompt }, { role: "user", content: userMessage }];
-  try {
-    return await callGateway(anthropicModel, messages, maxTokens, apiKey);
-  } catch (primaryErr) {
-    console.warn(`Primary model (${anthropicModel}) failed, trying fallback:`, primaryErr);
-    return await callGateway(lovableModel, messages, maxTokens, apiKey);
-  }
+  const json = await res.json();
+  return json?.content?.[0]?.text ?? null;
 }
-// ── End inlined AI client ─────────────────────────────────────────────────────
+// ── End Anthropic client ──────────────────────────────────────────────────────
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -91,12 +94,12 @@ serve(async (req) => {
       : "";
 
     // ── System prompt ─────────────────────────────────────────────────────────
-    const systemPrompt = `You are a senior licensed U.S. customs broker performing document cross-reference verification for CBP compliance.
+    const systemPrompt = `You are a senior licensed U.S. customs broker performing document cross-reference verification for CBP compliance. You have 20+ years of experience catching errors that cause penalties, holds, and seizures.
 
-YOUR ONLY JOB: Find actual discrepancies between documents.
+YOUR JOB: Find every actual discrepancy, inconsistency, and compliance risk across all documents.
 
 STRICT OUTPUT RULES:
-1. Return ONLY findings where values DIFFER or are MISSING.
+1. Return ONLY findings where values DIFFER, are MISSING, are INCONSISTENT, or are INCORRECT.
 2. NEVER return a finding when values match. If they match, skip that field entirely.
 3. NEVER return a finding with "no action needed", "matches", "consistent", or "no discrepancy" in the finding text. Those are not findings.
 4. NEVER include a finding just to confirm something is correct.
@@ -106,11 +109,33 @@ STRICT OUTPUT RULES:
 8. Country of origin mismatches between any two documents are always CRITICAL.
 9. Each field listing includes an "EXPLICIT SKIP" list — NEVER flag any field on that skip list regardless of what you observe.
 
+MANDATORY CROSS-DOCUMENT CHECKS (perform ALL of these regardless of field list):
+
+A. INVOICE MATH VALIDATION: Sum ALL line item totals on the commercial invoice. Compare the sum to the stated subtotal and invoice total. If the math doesn't add up (subtotal + freight + insurance ≠ total), flag as CRITICAL with exact numbers. Overvaluation or undervaluation is a 19 USC 1592 fraud indicator.
+
+B. DECLARED VALUE CONSISTENCY: Compare the total value on the commercial invoice vs the declared cargo value on the bill of lading. Flag any discrepancy as CRITICAL — CBP uses invoice value for duty assessment per 19 CFR 152.
+
+C. COUNTRY OF ORIGIN ACROSS ALL DOCS: Compare COO on EVERY document (invoice, packing list, ISF, certificate of origin, customs bond). If ANY item has a different origin on one document vs another, flag as CRITICAL. Pay special attention to multi-origin shipments where some items come from Country A and others from Country B — ALL documents must reflect this split correctly.
+
+D. HTS CODE CONSISTENCY: Compare HTS codes on invoice vs certificate of origin vs ISF. If they differ for the same goods, flag as CRITICAL — misclassification under 19 USC 1592 carries 4× duty shortfall penalty.
+
+E. CUSTOMS BOND SUFFICIENCY: If a customs bond is present, compare the bond amount to the declared value. For single-entry bonds, the bond must ≥ total entered value (19 U.S.C. 1623). Flag insufficiency as CRITICAL.
+
+F. ISF ELEMENT ACCURACY: If ISF is present, verify that ISF manufacturer (element 3) matches actual manufacturers in the packing list/COO, ISF country of origin (element 9) matches all document origins including split origins, and ISF HTS (element 10) matches COO/invoice HTS codes. Each wrong ISF element = $5,000 penalty per 19 CFR 149.
+
+G. QUANTITY RECONCILIATION: Compare total piece count across invoice, packing list, and certificate of origin. Flag any difference. Check if line-item quantities add up to stated totals.
+
+H. WEIGHT RECONCILIATION: Compare gross weight on BOL vs packing list. Also verify packing list internal math (sum of per-carton weights should equal stated total). Flag if >5% variance.
+
+I. ENTITY NAME/ADDRESS CONSISTENCY: Compare buyer/consignee name AND address across all documents. Flag if city/state differs even if company name matches — address discrepancies are a CBP red flag.
+
+J. ARRIVAL NOTICE DEADLINES: If arrival notice is present, check if ISF filing deadline has passed, if formal entry deadline is approaching, and flag overdue actions as CRITICAL.
+
 SEVERITY RULES:
-- critical: Will cause CBP hold, entry rejection, or $5,000+ penalty if unfiled/uncorrected
-- high: Will likely cause CBP exam or delay, or affects duty calculation
-- medium: May cause questions or documentation requests
-- low: Minor wording difference, low risk
+- critical: Will cause CBP hold, entry rejection, or $5,000+ penalty if unfiled/uncorrected. This includes: math errors on invoices, value discrepancies >$1000, COO conflicts, HTS mismatches, bond insufficiency, ISF inaccuracies, late filings.
+- high: Will likely cause CBP exam or delay, or affects duty calculation. This includes: weight discrepancies >5%, missing required fields.
+- medium: May cause questions or documentation requests. This includes: quantity differences, minor weight differences.
+- low: Minor wording difference, low risk. This includes: name abbreviation differences, formatting differences.
 
 Return ONLY a raw JSON array. No markdown. No explanation. No preamble. Just the array.`;
 
@@ -143,9 +168,9 @@ Do not return any field that matches. Do not explain your reasoning. Return only
     const messageContent = await callAIText({
       systemPrompt,
       userMessage: userPrompt,
-      anthropicModel: "claude-sonnet-4-5",
+      anthropicModel: "claude-opus-4-6",
       lovableModel: "google/gemini-2.5-flash",
-      maxTokens: 4096,
+      maxTokens: 8192,
     });
     if (!messageContent) throw new Error("AI returned empty response");
 

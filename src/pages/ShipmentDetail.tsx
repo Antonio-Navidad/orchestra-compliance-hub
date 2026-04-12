@@ -81,9 +81,33 @@ export default function ShipmentDetail() {
   });
 
   // Load cross-ref results for exceptions report
+  // Primary: read from `exceptions` table (where useValidation saves findings)
+  // Fallback: try legacy `crossref_results` table
   const { data: crossRefResults = [] } = useQuery({
     queryKey: ["crossref-results", id],
     queryFn: async () => {
+      // First try the `exceptions` table — this is where useValidation.ts writes findings
+      const { data: exceptionsData, error: exceptionsError } = await supabase
+        .from("exceptions")
+        .select("*")
+        .eq("shipment_id", id)
+        .order("created_at", { ascending: false });
+
+      if (!exceptionsError && exceptionsData && exceptionsData.length > 0) {
+        return exceptionsData.map((e: any) => ({
+          id: e.id,
+          severity: e.severity,
+          document_a: (e.source_document || "").toLowerCase().replace(/[\s\-]+/g, "_"),
+          document_b: (e.target_document || e.category || "").toLowerCase().replace(/[\s\-]+/g, "_"),
+          field_checked: e.field_name || "",
+          finding: e.description || e.found_value || "",
+          recommendation: e.expected_value || "",
+          estimated_financial_impact_usd: Number(e.estimated_financial_impact_usd) || 0,
+          resolved: e.resolved || false,
+        }));
+      }
+
+      // Fallback: legacy crossref_results table
       const { data, error } = await supabase
         .from("crossref_results" as any)
         .select("*")
@@ -129,9 +153,14 @@ export default function ShipmentDetail() {
       }
     : null;
 
-  const uploadedDocTypes = shipmentDocs.map((d: any) =>
+  // Merge uploaded doc types from both shipment_documents AND documents tables
+  const shipmentDocTypes = shipmentDocs.map((d: any) =>
     (d.document_type || "").toLowerCase().replace(/[\s\-]+/g, "_")
   );
+  const extractedDocTypes = extractedDocsRaw.map((d: any) =>
+    (d.document_type || "").toLowerCase().replace(/[\s\-]+/g, "_")
+  );
+  const uploadedDocTypes = [...new Set([...shipmentDocTypes, ...extractedDocTypes])];
 
   // Load extracted documents for workspace ExceptionsReport
   const { data: extractedDocsRaw = [] } = useQuery({
@@ -163,6 +192,56 @@ export default function ShipmentDetail() {
     ])
   );
 
+  // ── Derive enriched shipment fields from extracted document data ──────────
+  // The shipment row may have defaults (0, "Pending") from intake form.
+  // If AI has extracted real data from documents, use that instead.
+  const enrichedShipment = (() => {
+    const ci = extractedDocs.commercial_invoice?.extractedData || {};
+    const bol = extractedDocs.bill_of_lading?.extractedData || {};
+    const coo = extractedDocs.certificate_of_origin?.extractedData || {};
+    const isf = extractedDocs.isf_filing?.extractedData || {};
+    const bond = extractedDocs.customs_bond?.extractedData || {};
+    const arrival = extractedDocs.arrival_notice?.extractedData || {};
+
+    // Declared value: prefer commercial invoice total
+    const declaredValue = Number(ci.total_value) || Number(ci.invoice_total_usd) || Number(bol.declared_value_usd) || shipment?.declared_value || 0;
+    // HS Code: prefer commercial invoice, then COO
+    const hsCode = ci.hts_code || ci.hs_code || (ci.line_items?.[0]?.hts_code) || coo.line_items?.[0]?.hts_code || shipment?.hs_code || "0000.00";
+    // Consignee: prefer BOL consignee, then invoice buyer
+    const consignee = bol.consignee || ci.buyer_name || shipment?.consignee || "Pending";
+    // Country of origin
+    const originCountry = ci.country_of_origin || coo.country_of_origin || isf.country_of_origin || "";
+    // Description
+    const description = ci.line_items?.[0]?.description || bol.commodity_description || shipment?.description || "";
+    // Risk score: compute from crossref findings
+    const criticals = crossRefResults.filter(e => e.severity === "critical").length;
+    const highs = crossRefResults.filter(e => e.severity === "high").length;
+    const mediums = crossRefResults.filter(e => e.severity === "medium").length;
+    const lows = crossRefResults.filter(e => e.severity === "low").length;
+    const totalExposure = crossRefResults.reduce((sum, e) => sum + (e.estimated_financial_impact_usd || 0), 0);
+    // Risk score: higher = worse. Scale from crossref severity.
+    const riskScore = Math.min(100, criticals * 25 + highs * 15 + mediums * 8 + lows * 3);
+    // Bond info
+    const bondAmount = Number(bond.bond_amount_usd) || 0;
+    // Seller/shipper
+    const shipper = ci.seller_name || bol.shipper || "";
+
+    return {
+      declaredValue,
+      hsCode,
+      consignee,
+      originCountry,
+      description,
+      riskScore,
+      totalExposure,
+      bondAmount,
+      shipper,
+      vessel: bol.vessel_name || arrival.vessel_name || "",
+      blNumber: bol.bl_number || "",
+      containerNumbers: bol.container_numbers || isf.container_numbers || "",
+    };
+  })();
+
   const invoice = invoices[0];
   const manifest = manifests[0];
   const mismatches = invoice && manifest ? compareInvoiceManifest(invoice, manifest) : [];
@@ -193,15 +272,15 @@ export default function ShipmentDetail() {
     shipment.mode as TransportMode,
     jurisdictionCode,
     {
-      description: shipment.description,
+      description: enrichedShipment.description || shipment.description,
       quantity: undefined,
-      declared_value: shipment.declared_value,
-      hs_code: shipment.hs_code,
-      consignee: shipment.consignee,
-      shipper: (shipment as any).shipper,
+      declared_value: enrichedShipment.declaredValue || shipment.declared_value,
+      hs_code: enrichedShipment.hsCode || shipment.hs_code,
+      consignee: enrichedShipment.consignee !== "Pending" ? enrichedShipment.consignee : shipment.consignee,
+      shipper: enrichedShipment.shipper || (shipment as any).shipper,
       assigned_broker: (shipment as any).assigned_broker,
       coo_status: (shipment as any).coo_status,
-      origin_country: (shipment as any).origin_country,
+      origin_country: enrichedShipment.originCountry || (shipment as any).origin_country,
     }
   );
 
@@ -433,16 +512,28 @@ export default function ShipmentDetail() {
                 <h3 className="font-mono text-xs text-muted-foreground">{t("detail.shipmentInfo")}</h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.mode")}</span><span className="font-mono uppercase">{shipment.mode}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.consignee")}</span><span>{shipment.consignee}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.hsCode")}</span><span className="font-mono">{shipment.hs_code}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.declaredValue")}</span><span className="font-mono">${shipment.declared_value.toLocaleString()}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.consignee")}</span><span>{enrichedShipment.consignee}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.hsCode")}</span><span className="font-mono">{enrichedShipment.hsCode}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.declaredValue")}</span><span className="font-mono">${enrichedShipment.declaredValue.toLocaleString()}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">{t("detail.jurisdiction")}</span><span className="font-mono">{jurisdictionCode}</span></div>
+                  {enrichedShipment.originCountry && (
+                    <div className="flex justify-between"><span className="text-muted-foreground">Origin</span><span className="font-mono">{enrichedShipment.originCountry}</span></div>
+                  )}
+                  {enrichedShipment.shipper && (
+                    <div className="flex justify-between"><span className="text-muted-foreground">Shipper</span><span className="text-right max-w-[200px] truncate">{enrichedShipment.shipper}</span></div>
+                  )}
+                  {enrichedShipment.vessel && (
+                    <div className="flex justify-between"><span className="text-muted-foreground">Vessel</span><span className="font-mono">{enrichedShipment.vessel}</span></div>
+                  )}
+                  {enrichedShipment.blNumber && (
+                    <div className="flex justify-between"><span className="text-muted-foreground">B/L</span><span className="font-mono text-xs">{enrichedShipment.blNumber}</span></div>
+                  )}
                 </div>
               </div>
 
               <div className="rounded-lg border border-border bg-card p-4 space-y-3">
                 <h3 className="font-mono text-xs text-muted-foreground">{t("detail.description")}</h3>
-                <p className="text-sm">{shipment.description}</p>
+                <p className="text-sm">{enrichedShipment.description || shipment.description}</p>
                 {shipment.risk_notes && (
                   <>
                     <h3 className="font-mono text-xs text-muted-foreground mt-4">{t("detail.riskAnalysis")}</h3>
@@ -517,8 +608,8 @@ export default function ShipmentDetail() {
 
           <TabsContent value="exposure" className="mt-4">
             <ExposurePanel
-              riskScore={shipment.risk_score}
-              declaredValue={shipment.declared_value}
+              riskScore={enrichedShipment.riskScore || shipment.risk_score}
+              declaredValue={enrichedShipment.declaredValue || shipment.declared_value}
               jurisdictionCode={jurisdictionCode}
             />
           </TabsContent>
