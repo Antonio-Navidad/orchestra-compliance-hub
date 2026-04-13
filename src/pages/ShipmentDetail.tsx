@@ -416,27 +416,32 @@ export default function ShipmentDetail() {
               return (
                 <div className="space-y-3">
                   {/* Status banner */}
-                  <div className={`flex items-center gap-3 p-4 rounded-lg border-2 ${
-                    criticals > 0 ? "bg-red-950/60 border-red-700" :
-                    highs > 0 ? "bg-orange-950/60 border-orange-700" :
-                    crossRefResults.length > 0 ? "bg-yellow-950/60 border-yellow-700" :
-                    "bg-green-950/60 border-green-700"
-                  }`}>
-                    {criticals > 0
-                      ? <XCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
-                      : <Shield className="h-5 w-5 text-green-400 flex-shrink-0" />}
-                    <span className={`font-bold text-sm tracking-wide ${
-                      criticals > 0 ? "text-red-300" :
+                  {(() => {
+                    const hasRun = shipment.status === "flagged" || shipment.status === "cleared" || shipment.status === "in_transit" || crossRefResults.length > 0;
+                    const bannerBg = criticals > 0 ? "bg-red-950/60 border-red-700" :
+                      highs > 0 ? "bg-orange-950/60 border-orange-700" :
+                      crossRefResults.length > 0 ? "bg-yellow-950/60 border-yellow-700" :
+                      hasRun ? "bg-green-950/60 border-green-700" :
+                      "bg-slate-800/60 border-slate-600";
+                    const bannerText = criticals > 0 ? "text-red-300" :
                       highs > 0 ? "text-orange-300" :
                       crossRefResults.length > 0 ? "text-yellow-300" :
-                      "text-green-300"
-                    }`}>
-                      {criticals > 0 ? "HOLD — CRITICAL ISSUES MUST BE RESOLVED BEFORE FILING" :
-                       highs > 0    ? "REVIEW REQUIRED — RESOLVE EXCEPTIONS BEFORE FILING" :
-                       crossRefResults.length > 0 ? "REVIEW RECOMMENDED — LOW PRIORITY ITEMS FOUND" :
-                       "CLEARED — READY TO FILE"}
-                    </span>
-                  </div>
+                      hasRun ? "text-green-300" :
+                      "text-slate-400";
+                    const bannerLabel = criticals > 0 ? "HOLD — CRITICAL ISSUES MUST BE RESOLVED BEFORE FILING" :
+                      highs > 0    ? "REVIEW REQUIRED — RESOLVE EXCEPTIONS BEFORE FILING" :
+                      crossRefResults.length > 0 ? "REVIEW RECOMMENDED — LOW PRIORITY ITEMS FOUND" :
+                      hasRun ? "NO ISSUES DETECTED — DOCUMENTS PASSED VALIDATION" :
+                      "VALIDATION NOT YET RUN — UPLOAD DOCUMENTS TO VALIDATE";
+                    const BannerIcon = criticals > 0 ? XCircle : hasRun && crossRefResults.length === 0 ? Shield : AlertTriangle;
+                    const iconCls = criticals > 0 ? "text-red-400" : hasRun && crossRefResults.length === 0 ? "text-green-400" : "text-slate-400";
+                    return (
+                      <div className={`flex items-center gap-3 p-4 rounded-lg border-2 ${bannerBg}`}>
+                        <BannerIcon className={`h-5 w-5 flex-shrink-0 ${iconCls}`} />
+                        <span className={`font-bold text-sm tracking-wide ${bannerText}`}>{bannerLabel}</span>
+                      </div>
+                    );
+                  })()}
 
                   {/* Stats row */}
                   <div className="grid grid-cols-3 gap-3">
@@ -607,6 +612,18 @@ export default function ShipmentDetail() {
           </TabsContent>
 
           <TabsContent value="exposure" className="mt-4">
+            {enrichedShipment.totalExposure > 0 && (
+              <div className="mb-4 p-4 rounded-lg border-2 border-red-700 bg-red-950/40">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-mono text-red-400 uppercase tracking-widest">AI-Computed Loss Exposure</span>
+                  <span className="text-2xl font-bold text-red-300">${enrichedShipment.totalExposure.toLocaleString()}</span>
+                </div>
+                <p className="text-xs text-red-400/80">
+                  Direct financial impact from {crossRefResults.length} exception{crossRefResults.length !== 1 ? "s" : ""} found during pre-filing validation.
+                  Includes penalties under 19 USC 1592, duty underpayments, and D&D exposure.
+                </p>
+              </div>
+            )}
             <ExposurePanel
               riskScore={enrichedShipment.riskScore || shipment.risk_score}
               declaredValue={enrichedShipment.declaredValue || shipment.declared_value}

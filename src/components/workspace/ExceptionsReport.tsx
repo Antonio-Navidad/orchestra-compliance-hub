@@ -82,7 +82,7 @@ const severityConfig = {
     bg: "bg-yellow-950/60 border-yellow-700",
     icon: AlertTriangle,
     iconClass: "text-yellow-400",
-    textClass: "text-yellow-200",
+    textClass: "text-yellow-300",
   },
   low: {
     label: "LOW",
@@ -104,7 +104,7 @@ const overallStatusConfig = {
   review: {
     label: "REVIEW REQUIRED — RESOLVE EXCEPTIONS BEFORE FILING",
     bg: "bg-yellow-950/60 border-yellow-600",
-    text: "text-yellow-200",
+    text: "text-yellow-300",
     icon: AlertTriangle,
     iconClass: "text-yellow-400",
   },
@@ -359,7 +359,7 @@ export function ExceptionsReport({
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Shield className="h-5 w-5 text-primary" />
-                <span className="text-sm font-bold tracking-widest text-muted-foreground uppercase">
+                <span className="text-sm font-bold tracking-widest text-foreground uppercase">
                   Orchestra AI — Pre-Filing Validation Report
                 </span>
               </div>
@@ -492,7 +492,7 @@ export function ExceptionsReport({
 
           {/* ── Exceptions ── */}
           <div className="mb-6">
-            <h3 className="font-semibold text-xs uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+            <h3 className="font-semibold text-xs uppercase tracking-widest text-foreground mb-3 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
               Exceptions ({sortedExceptions.length})
             </h3>
@@ -525,12 +525,12 @@ export function ExceptionsReport({
                               >
                                 {cfg.label}
                               </span>
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-xs text-foreground/70">
                                 {exc.document_a} × {exc.document_b} —{" "}
                                 {exc.field_checked}
                               </span>
                             </div>
-                            <p className="text-sm font-semibold text-gray-900 mb-1">
+                            <p className="text-sm font-semibold text-foreground mb-1">
                               {exc.finding}
                             </p>
                             <p className="text-sm text-foreground/80">

@@ -119,8 +119,10 @@ export function useValidation({
         },
       });
 
-      if (error) throw new Error(error.message);
+      // Check data.error first — it contains the actual Anthropic/function error message.
+      // `error` from the SDK is always the generic "Edge Function returned a non-2xx status code".
       if (data?.error) throw new Error(data.error);
+      if (error) throw new Error(error.message);
 
       const extracted = data.extracted_data || {};
       const warnings: string[] = data.warnings || [];
