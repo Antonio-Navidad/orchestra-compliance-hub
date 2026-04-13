@@ -153,15 +153,6 @@ export default function ShipmentDetail() {
       }
     : null;
 
-  // Merge uploaded doc types from both shipment_documents AND documents tables
-  const shipmentDocTypes = shipmentDocs.map((d: any) =>
-    (d.document_type || "").toLowerCase().replace(/[\s\-]+/g, "_")
-  );
-  const extractedDocTypes = extractedDocsRaw.map((d: any) =>
-    (d.document_type || "").toLowerCase().replace(/[\s\-]+/g, "_")
-  );
-  const uploadedDocTypes = [...new Set([...shipmentDocTypes, ...extractedDocTypes])];
-
   // Load extracted documents for workspace ExceptionsReport
   const { data: extractedDocsRaw = [] } = useQuery({
     queryKey: ["extracted-docs", id],
@@ -176,6 +167,15 @@ export default function ShipmentDetail() {
     },
     enabled: !!id,
   });
+
+  // Merge uploaded doc types from both shipment_documents AND documents tables
+  const shipmentDocTypes = shipmentDocs.map((d: any) =>
+    (d.document_type || "").toLowerCase().replace(/[\s\-]+/g, "_")
+  );
+  const extractedDocTypes = extractedDocsRaw.map((d: any) =>
+    (d.document_type || "").toLowerCase().replace(/[\s\-]+/g, "_")
+  );
+  const uploadedDocTypes = [...new Set([...shipmentDocTypes, ...extractedDocTypes])];
 
   const extractedDocs: Record<string, ExtractedDocData> = Object.fromEntries(
     extractedDocsRaw.map((doc: any) => [

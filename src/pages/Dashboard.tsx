@@ -111,6 +111,7 @@ const SEVERITY_CFG: Record<string, { cls: string; dot: string; label: string; ic
 
 function deriveStatus(s: Shipment): DerivedStatus {
   if (s.status === "cleared") return "clear";
+  if (s.status === "flagged") return "hold";
   if (s.status === "hold")    return "hold";
   if (s.status === "new" || s.status === "draft") return "draft";
   if (s.readiness_score != null) {
