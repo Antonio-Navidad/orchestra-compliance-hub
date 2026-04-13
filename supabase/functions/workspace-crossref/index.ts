@@ -168,7 +168,7 @@ Do not return any field that matches. Do not explain your reasoning. Return only
     const messageContent = await callAIText({
       systemPrompt,
       userMessage: userPrompt,
-      anthropicModel: "claude-sonnet-4-6",
+      anthropicModel: "claude-sonnet-4-5-20241022",
       lovableModel: "google/gemini-2.5-flash",
       maxTokens: 8192,
     });
