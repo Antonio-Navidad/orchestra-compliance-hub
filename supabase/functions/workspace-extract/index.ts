@@ -1,48 +1,63 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-// ── Inlined AI client (cross-directory imports fail at runtime on Supabase) ──
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+
+// ── Anthropic API client (direct, no gateway dependency) ─────────────────────
+const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
+const ANTHROPIC_VERSION = "2023-06-01";
 
 type MultimodalPart =
   | { type: "text"; text: string }
-  | { type: "image"; base64: string; mimeType: string };
+  | { type: "image"; base64: string; mimeType: string }
+  | { type: "document"; base64: string; mimeType: string };
 
-function getGatewayKey(): string {
-  const key = Deno.env.get("LOVABLE_API_KEY");
-  if (!key) throw new Error("LOVABLE_API_KEY is not configured");
+function getAnthropicKey(): string {
+  const key = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!key) throw new Error("ANTHROPIC_API_KEY is not configured");
   return key;
 }
 
-async function callGateway(model: string, messages: object[], maxTokens: number, apiKey: string): Promise<string | null> {
-  const res = await fetch(GATEWAY_URL, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, temperature: 0, max_tokens: maxTokens, messages }),
+async function callAnthropic(opts: {
+  systemPrompt: string;
+  parts: MultimodalPart[];
+  model: string;
+  maxTokens?: number;
+}): Promise<string | null> {
+  const { systemPrompt, parts, model, maxTokens = 16384 } = opts;
+  const apiKey = getAnthropicKey();
+
+  const content = parts.map((part) => {
+    if (part.type === "text") return { type: "text", text: part.text };
+    if (part.type === "document") {
+      return { type: "document", source: { type: "base64", media_type: part.mimeType, data: part.base64 } };
+    }
+    return { type: "image", source: { type: "base64", media_type: part.mimeType, data: part.base64 } };
   });
+
+  const res = await fetch(ANTHROPIC_API_URL, {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": ANTHROPIC_VERSION,
+      "anthropic-beta": "pdfs-2024-09-25",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: [{ role: "user", content }],
+    }),
+  });
+
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Gateway error (${model}): ${res.status} — ${err.substring(0, 300)}`);
+    throw new Error(`Anthropic API error ${res.status}: ${err.substring(0, 400)}`);
   }
-  const json = await res.json();
-  return json?.choices?.[0]?.message?.content ?? null;
-}
 
-async function callAIMultimodal(opts: { systemPrompt: string; parts: MultimodalPart[]; anthropicModel: string; lovableModel: string; maxTokens?: number }): Promise<string | null> {
-  const { systemPrompt, parts, anthropicModel, lovableModel, maxTokens = 16384 } = opts;
-  const apiKey = getGatewayKey();
-  const userContent = parts.map((part) => {
-    if (part.type === "text") return { type: "text", text: part.text };
-    return { type: "image_url", image_url: { url: `data:${part.mimeType};base64,${part.base64}` } };
-  });
-  const messages = [{ role: "system", content: systemPrompt }, { role: "user", content: userContent }];
-  try {
-    return await callGateway(anthropicModel, messages, maxTokens, apiKey);
-  } catch (primaryErr) {
-    console.warn(`Primary model (${anthropicModel}) failed, trying fallback:`, primaryErr);
-    return await callGateway(lovableModel, messages, maxTokens, apiKey);
-  }
+  const json = await res.json();
+  return json?.content?.[0]?.text ?? null;
 }
-// ── End inlined AI client ─────────────────────────────────────────────────────
+// ── End Anthropic client ──────────────────────────────────────────────────────
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -319,7 +334,14 @@ serve(async (req) => {
     if (!file) throw new Error("No file provided");
 
     const arrayBuffer = await file.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    // Chunked base64 — spread operator crashes on files > ~50KB (stack overflow)
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = "";
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+    const base64 = btoa(binary);
     const mimeType = file.type || "application/octet-stream";
 
     const isPdf = mimeType === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
@@ -363,47 +385,25 @@ ${isPackingList ? '- "internal_errors": array as specified in the validation ins
 
 Return ONLY the JSON object. No markdown. No preamble.`;
 
-    // Build multimodal message content
-    const userContent: any[] = [];
-
-    if (isPdf || isImage) {
-      // PDFs and images — send as image_url for vision processing
-      userContent.push({
-        type: "image_url",
-        image_url: { url: `data:${mimeType};base64,${base64}` },
-      });
-    } else if (isXlsx || isDocx) {
-      // ── FIX: XLSX and DOCX are binary — don't try to decode as text ──
-      // Send as base64 with file context so the model knows what it is
-      userContent.push({
-        type: "text",
-        text: `[Binary file attached: ${file.name}, type: ${mimeType}, size: ${file.size} bytes, base64 encoded below]\n${base64.substring(0, 100)}...\n\nNote: This is a ${isXlsx ? "spreadsheet (XLSX)" : "Word document (DOCX)"}. Extract data based on the filename and document type context provided.`,
-      });
-    }
-
-    userContent.push({ type: "text", text: userText });
-
-    // ── Convert userContent to shared client MultimodalPart format ────────────
+    // Build parts for Anthropic API
     const parts: MultimodalPart[] = [];
-    for (const block of userContent) {
-      if (block.type === "image_url") {
-        // Extract base64 and mimeType from data URL
-        const dataUrl: string = block.image_url.url;
-        const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-        if (match) {
-          parts.push({ type: "image", base64: match[2], mimeType: match[1] });
-        }
-      } else if (block.type === "text") {
-        parts.push({ type: "text", text: block.text });
-      }
-    }
 
-    // ── Call AI (Anthropic preferred, Lovable fallback) ────────────────────────
-    const messageContent = await callAIMultimodal({
+    if (isPdf) {
+      // PDFs must be sent as "document" type with the pdfs-2024-09-25 beta
+      parts.push({ type: "document", base64, mimeType: "application/pdf" });
+    } else if (isImage) {
+      const supportedMime = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+      const safeMime = supportedMime.includes(mimeType) ? mimeType : "image/jpeg";
+      parts.push({ type: "image", base64, mimeType: safeMime });
+    } else if (isXlsx || isDocx) {
+      parts.push({ type: "text", text: `[Binary file: ${file.name}, type: ${mimeType}, size: ${file.size} bytes. Extract data based on filename and document type context.]` });
+    }
+    parts.push({ type: "text", text: userText });
+
+    const messageContent = await callAnthropic({
       systemPrompt,
       parts,
-      anthropicModel: "claude-opus-4-6", // Opus for best document OCR/extraction
-      lovableModel: "google/gemini-2.5-flash",
+      model: "claude-sonnet-4-5",
       maxTokens: 16384,
     });
     if (!messageContent) throw new Error("AI returned empty response");
@@ -439,7 +439,7 @@ Return ONLY the JSON object. No markdown. No preamble.`;
       .insert({
         extracted_fields: result.extracted_data || fieldMap,
         field_confidence: confidenceMap,
-        extraction_model: "gemini-2.5-flash",
+        extraction_model: "claude-sonnet-4-5",
         raw_text: result.document_type_detected || null,
         parse_warnings: warnings,
       })
