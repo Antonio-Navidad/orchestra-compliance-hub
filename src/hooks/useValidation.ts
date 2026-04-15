@@ -119,10 +119,18 @@ export function useValidation({
         },
       });
 
-      // Check data.error first — it contains the actual Anthropic/function error message.
-      // `error` from the SDK is always the generic "Edge Function returned a non-2xx status code".
+      // Supabase SDK v2: for non-2xx responses, data=null and error.context = Response object.
+      // We must read the actual error from the response body to get the real message.
+      if (error) {
+        let actualMessage = error.message;
+        try {
+          // error.context is the raw Response — read the JSON body to get the real error
+          const body = await (error as any).context?.json?.();
+          if (body?.error) actualMessage = body.error;
+        } catch { /* body unreadable or already consumed — fall back to SDK message */ }
+        throw new Error(actualMessage);
+      }
       if (data?.error) throw new Error(data.error);
-      if (error) throw new Error(error.message);
 
       const extracted = data.extracted_data || {};
       const warnings: string[] = data.warnings || [];

@@ -6,7 +6,7 @@
  * its essential value.
  */
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -48,14 +48,34 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 // ── The three documents that power Orchestra's core validation ──────────────
-const DOC_SLOTS = [
-  {
-    id: "bill_of_lading",
-    label: "Bill of Lading",
-    description: "Container, seal, notify party, consignee",
-    Icon: Package,
-    accent: "blue",
-  },
+interface DocSlotDef {
+  id: string;
+  label: string;
+  description: string;
+  Icon: React.ComponentType<{ className?: string }>;
+  accent: string;
+}
+
+type DocSlotId = string;
+
+const OCEAN_TRANSPORT_SLOT: DocSlotDef = {
+  id: "bill_of_lading",
+  label: "Bill of Lading",
+  description: "Container, seal, notify party, consignee",
+  Icon: Package,
+  accent: "blue",
+};
+
+// Mexico & Canada land: truck BOL uses a dedicated extraction schema
+const LAND_TRANSPORT_SLOT: DocSlotDef = {
+  id: "truck_bol_carrier_manifest",
+  label: "Truck BOL / Carrier Manifest",
+  description: "PAPS number, carrier, truck/trailer, crossing date",
+  Icon: Truck,
+  accent: "blue",
+};
+
+const CORE_COMMODITY_SLOTS: DocSlotDef[] = [
   {
     id: "commercial_invoice",
     label: "Commercial Invoice",
@@ -70,9 +90,10 @@ const DOC_SLOTS = [
     Icon: FileText,
     accent: "violet",
   },
-] as const;
+];
 
-type DocSlotId = (typeof DOC_SLOTS)[number]["id"];
+// Legacy constant kept for any remaining static references
+const DOC_SLOTS: DocSlotDef[] = [OCEAN_TRANSPORT_SLOT, ...CORE_COMMODITY_SLOTS];
 
 const ACCENT_CLASSES: Record<string, { border: string; bg: string; icon: string }> = {
   blue:    { border: "border-blue-200",   bg: "bg-blue-50/60",    icon: "text-blue-500"    },
@@ -298,6 +319,14 @@ export default function ValidatePage() {
 
   const { slots, result, isRunning, extractDocument: validationExtract, runCrossRef } = validation;
 
+  // ── Compute doc slots based on selected mode (land vs ocean) ──────────────
+  const docSlots: DocSlotDef[] = useMemo(() => {
+    if (selectedMode === "land_mexico" || selectedMode === "land_canada") {
+      return [LAND_TRANSPORT_SLOT, ...CORE_COMMODITY_SLOTS];
+    }
+    return DOC_SLOTS;
+  }, [selectedMode]);
+
   // ── Derive legacy-compatible shapes for ExceptionsReport ──
   const extractedDocs: Record<string, ExtractedDocData> = Object.fromEntries(
     Object.entries(slots)
@@ -337,7 +366,7 @@ export default function ValidatePage() {
   }, [result]);
 
   // ── When any doc starts processing → show processing phase ──
-  const uploadedSlotIds = DOC_SLOTS.map((s) => s.id).filter((id) => id in extractedDocs);
+  const uploadedSlotIds = docSlots.map((s) => s.id).filter((id) => id in extractedDocs);
   useEffect(() => {
     if ((phase === "upload" || phase === "done") && (processingDocs.size > 0)) {
       setPhase("processing");
@@ -687,7 +716,7 @@ export default function ValidatePage() {
           const missingRequired = selectedMode
             ? MODE_ADDITIONAL_SLOTS[selectedMode].filter(slot => slot.required && !(slot.id in extractedDocs))
             : [];
-          const coreDocsMissing = DOC_SLOTS.filter(slot => !(slot.id in extractedDocs));
+          const coreDocsMissing = docSlots.filter(slot => !(slot.id in extractedDocs));
           const allMissing = [...coreDocsMissing.map(d => d.label), ...missingRequired.map(d => d.label)];
           if (allMissing.length === 0) return null;
           const daysLeft = Math.round((new Date(expectedArrivalDate + "T00:00:00").getTime() - new Date().setHours(0,0,0,0)) / 86400000);
@@ -759,13 +788,13 @@ export default function ValidatePage() {
               Shipment Documents
             </label>
             <span className="text-[11px] text-muted-foreground">
-              {uploadedSlotIds.length} of {DOC_SLOTS.length} uploaded
+              {uploadedSlotIds.length} of {docSlots.length} uploaded
               {uploadedSlotIds.length >= 2 && " · AI analysis running"}
             </span>
           </div>
 
           <div className="grid grid-cols-3 gap-3">
-            {DOC_SLOTS.map((slot) => {
+            {docSlots.map((slot) => {
               const isUploaded  = slot.id in extractedDocs;
               const isProcessing = processingDocs.has(slot.id);
               const doc = extractedDocs[slot.id];
@@ -948,7 +977,7 @@ export default function ValidatePage() {
 // ─── Sub-components ────────────────────────────────────────────────────────
 
 interface DocSlotProps {
-  slot: (typeof DOC_SLOTS)[number];
+  slot: DocSlotDef;
   isUploaded: boolean;
   isProcessing: boolean;
   doc: any;
