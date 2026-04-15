@@ -729,7 +729,10 @@ export const LAND_CANADA_RULES: ModeComplianceRules = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// LAND IMPORT — MEXICO (stub)
+// LAND IMPORT — MEXICO (FULL RULE SET — PRIMARY SUPPORTED CORRIDOR)
+// Covers: Commercial Invoice, Packing List, Truck BoL/PAPS, USMCA CoO,
+//         Pedimento, Customs Bond, Arrival Notice
+// Regulations: 19 CFR 141.86, USMCA Article 5, 19 USC 1623, IEEPA March 2025
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const LAND_MEXICO_RULES: ModeComplianceRules = {
@@ -737,6 +740,109 @@ export const LAND_MEXICO_RULES: ModeComplianceRules = {
   displayName: "Land Import — Mexico",
 
   documentPairs: [
+    // ── 1. Commercial Invoice vs Packing List ─────────────────────────────────
+    {
+      documentA: "commercial_invoice",
+      documentB: "packing_list",
+      fields: [
+        {
+          fieldA: "country_of_origin",
+          fieldB: "country_of_origin",
+          severity: "critical",
+          tolerance: "Exact match required. Mexico (MX) must appear identically on both documents.",
+          regulation: "19 CFR 134 — country of origin marking",
+        },
+        {
+          fieldA: "total_cartons",
+          fieldB: "total_cartons",
+          severity: "critical",
+          tolerance: "Exact match required. Carton count discrepancy triggers CBP exam.",
+          regulation: "19 CFR 141.86(c)",
+        },
+        {
+          fieldA: "total_gross_weight_kg",
+          fieldB: "total_gross_weight_kg",
+          severity: "high",
+          tolerance: "Within 5% variance allowed. Larger difference = hold for re-weigh.",
+          regulation: "19 CFR 141.86(d)",
+        },
+        {
+          fieldA: "total_value",
+          fieldB: "total_value",
+          severity: "critical",
+          tolerance: "Invoice total must match packing list declared value if stated. Discrepancy is undervaluation indicator.",
+          regulation: "19 USC 1592 — penalties for fraud/negligence",
+        },
+        {
+          fieldA: "seller_name",
+          fieldB: "seller_name",
+          severity: "medium",
+          tolerance: "Abbreviations acceptable. Different legal entity names are high risk.",
+          regulation: "19 CFR 141.86",
+        },
+        {
+          fieldA: "buyer_name",
+          fieldB: "buyer_name",
+          severity: "medium",
+          tolerance: "Abbreviations acceptable. Different legal entity names are high risk.",
+          regulation: "19 CFR 141.86",
+        },
+      ],
+      explicitSkipFields: ["payment_terms", "bank_details", "invoice_number", "marks_and_numbers", "packing_list_number", "fta_program"],
+    },
+
+    // ── 2. Commercial Invoice vs Truck BoL / PAPS Manifest ──────────────────
+    {
+      documentA: "commercial_invoice",
+      documentB: "truck_bol_carrier_manifest",
+      fields: [
+        {
+          fieldA: "seller_name",
+          fieldB: "shipper",
+          severity: "high",
+          tolerance: "Invoice seller and BoL shipper must refer to same entity. Different names are a CBP red flag.",
+          regulation: "19 CFR 141.86",
+        },
+        {
+          fieldA: "buyer_name",
+          fieldB: "consignee",
+          severity: "critical",
+          tolerance: "Invoice buyer and BoL consignee must be identical. Mismatch may indicate diversion or fraud.",
+          regulation: "19 CFR 141.86; 19 USC 1592",
+        },
+        {
+          fieldA: "total_gross_weight_kg",
+          fieldB: "gross_weight_kg",
+          severity: "high",
+          tolerance: "Within 5% variance. Larger variance triggers hold for re-weigh under 19 CFR 163.",
+          regulation: "19 CFR 141.86(d)",
+        },
+        {
+          fieldA: "total_cartons",
+          fieldB: "total_packages",
+          severity: "critical",
+          tolerance: "Exact match required. Package count on BoL vs invoice must agree.",
+          regulation: "19 CFR 141.86(c)",
+        },
+        {
+          fieldA: "total_value",
+          fieldB: "declared_value_usd",
+          severity: "critical",
+          tolerance: "Invoice total and BoL declared value must match exactly. CBP assesses duty on invoice value per 19 CFR 152.",
+          regulation: "19 CFR 152; 19 USC 1592",
+        },
+        {
+          fieldA: "country_of_origin",
+          fieldB: "country_of_origin",
+          severity: "critical",
+          tolerance: "Exact match required. Mexico (MX) must appear identically on both.",
+          regulation: "19 CFR 134",
+        },
+      ],
+      explicitSkipFields: ["payment_terms", "bank_details", "invoice_number", "bl_number", "paps_number", "seal_numbers", "eta", "etd", "freight_terms"],
+    },
+
+    // ── 3. Commercial Invoice vs USMCA Certification of Origin ───────────────
     {
       documentA: "commercial_invoice",
       documentB: "usmca_certification",
@@ -745,24 +851,205 @@ export const LAND_MEXICO_RULES: ModeComplianceRules = {
           fieldA: "country_of_origin",
           fieldB: "country_of_origin",
           severity: "critical",
-          tolerance: "Exact match required for USMCA duty preference claim.",
-          regulation: "USMCA Article 5",
+          tolerance: "Exact match required. USMCA cert must state Mexico (MX) as origin to qualify for duty-free treatment.",
+          regulation: "USMCA Article 5; 19 CFR 182",
+        },
+        {
+          fieldA: "seller_name",
+          fieldB: "certifier_name",
+          severity: "critical",
+          tolerance: "USMCA certifier must be invoice seller, producer, or authorized exporter. Mismatch invalidates USMCA claim.",
+          regulation: "USMCA Article 5.2 — who may certify",
+        },
+        {
+          fieldA: "buyer_name",
+          fieldB: "importer_name",
+          severity: "high",
+          tolerance: "USMCA importer must match invoice buyer. Discrepancy may invalidate preferential claim.",
+          regulation: "USMCA Annex 5-A",
+        },
+        {
+          fieldA: "line_items[].hts_6digit",
+          fieldB: "hts_codes",
+          severity: "critical",
+          tolerance: "HTS codes on invoice must match USMCA cert exactly. Mismatch = USMCA claim fails = 25% IEEPA tariff exposure.",
+          regulation: "USMCA Rules of Origin; 19 USC 1592",
+        },
+        {
+          fieldA: "invoice_date",
+          fieldB: "certification_date",
+          severity: "high",
+          tolerance: "USMCA cert must not be expired (max 12-month validity). Cert must predate or match invoice date.",
+          regulation: "USMCA Article 5.2 — blanket period max 12 months",
         },
       ],
-      explicitSkipFields: ["declared_value_usd", "payment_terms", "bank_details"],
+      explicitSkipFields: ["payment_terms", "bank_details", "invoice_number", "total_value", "total_cartons", "marks_and_numbers"],
+    },
+
+    // ── 4. Packing List vs Truck BoL / PAPS Manifest ────────────────────────
+    {
+      documentA: "packing_list",
+      documentB: "truck_bol_carrier_manifest",
+      fields: [
+        {
+          fieldA: "total_cartons",
+          fieldB: "total_packages",
+          severity: "critical",
+          tolerance: "Exact match required. Physical piece count must agree across all transport documents.",
+          regulation: "19 CFR 141.86(c)",
+        },
+        {
+          fieldA: "total_gross_weight_kg",
+          fieldB: "gross_weight_kg",
+          severity: "high",
+          tolerance: "Within 5% variance. Larger variance triggers CBP hold for physical re-weigh.",
+          regulation: "19 CFR 141.86(d)",
+        },
+        {
+          fieldA: "country_of_origin",
+          fieldB: "country_of_origin",
+          severity: "critical",
+          tolerance: "Exact match required on all transport documents.",
+          regulation: "19 CFR 134",
+        },
+      ],
+      explicitSkipFields: ["packing_list_number", "bl_number", "paps_number", "seal_numbers", "marks_and_numbers", "eta", "etd", "freight_terms", "total_net_weight_kg", "total_cbm"],
+    },
+
+    // ── 5. USMCA Certification vs Packing List ───────────────────────────────
+    {
+      documentA: "usmca_certification",
+      documentB: "packing_list",
+      fields: [
+        {
+          fieldA: "country_of_origin",
+          fieldB: "country_of_origin",
+          severity: "critical",
+          tolerance: "USMCA cert and packing list must show identical origin country. Mismatch invalidates duty preference.",
+          regulation: "USMCA Article 5; 19 CFR 134",
+        },
+        {
+          fieldA: "description_of_goods",
+          fieldB: "line_items[].description",
+          severity: "high",
+          tolerance: "Goods description must be consistent. Vague USMCA description vs specific packing list = CBP challenge risk.",
+          regulation: "USMCA Annex 5-A — minimum data requirements",
+        },
+      ],
+      explicitSkipFields: ["certifier_name", "importer_name", "certification_date", "hts_codes", "total_cartons", "total_gross_weight_kg"],
+    },
+
+    // ── 6. Customs Bond vs Commercial Invoice ────────────────────────────────
+    {
+      documentA: "customs_bond",
+      documentB: "commercial_invoice",
+      fields: [
+        {
+          fieldA: "principal_name",
+          fieldB: "buyer_name",
+          severity: "critical",
+          tolerance: "Bond principal must be the importer of record on the invoice. Mismatch = bond cannot cover this entry.",
+          regulation: "19 USC 1623; 19 CFR 113",
+        },
+        {
+          fieldA: "bond_amount_usd",
+          fieldB: "total_value",
+          severity: "critical",
+          tolerance: "Single-entry bond must be ≥ total entered value. Continuous bond amount should comfortably exceed entered value × annual frequency.",
+          regulation: "19 USC 1623(b) — bond sufficiency",
+        },
+      ],
+      explicitSkipFields: ["surety_company", "bond_number", "expiration_date", "entry_number", "payment_terms", "bank_details"],
+    },
+
+    // ── 7. Pedimento vs Commercial Invoice (when available) ──────────────────
+    {
+      documentA: "pedimento",
+      documentB: "commercial_invoice",
+      fields: [
+        {
+          fieldA: "declared_value_usd",
+          fieldB: "total_value",
+          severity: "critical",
+          tolerance: "Pedimento declared value and US invoice value must match. Discrepancy = undervaluation under both Mexican and US customs law.",
+          regulation: "19 USC 1592; Ley Aduanera Mexico Art. 64",
+        },
+        {
+          fieldA: "exporter_name",
+          fieldB: "seller_name",
+          severity: "high",
+          tolerance: "Mexican exporter on Pedimento must match invoice seller. Mismatch is a CBP red flag for transshipment.",
+          regulation: "19 CFR 141.86; 19 CFR 134",
+        },
+        {
+          fieldA: "hts_mexico",
+          fieldB: "line_items[].hts_6digit",
+          severity: "high",
+          tolerance: "HS code used in Mexico Pedimento should align with US HTS classification at 6-digit level. Divergence may indicate mis-description.",
+          regulation: "19 USC 1592 — false statements",
+        },
+        {
+          fieldA: "country_of_origin",
+          fieldB: "country_of_origin",
+          severity: "critical",
+          tolerance: "Exact match required. Both must show Mexico (MX).",
+          regulation: "19 CFR 134; USMCA Article 5",
+        },
+      ],
+      explicitSkipFields: ["pedimento_number", "aduana", "regime_code", "payment_method", "invoice_number", "payment_terms"],
     },
   ],
 
   documentSpecs: [
     {
       documentType: "commercial_invoice",
-      regulationSummary: "19 CFR 141.86 — same requirements as ocean import",
-      requiredFields: OCEAN_IMPORT_RULES.documentSpecs.find(d => d.documentType === "commercial_invoice")!.requiredFields,
+      regulationSummary: "19 CFR 141.86 — required data elements for formal CBP entry. Must include seller, buyer, description, country of origin, HTS, total value in USD.",
+      requiredFields: [
+        "seller_name", "seller_address", "buyer_name", "buyer_address",
+        "invoice_number", "invoice_date", "currency", "total_value",
+        "country_of_origin", "total_cartons", "total_gross_weight_kg",
+        "line_items", "incoterms",
+      ],
+    },
+    {
+      documentType: "packing_list",
+      regulationSummary: "19 CFR 141.86 — must reconcile with invoice carton count, weight, and goods description.",
+      requiredFields: [
+        "total_cartons", "total_gross_weight_kg", "total_net_weight_kg",
+        "country_of_origin", "line_items",
+      ],
+    },
+    {
+      documentType: "truck_bol_carrier_manifest",
+      regulationSummary: "49 CFR 373 — Truck Bill of Lading. PAPS (Pre-Arrival Processing System) manifest for ACE truck entry from Mexico.",
+      requiredFields: [
+        "shipper", "consignee", "total_packages", "gross_weight_kg",
+        "commodity_description", "declared_value_usd",
+      ],
     },
     {
       documentType: "usmca_certification",
-      regulationSummary: "USMCA Article 5 — certification of origin for Mexican goods.",
-      requiredFields: LAND_CANADA_RULES.documentSpecs.find(d => d.documentType === "usmca_certification")!.requiredFields,
+      regulationSummary: "USMCA Article 5 / 19 CFR 182 — Certification of Origin required for duty-free treatment on Mexican goods. Valid up to 12 months (blanket cert).",
+      requiredFields: [
+        "certifier_name", "certifier_role", "importer_name", "producer_name",
+        "country_of_origin", "description_of_goods", "hts_codes",
+        "certification_date", "blanket_period_start", "blanket_period_end",
+      ],
+    },
+    {
+      documentType: "pedimento",
+      regulationSummary: "Ley Aduanera Mexico — Mexican customs export declaration. Required for all commercial exports from Mexico. Contains pedimento number, declared value, exporter, and HTS.",
+      requiredFields: [
+        "pedimento_number", "exporter_name", "declared_value_usd",
+        "country_of_origin", "aduana",
+      ],
+    },
+    {
+      documentType: "customs_bond",
+      regulationSummary: "19 USC 1623 — Single Entry Bond or Continuous Bond required for formal entry. Bond amount must ≥ total entered value for single-entry bonds.",
+      requiredFields: [
+        "principal_name", "bond_amount_usd", "bond_type",
+      ],
     },
   ],
 
@@ -772,20 +1059,29 @@ export const LAND_MEXICO_RULES: ModeComplianceRules = {
     mpf_max_usd: 538.40,
     hmf_rate: null,
     notes: [
-      "MPF exempt for USMCA-qualifying goods from Mexico",
-      "HMF does NOT apply to land imports",
-      "Mexico IEEPA tariff: 25% on non-USMCA qualifying goods effective March 4 2025",
-      "Automotive parts from Mexico subject to specific USMCA regional value content requirements",
+      "MPF (Merchandise Processing Fee): 0.3464% of entered value — EXEMPT for USMCA-qualifying Mexican goods",
+      "HMF (Harbor Maintenance Fee): NOT applicable to land imports",
+      "IEEPA 25% tariff: applies to ALL non-USMCA qualifying Mexican goods effective March 4 2025 (EO 14194)",
+      "USMCA-qualifying goods: zero duty + MPF exempt — USMCA cert must be on file",
+      "Section 232: 25% steel / 25% aluminum regardless of USMCA status",
+      "Automotive: USMCA Regional Value Content ≥75% required for passenger vehicles; ≥70% for parts",
+      "De minimis $800 informal entry: no longer available for IEEPA-subject goods as of Aug 29 2025",
     ],
   },
 
   entryNotes: [
-    "USMCA certificate or certification of origin required for duty preference on Mexican goods.",
-    "Mexico IEEPA: 25% tariff on non-USMCA qualifying goods effective March 4 2025. USMCA-qualifying goods are exempt.",
-    "PAPS (Pre-Arrival Processing System) filing required for truck entries from Mexico.",
-    "Pedimento required from Mexican side for all commercial exports to the US.",
-    "No ISF, No HMF for land entries.",
-    "MPF exempt for USMCA-qualifying imports from Mexico.",
+    "USMCA Certificate of Origin REQUIRED for duty-free treatment — file must be on record at time of entry.",
+    "IEEPA 25% tariff on ALL non-USMCA qualifying goods from Mexico effective March 4 2025. Verify USMCA cert covers every line item.",
+    "PAPS (Pre-Arrival Processing System): carrier must transmit ACE manifest before truck arrives at US port. Late PAPS = CBP hold.",
+    "Pedimento (Mexican export declaration) must accompany shipment — CBP cross-references pedimento number on US entry.",
+    "NO ISF required for land entries (ISF is ocean-only under 19 CFR 149).",
+    "NO HMF for land entries (Harbor Maintenance Fee is port-only).",
+    "MPF exempt for USMCA-qualifying imports — ensure USMCA cert is valid and covers shipment date.",
+    "Formal entry (CBP 3461/7501) required for shipments valued >$800 (19 USC 1321 de minimis).",
+    "Customs bond required: single-entry bond ≥ entered value, or importer must have continuous bond on file.",
+    "Section 232 steel/aluminum tariffs apply regardless of USMCA status — no Mexico exemption.",
+    "C-TPAT participation reduces exam frequency at Mexico land border — flag if importer is not C-TPAT certified.",
+    "FDA Prior Notice required for food, beverages, supplements — file via OASIS/ACE before truck arrival.",
   ],
 };
 

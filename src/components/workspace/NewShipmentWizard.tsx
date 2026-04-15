@@ -36,31 +36,30 @@ export interface PacketIntakeDraft {
   title: string;
 }
 
-interface ModeCard { id: ShipmentModeChoice; label: string; icon: React.ReactNode; detail: string }
+// Mexico land border crossing ports (by trade volume)
+const MEXICO_PORTS_OF_ENTRY = [
+  "Laredo, TX (Juarez-Lincoln Bridge)",
+  "El Paso, TX (Bridge of the Americas)",
+  "Otay Mesa, CA (Otay Mesa Commercial Facility)",
+  "Nogales, AZ (Mariposa Commercial Port)",
+  "McAllen, TX (Pharr-Reynosa Bridge)",
+  "Eagle Pass, TX (International Bridge II)",
+  "Hidalgo, TX (Pharr International Bridge)",
+  "Brownsville, TX (Veterans International Bridge)",
+  "Del Rio, TX (International Bridge)",
+  "Calexico, CA (Calexico East Commercial Port)",
+];
+
+interface ModeCard { id: ShipmentModeChoice; label: string; icon: React.ReactNode; detail: string; active: boolean }
 
 const MODE_GROUPS: { title: string; cards: ModeCard[] }[] = [
   {
     title: "Importing into the U.S.",
     cards: [
-      { id: "ocean_import", label: "Ocean Import", icon: <Ship size={18} />, detail: "14 docs + ISF mandatory" },
-      { id: "air_import", label: "Air Import", icon: <Plane size={18} />, detail: "11 docs, no ISF" },
-      { id: "land_mexico_import", label: "Land — Mexico Import", icon: <Truck size={18} />, detail: "PAPS + Pedimento + Carta Porte" },
-      { id: "land_canada_import", label: "Land — Canada Import", icon: <Truck size={18} />, detail: "PARS + ACI eManifest" },
-    ],
-  },
-  {
-    title: "Exporting from the U.S.",
-    cards: [
-      { id: "ocean_export", label: "Ocean Export", icon: <Ship size={18} />, detail: "EEI/AES + ocean docs" },
-      { id: "air_export", label: "Air Export", icon: <Plane size={18} />, detail: "EEI/AES + air docs" },
-      { id: "land_mexico_export", label: "Land — Mexico Export", icon: <Truck size={18} />, detail: "EEI/AES + Pedimento coordination" },
-      { id: "land_canada_export", label: "Land — Canada Export", icon: <Truck size={18} />, detail: "No EEI + CARM coordination" },
-    ],
-  },
-  {
-    title: "Other",
-    cards: [
-      { id: "inbond_te", label: "In-Bond / T&E", icon: <RefreshCcw size={18} />, detail: "CBP Form 7512 workflow" },
+      { id: "land_mexico_import", label: "Land — Mexico Import", icon: <Truck size={18} />, detail: "Commercial Invoice · Packing List · Truck BoL · USMCA CoO", active: true },
+      { id: "land_canada_import", label: "Land — Canada Import", icon: <Truck size={18} />, detail: "Coming soon — Q3 2026", active: false },
+      { id: "ocean_import", label: "Ocean Import", icon: <Ship size={18} />, detail: "Coming soon", active: false },
+      { id: "air_import", label: "Air Import", icon: <Plane size={18} />, detail: "Coming soon", active: false },
     ],
   },
 ];
@@ -79,47 +78,44 @@ const COMMODITY_TYPES = [
   "Firearms, Ammunition",
 ];
 
-/* ── Requirement tag inference ── */
+/* ── Requirement tag inference (Mexico land-focused) ── */
 function inferTags(mode: ShipmentModeChoice, commodity: string, origin: string): { label: string; color: string }[] {
   const tags: { label: string; color: string }[] = [];
-  const o = origin.toLowerCase();
   const c = commodity.toLowerCase();
 
-  if (mode === "ocean_import") tags.push({ label: "ISF 10+2 — must file 24h before vessel departure", color: "bg-red-500/10 text-red-600 border-red-500/20" });
-  if (o.includes("china") || o === "cn") {
-    tags.push({ label: "Section 301 tariff check", color: "bg-amber-500/10 text-amber-600 border-amber-500/20" });
-    if (["general", "electronics", "textiles"].some(k => c.includes(k))) {
-      tags.push({ label: "CPSC if consumer goods", color: "bg-amber-500/10 text-amber-600 border-amber-500/20" });
-    }
+  // Mexico land entry — always applicable
+  if (mode === "land_mexico_import") {
+    tags.push({ label: "USMCA Cert of Origin — required for duty-free treatment", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" });
+    tags.push({ label: "PAPS filing — required for CBP ACE truck entry", color: "bg-blue-500/10 text-blue-600 border-blue-500/20" });
+    tags.push({ label: "Pedimento — required from Mexican customs side", color: "bg-blue-500/10 text-blue-600 border-blue-500/20" });
+    tags.push({ label: "25% IEEPA tariff exposure on non-USMCA goods", color: "bg-red-500/10 text-red-600 border-red-500/20" });
   }
-  if (c.includes("food") || c.includes("beverage") || c.includes("supplement")) tags.push({ label: "FDA Prior Notice — mandatory", color: "bg-red-500/10 text-red-600 border-red-500/20" });
-  if (c.includes("steel") || c.includes("aluminum")) tags.push({ label: "SIMA License — required for all steel mill products", color: "bg-amber-500/10 text-amber-600 border-amber-500/20" });
+
+  // Commodity-specific PGA requirements
+  if (c.includes("food") || c.includes("beverage") || c.includes("supplement")) tags.push({ label: "FDA Prior Notice — mandatory for food/supplements", color: "bg-red-500/10 text-red-600 border-red-500/20" });
   if (c.includes("agricultural") || c.includes("plant")) {
-    tags.push({ label: "Phytosanitary Certificate", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" });
-    tags.push({ label: "USDA/APHIS permit", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" });
-    tags.push({ label: "Fumigation / ISPM-15 cert", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" });
+    tags.push({ label: "Phytosanitary Certificate — USDA APHIS", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" });
+    tags.push({ label: "Fumigation / ISPM-15 cert required", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" });
   }
-  if (c.includes("firearm") || c.includes("ammunition")) tags.push({ label: "ATF Form 6 — import permit required", color: "bg-red-500/10 text-red-600 border-red-500/20" });
+  if (c.includes("steel") || c.includes("aluminum")) tags.push({ label: "Section 232 tariff — 25% steel / 25% aluminum", color: "bg-amber-500/10 text-amber-600 border-amber-500/20" });
+  if (c.includes("auto") || c.includes("vehicle")) tags.push({ label: "USMCA Regional Value Content — auto rules strict", color: "bg-amber-500/10 text-amber-600 border-amber-500/20" });
   if (c.includes("electronics") || c.includes("telecom")) tags.push({ label: "FCC Declaration required", color: "bg-blue-500/10 text-blue-600 border-blue-500/20" });
-  if (c.includes("chemical") || c.includes("hazmat")) tags.push({ label: "Dangerous Goods Declaration required", color: "bg-red-500/10 text-red-600 border-red-500/20" });
-  if (c.includes("medical") || c.includes("pharma")) tags.push({ label: "FDA 510(k) or registration may apply", color: "bg-amber-500/10 text-amber-600 border-amber-500/20" });
-  if (c.includes("wildlife") || c.includes("exotic")) tags.push({ label: "CITES permit — required for endangered species", color: "bg-red-500/10 text-red-600 border-red-500/20" });
-  if (["ocean_export", "air_export", "land_mexico_export", "land_canada_export"].some(m => mode === m)) tags.push({ label: "Denied Party Screening — mandatory before export", color: "bg-red-500/10 text-red-600 border-red-500/20" });
+  if (c.includes("chemical") || c.includes("hazmat")) tags.push({ label: "Dangerous Goods Declaration — mandatory", color: "bg-red-500/10 text-red-600 border-red-500/20" });
+  if (c.includes("medical") || c.includes("pharma")) tags.push({ label: "FDA 510(k) or device registration may apply", color: "bg-amber-500/10 text-amber-600 border-amber-500/20" });
 
   return tags;
 }
 
-function estimateDocCount(mode: ShipmentModeChoice, commodity: string): { required: number; conditional: number } {
-  const isExport = ["ocean_export", "air_export", "land_mexico_export", "land_canada_export"].includes(mode);
-  let base = mode === "ocean_import" ? 14 : mode === "air_import" ? 11 : isExport ? 9 : mode === "land_mexico_import" ? 16 : mode === "land_canada_import" ? 13 : 7;
+function estimateDocCount(_mode: ShipmentModeChoice, commodity: string): { required: number; conditional: number } {
+  // Mexico land entry: 5 core required docs
+  let base = 5; // Commercial Invoice, Packing List, Truck BoL, USMCA CoO, Customs Bond
   let cond = 0;
   const c = commodity.toLowerCase();
-  if (c.includes("food")) cond += 2;
-  if (c.includes("chemical") || c.includes("hazmat")) cond += 2;
-  if (c.includes("agricultural")) cond += 3;
-  if (c.includes("firearm")) cond += 1;
-  if (c.includes("medical")) cond += 1;
-  if (c.includes("steel")) cond += 1;
+  if (c.includes("food") || c.includes("beverage")) cond += 2; // FDA Prior Notice + Phytosanitary
+  if (c.includes("chemical") || c.includes("hazmat")) cond += 1; // Dangerous Goods Declaration
+  if (c.includes("agricultural") || c.includes("plant")) cond += 2; // Phytosanitary + USDA permit
+  if (c.includes("medical") || c.includes("pharma")) cond += 1; // FDA registration
+  if (c.includes("steel") || c.includes("aluminum")) cond += 1; // SIMA/232 docs
   return { required: base, conditional: cond };
 }
 
@@ -142,7 +138,7 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
   const [importerOfRecord, setImporterOfRecord] = useState("");
   const [importerQuery, setImporterQuery] = useState("");
   const [showImporterSuggestions, setShowImporterSuggestions] = useState(false);
-  const [shipmentMode, setShipmentMode] = useState<ShipmentModeChoice>("ocean_import");
+  const [shipmentMode, setShipmentMode] = useState<ShipmentModeChoice>("land_mexico_import");
   const [commodityType, setCommodityType] = useState("");
   const [countryOfOrigin, setCountryOfOrigin] = useState("");
   const [portOfEntry, setPortOfEntry] = useState("");
@@ -318,23 +314,28 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
                 <div className="flex-1 h-px bg-border" />
               </div>
 
-              {/* 4. Shipment Mode */}
+              {/* 4. Shipment Mode — Mexico Land pilot */}
               <div className="space-y-3">
-                <Label className="text-xs font-semibold">Shipment Mode</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold">Shipment Mode</Label>
+                  <span className="text-[10px] text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">Mexico Land Pilot</span>
+                </div>
                 {MODE_GROUPS.map(group => (
                   <div key={group.title} className="space-y-1.5">
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{group.title}</p>
                     <div className="grid grid-cols-2 gap-2">
                       {group.cards.map(m => {
                         const active = shipmentMode === m.id;
+                        const isEnabled = m.active;
                         return (
                           <button
                             key={m.id}
-                            onClick={() => setShipmentMode(m.id)}
+                            onClick={() => isEnabled && setShipmentMode(m.id)}
+                            disabled={!isEnabled}
                             className={cn(
                               "relative flex flex-col items-start gap-1 rounded-lg border p-2.5 text-left transition-all",
-                              "hover:border-primary/40 hover:shadow-sm active:scale-[0.98]",
-                              active ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-card"
+                              isEnabled && "hover:border-primary/40 hover:shadow-sm active:scale-[0.98]",
+                              active ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-card",
+                              !isEnabled && "opacity-40 cursor-not-allowed"
                             )}
                           >
                             <div className="flex items-center gap-2">
@@ -343,6 +344,9 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
                             </div>
                             <p className="text-[10px] leading-snug text-muted-foreground">{m.detail}</p>
                             {active && <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary" />}
+                            {!isEnabled && (
+                              <span className="absolute top-2 right-2 text-[9px] font-semibold text-muted-foreground bg-muted px-1.5 py-0.5 rounded">SOON</span>
+                            )}
                           </button>
                         );
                       })}
@@ -412,15 +416,16 @@ export function NewShipmentWizard({ open, onOpenChange, onComplete, existingImpo
                 />
               </div>
 
-              {/* 8. Port of Entry */}
+              {/* 8. Port of Entry — Mexico land border crossings */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Port of Entry / Destination</Label>
-                <Input
-                  value={portOfEntry}
-                  onChange={e => setPortOfEntry(e.target.value)}
-                  placeholder="e.g. Port of Los Angeles, JFK Airport"
-                  className="text-sm"
-                />
+                <Label className="text-xs font-semibold">Port of Entry</Label>
+                <Select value={portOfEntry} onValueChange={setPortOfEntry}>
+                  <SelectTrigger className="text-sm"><SelectValue placeholder="Select Mexico land border port…" /></SelectTrigger>
+                  <SelectContent>
+                    {MEXICO_PORTS_OF_ENTRY.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground">Laredo handles ~39% of all US-Mexico truck crossings</p>
               </div>
 
               {/* 9. Live AI Preview */}

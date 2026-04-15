@@ -215,6 +215,101 @@ const EXTRACTION_SCHEMAS: Record<string, object> = {
       estimated_arrival: { type: "string" },
     },
   },
+
+  // ── MEXICO LAND ENTRY: Truck Bill of Lading / PAPS Manifest ─────────────────
+  truck_bol_carrier_manifest: {
+    type: "object",
+    properties: {
+      paps_number: { type: "string", description: "Pre-Arrival Processing System (PAPS) barcode number — alphanumeric, used for ACE truck entry from Mexico" },
+      bl_number: { type: "string", description: "Bill of Lading or carrier reference number" },
+      shipper: { type: "string", description: "Full legal name of shipper/exporter in Mexico" },
+      shipper_address: { type: "string", description: "Shipper full address in Mexico" },
+      consignee: { type: "string", description: "Full legal name of US consignee/importer" },
+      consignee_address: { type: "string", description: "US consignee full address" },
+      notify_party: { type: "string" },
+      carrier_name: { type: "string", description: "Trucking carrier / SCAC code" },
+      truck_number: { type: "string" },
+      trailer_number: { type: "string" },
+      seal_numbers: { type: "array", items: { type: "string" } },
+      port_of_entry: { type: "string", description: "US port of entry (e.g. Laredo TX, El Paso TX, Otay Mesa CA)" },
+      crossing_date: { type: "string", description: "Expected or actual crossing date in ISO format YYYY-MM-DD" },
+      total_packages: { type: "number", description: "Total number of cartons/packages" },
+      gross_weight_kg: { type: "number", description: "Total gross weight in KG. Convert from LBS if needed (1 LB = 0.453592 KG)." },
+      commodity_description: { type: "string", description: "Description of goods as stated on the BoL" },
+      declared_value_usd: { type: "number", description: "Declared cargo value in USD" },
+      country_of_origin: { type: "string", description: "Country of origin of goods" },
+      freight_terms: { type: "string", description: "Prepaid or Collect" },
+      pedimento_number: { type: "string", description: "Mexican Pedimento reference number if cross-referenced on BoL" },
+    },
+  },
+
+  // ── MEXICO LAND ENTRY: USMCA Certificate / Certification of Origin ──────────
+  usmca_certification: {
+    type: "object",
+    properties: {
+      certifier_name: { type: "string", description: "Full legal name of the certifier (exporter, producer, or importer)" },
+      certifier_role: { type: "string", description: "Role of certifier: 'exporter', 'producer', or 'importer'" },
+      certifier_address: { type: "string" },
+      certifier_tax_id: { type: "string", description: "Tax ID or business registration number of certifier" },
+      producer_name: { type: "string", description: "Full name of the producer/manufacturer of goods" },
+      producer_address: { type: "string" },
+      importer_name: { type: "string", description: "Full legal name of the US importer" },
+      importer_address: { type: "string" },
+      country_of_origin: { type: "string", description: "Country of origin — should be Mexico (MX) for Mexico land imports" },
+      description_of_goods: { type: "string", description: "Description of goods covered by this certification" },
+      hts_codes: { type: "array", items: { type: "string" }, description: "HTS/HS codes covered by this USMCA certification" },
+      origin_criterion: { type: "string", description: "USMCA origin criterion code: A (wholly obtained), B (tariff change), C (regional value content), D (produced exclusively), E (automatic data processing)" },
+      blanket_period_start: { type: "string", description: "Blanket period start date ISO format YYYY-MM-DD (max 12-month blanket cert)" },
+      blanket_period_end: { type: "string", description: "Blanket period end date ISO format YYYY-MM-DD" },
+      certification_date: { type: "string", description: "Date cert was signed ISO format YYYY-MM-DD" },
+      invoice_numbers: { type: "array", items: { type: "string" }, description: "Invoice numbers this cert covers, if single-shipment cert" },
+      is_blanket: { type: "boolean", description: "true if this is a blanket/annual USMCA cert, false if single-shipment" },
+      is_expired: { type: "boolean", description: "true if blanket_period_end is before today's date" },
+      regional_value_content_pct: { type: "number", description: "Regional Value Content percentage if stated (required for automotive: ≥75% for vehicles, ≥70% for parts)" },
+    },
+  },
+
+  // ── MEXICO LAND ENTRY: Pedimento (Mexican Customs Export Declaration) ────────
+  pedimento: {
+    type: "object",
+    properties: {
+      pedimento_number: { type: "string", description: "Mexican customs declaration number (15-digit format: AA-AAAAAA-XXXXXXX)" },
+      aduana: { type: "string", description: "Mexican customs office (aduana) where exported" },
+      regime_code: { type: "string", description: "Customs regime code (e.g. A1 for definitive export)" },
+      exporter_name: { type: "string", description: "Full legal name of Mexican exporter" },
+      exporter_rfc: { type: "string", description: "Mexican RFC (tax ID) of exporter" },
+      importer_name: { type: "string", description: "Full legal name of US importer" },
+      country_of_origin: { type: "string", description: "Country of origin — should be MX for Mexican goods" },
+      country_of_destination: { type: "string", description: "Destination country — should be US" },
+      declared_value_usd: { type: "number", description: "Total declared value in USD as stated on Pedimento" },
+      declared_value_mxn: { type: "number", description: "Total declared value in MXN if stated" },
+      hts_mexico: { type: "array", items: { type: "string" }, description: "Mexican tariff codes (fracción arancelaria) from Pedimento line items" },
+      total_packages: { type: "number", description: "Total number of packages as declared on Pedimento" },
+      total_gross_weight_kg: { type: "number", description: "Total gross weight in KG as stated on Pedimento" },
+      transport_mode: { type: "string", description: "Transport mode code on Pedimento (e.g. '3' for road/truck)" },
+      crossing_date: { type: "string", description: "Date goods crossed border ISO format YYYY-MM-DD" },
+      invoice_numbers: { type: "array", items: { type: "string" }, description: "Commercial invoice numbers referenced on the Pedimento" },
+    },
+  },
+
+  // ── MEXICO LAND ENTRY: PAPS Document ────────────────────────────────────────
+  paps_document: {
+    type: "object",
+    properties: {
+      paps_number: { type: "string", description: "PAPS barcode number — alphanumeric string used by CBP ACE system for pre-arrival truck entry" },
+      carrier_scac: { type: "string", description: "SCAC code of the trucking carrier" },
+      carrier_name: { type: "string" },
+      shipper: { type: "string" },
+      consignee: { type: "string" },
+      port_of_entry: { type: "string", description: "US land port where truck will cross" },
+      estimated_arrival: { type: "string", description: "Estimated crossing date/time ISO format" },
+      total_packages: { type: "number" },
+      gross_weight_kg: { type: "number" },
+      commodity_description: { type: "string" },
+      trailer_number: { type: "string" },
+      truck_number: { type: "string" },
+    },
+  },
 };
 
 // ── Packing list internal validation — these run as a self-check before crossref ──
@@ -353,18 +448,38 @@ serve(async (req) => {
       throw new Error("Unsupported file type. Accepted: PDF, JPG, PNG, XLSX, DOCX");
     }
 
-    const schemaKey = Object.keys(EXTRACTION_SCHEMAS).find(k => documentType.includes(k));
+    // Match schema — longest matching key wins to avoid "bill_of_lading" matching "usmca_certification" etc.
+    const schemaKey = Object.keys(EXTRACTION_SCHEMAS)
+      .filter(k => documentType.includes(k))
+      .sort((a, b) => b.length - a.length)[0];
     const extractionSchema = schemaKey ? EXTRACTION_SCHEMAS[schemaKey] : null;
     const isPackingList = documentType.includes("packing_list");
 
-    const systemPrompt = `You are a licensed U.S. customs broker's AI assistant processing a ${documentType.replace(/_/g, " ")} for a ${shipmentMode.replace(/_/g, " ")} shipment of ${commodityType || "goods"} from ${countryOfOrigin || "unknown origin"}.
+    const isMexicoLand = shipmentMode.includes("mexico") || shipmentMode.includes("land");
+    const mexicoContext = isMexicoLand ? `
+MEXICO LAND ENTRY CONTEXT — This is a US-Mexico land border import shipment.
+Key compliance requirements to be aware of while extracting:
+- USMCA qualification: Goods must meet USMCA Rules of Origin for duty-free treatment. If USMCA is NOT claimed, a 25% IEEPA tariff applies (EO 14194, effective March 4 2025).
+- PAPS filing: Carrier must transmit Pre-Arrival Processing System (PAPS) manifest via ACE before crossing.
+- Pedimento: Mexican customs export declaration — pedimento number must appear on transport documents.
+- NO ISF required (ISF is ocean-only).
+- MPF exempt for USMCA-qualifying goods; applies at 0.3464% for non-USMCA goods.
+- Section 232: 25% steel / 25% aluminum regardless of USMCA status.
+- Automotive parts: USMCA Regional Value Content must be ≥75% (passenger vehicles) or ≥70% (parts).
+` : "";
 
-Extract all customs compliance data from this document. Rules:
+    const systemPrompt = `You are a licensed U.S. customs broker's AI assistant specializing in US-Mexico land entry compliance. You are processing a ${documentType.replace(/_/g, " ")} for a ${shipmentMode.replace(/_/g, " ")} shipment of ${commodityType || "goods"} from ${countryOfOrigin || "Mexico"}.
+${mexicoContext}
+Extract all customs compliance data from this document with maximum precision. Rules:
 - Return ONLY a valid JSON object. No markdown. No code fences. No explanation.
 - If a field is not present in the document, set it to null. Do NOT guess or estimate.
 - All weights must be in KG. Convert from LBS if needed (1 LB = 0.453592 KG).
 - All values must be numbers (not strings) where the schema specifies type number.
 - Extract the EXACT text for descriptions — do not paraphrase or summarize.
+- For HTS codes: extract the full code as written. Minimum 6 digits. US formal entry requires 10 digits.
+- For USMCA certifications: extract ALL blanket period dates, origin criterion codes, and every HTS code listed.
+- For Pedimentos: extract the full 15-digit pedimento number and all fracción arancelaria codes.
+- For Truck BoL/PAPS: extract the PAPS barcode number exactly as written — it is the ACE manifest key.
 
 ${extractionSchema ? `Required schema for extracted_data:\n${JSON.stringify(extractionSchema, null, 2)}` : "Extract all fields you can identify."}
 
@@ -372,7 +487,13 @@ ${isPackingList ? PACKING_LIST_VALIDATION_PROMPT : ""}`;
 
     const isCommercialInvoice = documentType.includes("commercial_invoice");
     const pgaFlagsInstruction = isCommercialInvoice
-      ? `- "pga_flags": array of { "agency": string, "requirement": string, "mandatory": boolean, "reason": string } — ONLY include a PGA flag if a formal regulatory filing, permit, or prior notice is ACTUALLY REQUIRED by a U.S. Partner Government Agency for this specific commodity. Do NOT flag advisory-only requirements, general import cautions, or requirements that apply only to certain sub-classifications. Common examples that require actual filings: FDA Prior Notice for food/drugs, USDA APHIS permit for plants/animals, EPA Form 3520 for vehicles/engines, CPSC certification for children's products with HTS 9503. Maximum 5 flags. If the commodity is generic electronics, commercial goods, or industrial equipment with no food/drug/plant/animal/vehicle content, return an empty array [].`
+      ? `- "pga_flags": array of { "agency": string, "requirement": string, "mandatory": boolean, "reason": string } — ONLY include a PGA flag if a formal regulatory filing, permit, or prior notice is ACTUALLY REQUIRED by a U.S. Partner Government Agency for this specific commodity. For Mexico land entry shipments, also flag:
+  • USMCA qualification risk: if goods do NOT appear to qualify for USMCA (no origin criterion stated, or HTS codes suggest non-Mexican manufacture), flag as {"agency": "CBP", "requirement": "USMCA Certificate of Origin", "mandatory": true, "reason": "Without USMCA qualification, 25% IEEPA tariff applies per EO 14194 March 4 2025"}
+  • Section 232 exposure: if goods are steel (HTS 7206-7229, 7301-7326) or aluminum (HTS 7601-7616), flag as {"agency": "CBP", "requirement": "Section 232 tariff — 25% steel/25% aluminum", "mandatory": true, "reason": "Section 232 applies regardless of USMCA status — no Mexico exemption"}
+  • FDA Prior Notice: required for food, dietary supplements, beverages, drugs
+  • USDA APHIS: required for plants, seeds, soil, animals, animal products
+  • EPA Form 3520: required for vehicles, engines, off-road equipment
+  Maximum 5 flags. If commodity is generic merchandise with no food/drug/plant/vehicle/steel/aluminum content AND USMCA clearly applies, return [].`
       : `- "pga_flags": [] — PGA analysis is only performed on commercial invoices. Return an empty array for this document type.`;
 
     const userText = `Extract all customs-relevant data from this ${documentType.replace(/_/g, " ")}. Return a single JSON object with these exact keys:
