@@ -108,8 +108,15 @@ export function useValidation({
       formData.append("commodityType", commodityType);
       formData.append("countryOfOrigin", countryOfOrigin);
 
+      // Explicitly attach the session JWT — supabase.functions.invoke does NOT
+      // automatically include the Authorization header when the body is FormData
+      // (known SDK issue). Without this the edge function returns 401.
+      const { data: { session } } = await supabase.auth.getSession();
       const { data, error } = await supabase.functions.invoke("workspace-extract", {
         body: formData,
+        headers: {
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        },
       });
 
       if (error) throw new Error(error.message);
@@ -237,9 +244,11 @@ export function useValidation({
           category: "cross_reference",
           field_name: f.field_checked,
           source_document: f.document_a,
+          target_document: f.document_b,
           found_value: f.finding,
           expected_value: f.recommendation,
           description: f.finding,
+          estimated_financial_impact_usd: f.estimated_financial_impact_usd || 0,
           is_blocker: f.severity === "critical",
           resolved: false,
         }));
@@ -266,6 +275,22 @@ export function useValidation({
         criticalCount > 0 ? "hold" :
         highCount > 0 ? "review" :
         mediumCount > 0 ? "review" : "clean";
+
+      const dbStatus = status === "clean" ? "clear" : status;
+
+      // Write readiness_score + overall_status back to validation_run
+      if (validationRunId) {
+        await supabase.from("validation_runs").update({
+          readiness_score: readinessScore,
+          overall_status: dbStatus,
+        }).eq("id", validationRunId);
+      }
+
+      // Also update the shipment row so Dashboard shows live data immediately
+      await supabase.from("shipments").update({
+        readiness_score: readinessScore,
+        status: dbStatus === "hold" ? "flagged" : dbStatus === "review" ? "in_transit" : "cleared",
+      } as any).eq("shipment_id", shipmentId);
 
       const validationResult: ValidationResult = {
         findings,

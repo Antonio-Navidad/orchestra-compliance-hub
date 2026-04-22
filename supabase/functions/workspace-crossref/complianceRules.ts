@@ -324,6 +324,135 @@ export const OCEAN_IMPORT_RULES: ModeComplianceRules = {
       ],
       explicitSkipFields: ["unit_prices", "payment_terms", "bank_details"],
     },
+
+    // ── Certificate of Origin vs Commercial Invoice ──────────────────────────
+    {
+      documentA: "certificate_of_origin",
+      documentB: "commercial_invoice",
+      fields: [
+        {
+          fieldA: "country_of_origin",
+          fieldB: "country_of_origin",
+          severity: "critical",
+          tolerance: "Must match for ALL line items. If certificate shows multiple origins (e.g., China AND Vietnam for different items), the invoice must reflect the same split. A blanket 'CHINA' on the invoice when some items are from Vietnam is a 19 CFR 134 violation.",
+          regulation: "19 CFR 134.11 — country of origin marking must be accurate per item; false COO declaration = 19 USC 1592 penalty",
+        },
+        {
+          fieldA: "hts_codes",
+          fieldB: "hts_codes",
+          severity: "critical",
+          tolerance: "HTS codes on certificate must match invoice HTS codes for the same goods. Different HTS = different duty rates = potential duty shortfall. Flag ANY difference.",
+          regulation: "19 USC 1592 — misclassification penalty up to 4× duty shortfall",
+        },
+        {
+          fieldA: "total_quantity",
+          fieldB: "total_quantity",
+          severity: "medium",
+          tolerance: "Quantities must match. Flag any difference — indicates goods were added or removed after certificate was issued.",
+          regulation: "CBP requirement — certificate must accurately describe the goods being imported",
+        },
+      ],
+      explicitSkipFields: ["payment_terms", "bank_details", "freight_charges"],
+    },
+
+    // ── Certificate of Origin vs Packing List ────────────────────────────────
+    {
+      documentA: "certificate_of_origin",
+      documentB: "packing_list",
+      fields: [
+        {
+          fieldA: "country_of_origin",
+          fieldB: "country_of_origin",
+          severity: "critical",
+          tolerance: "Must match per item. If packing list shows different origin countries per line item, certificate must reflect the same split.",
+          regulation: "19 CFR 134.11 — origin marking consistency across all shipping documents",
+        },
+        {
+          fieldA: "total_quantity",
+          fieldB: "total_quantity",
+          severity: "medium",
+          tolerance: "Total pieces must match. Certificate of origin quantity must equal packing list quantity.",
+          regulation: "CBP exam best practice — quantities must be reconcilable across documents",
+        },
+      ],
+      explicitSkipFields: ["unit_prices", "payment_terms"],
+    },
+
+    // ── Certificate of Origin vs ISF ─────────────────────────────────────────
+    {
+      documentA: "certificate_of_origin",
+      documentB: "isf_filing",
+      fields: [
+        {
+          fieldA: "country_of_origin",
+          fieldB: "country_of_origin",
+          severity: "critical",
+          tolerance: "ISF Element 9 (country of origin) must match certificate. If certificate shows multiple origins, ISF must list all of them. Single-origin ISF for a multi-origin shipment is an ISF inaccuracy ($5,000 per element).",
+          regulation: "19 CFR 149.2(b)(5) — ISF must include accurate country of origin; $5,000 per violation",
+        },
+        {
+          fieldA: "manufacturer_name",
+          fieldB: "manufacturer_name",
+          severity: "high",
+          tolerance: "ISF Element 3 (manufacturer) must include ALL manufacturers listed on the certificate. If certificate shows goods from different factories, ISF must disclose each one.",
+          regulation: "19 CFR 149.2(b)(1) — ISF must identify manufacturer/supplier for each item",
+        },
+        {
+          fieldA: "hts_codes",
+          fieldB: "hts_codes",
+          severity: "critical",
+          tolerance: "ISF Element 10 (HTS) must match certificate HTS codes. Any difference = ISF inaccuracy.",
+          regulation: "19 CFR 149.2(b)(4) — ISF must include commodity HTS number at 6-digit level; $5,000 penalty per violation",
+        },
+      ],
+      explicitSkipFields: [],
+    },
+
+    // ── Customs Bond vs Commercial Invoice ───────────────────────────────────
+    {
+      documentA: "customs_bond",
+      documentB: "commercial_invoice",
+      fields: [
+        {
+          fieldA: "bond_amount_usd",
+          fieldB: "total_value",
+          severity: "critical",
+          tolerance: "For a single-entry bond, the bond amount MUST equal or exceed the total entered value of the merchandise. If bond amount < invoice total, flag as CRITICAL with exact shortfall. CBP will reject entry if bond is insufficient per 19 U.S.C. 1623.",
+          regulation: "19 U.S.C. 1623 — failure to maintain adequate bond results in entry rejection; 19 CFR 113.13 — bond must cover duties, taxes, and fees",
+        },
+        {
+          fieldA: "importer_name",
+          fieldB: "buyer_name",
+          severity: "high",
+          tolerance: "Must refer to the same entity. Bond principal must be the importer of record.",
+          regulation: "19 CFR 113.11 — bond must identify the correct principal",
+        },
+      ],
+      explicitSkipFields: [],
+    },
+
+    // ── Arrival Notice vs Bill of Lading ─────────────────────────────────────
+    {
+      documentA: "arrival_notice",
+      documentB: "bill_of_lading",
+      fields: [
+        {
+          fieldA: "gross_weight_kg",
+          fieldB: "gross_weight_kg",
+          severity: "medium",
+          tolerance: "Must match. Weight discrepancy between arrival notice and BOL may indicate cargo was added or removed in transit.",
+          regulation: "CBP manifest accuracy requirement",
+        },
+        {
+          fieldA: "container_numbers",
+          fieldB: "container_numbers",
+          severity: "critical",
+          tolerance: "Must match exactly. Container number discrepancy indicates possible transshipment or document substitution.",
+          regulation: "19 CFR 4.7a — container numbers on manifest must match actual containers",
+        },
+      ],
+      explicitSkipFields: ["freight_charges", "demurrage_rate"],
+    },
   ],
 
   documentSpecs: [
@@ -379,6 +508,39 @@ export const OCEAN_IMPORT_RULES: ModeComplianceRules = {
         { field: "total_cartons", description: "Total number of cartons/packages", regulation: "CBP exam best practice" },
         { field: "total_gross_weight_kg", description: "Total gross weight in KG", regulation: "CBP exam best practice" },
         { field: "line_items", description: "Itemized list matching invoice line items with quantities, weights, and dimensions", regulation: "CBP exam best practice" },
+      ],
+    },
+    {
+      documentType: "certificate_of_origin",
+      regulationSummary: "Certificate certifying the country of origin for all goods in the shipment. Required for duty preference claims and COO marking compliance under 19 CFR 134.",
+      requiredFields: [
+        { field: "country_of_origin", description: "Country of origin per item — must be accurate for duty classification", regulation: "19 CFR 134.11" },
+        { field: "hts_codes", description: "HTS codes per item — must match invoice and ISF", regulation: "CBP classification requirement" },
+        { field: "total_quantity", description: "Total quantity of goods", regulation: "Certificate accuracy" },
+        { field: "exporter_name", description: "Name of exporter/manufacturer", regulation: "Certificate accuracy" },
+        { field: "importer_name", description: "Name of importer", regulation: "Certificate accuracy" },
+      ],
+    },
+    {
+      documentType: "customs_bond",
+      regulationSummary: "19 U.S.C. 1623 — Customs bond required for formal entries. Single-entry bond must equal or exceed total entered value. Insufficient bond = entry rejection.",
+      requiredFields: [
+        { field: "bond_amount_usd", description: "Bond face amount in USD", regulation: "19 U.S.C. 1623 — bond must be sufficient to cover duties, taxes, and fees" },
+        { field: "bond_type", description: "Single entry or continuous", regulation: "19 CFR 113.11" },
+        { field: "importer_name", description: "Principal (importer of record)", regulation: "19 CFR 113.11" },
+        { field: "surety_company", description: "CBP-approved surety issuer", regulation: "19 CFR 113.12" },
+        { field: "port_of_entry", description: "Port where bond is filed", regulation: "19 CFR 113.13" },
+      ],
+    },
+    {
+      documentType: "arrival_notice",
+      regulationSummary: "Carrier-issued notice of vessel arrival. Contains critical deadlines for ISF filing, formal entry, last free day, and demurrage/detention charges.",
+      requiredFields: [
+        { field: "vessel_name", description: "Carrying vessel name", regulation: "Carrier notification" },
+        { field: "eta_date", description: "Estimated time of arrival at US port", regulation: "Carrier notification" },
+        { field: "last_free_day", description: "Last free day before demurrage/detention charges begin", regulation: "Terminal/carrier schedule" },
+        { field: "container_numbers", description: "Container identification numbers", regulation: "Carrier notification" },
+        { field: "bl_number", description: "Bill of lading reference", regulation: "Carrier notification" },
       ],
     },
   ],

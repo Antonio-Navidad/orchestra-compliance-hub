@@ -2,8 +2,7 @@
  * useCredits — manages validation credits and subscription state.
  *
  * Free tier:  5 credits (one per exceptions report generated)
- * Starter:    $299/month — subscription_tier = 'gold',  unlimited
- * Team:       $499/month — subscription_tier = 'black', unlimited
+ * Team:       $1,499/month or $14,999/year — subscription_tier = 'black', unlimited
  *
  * Calling deductCredit() invokes the `deduct_validation_credit` Postgres
  * function, which is atomic and returns false if the user has no credits left.
