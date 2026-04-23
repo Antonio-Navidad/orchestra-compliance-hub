@@ -105,6 +105,50 @@ const EXTRACTION_SCHEMAS: Record<string, object> = {
     },
   },
 
+  // ── USMCA Certification of Origin — all 9 Annex 5-A mandatory elements ──
+  usmca_certification: {
+    type: "object",
+    properties: {
+      // Element 1: Certifier
+      certifier_name: { type: "string", description: "Full legal name of the certifier (person signing the certification)" },
+      certifier_title: { type: "string", description: "Job title or position of the certifier" },
+      certifier_company: { type: "string", description: "Company name of the certifier" },
+      certifier_address: { type: "string", description: "Full address of the certifier" },
+      certifier_phone: { type: "string", description: "Phone number of the certifier" },
+      certifier_email: { type: "string", description: "Email address of the certifier" },
+      certifier_role: { type: "string", description: "Role of certifier: 'Exporter', 'Producer', 'Importer', or 'Exporter and Producer'" },
+      // Element 2: Exporter
+      exporter_name: { type: "string", description: "Full legal name of the exporter. May say 'Same as certifier' or 'Various'." },
+      exporter_address: { type: "string", description: "Full address of the exporter" },
+      // Element 3: Producer
+      producer_name: { type: "string", description: "Full legal name of the producer/manufacturer. May say 'Same as certifier', 'Same as exporter', or 'Various'." },
+      producer_address: { type: "string", description: "Full address of the producer" },
+      // Element 4: Importer
+      importer_name: { type: "string", description: "Full legal name of the importer. May say 'Various' or 'Unknown'." },
+      importer_address: { type: "string", description: "Full address of the importer" },
+      // Element 5: Description and HS tariff classification
+      goods_description: { type: "string", description: "Full description of goods covered by this certification" },
+      hts_codes_covered: { type: "array", items: { type: "string" }, description: "All HTS/HS codes covered (6-digit minimum). Extract EVERY HTS code listed." },
+      // Element 6: Origin criterion
+      origin_criterion: { type: "string", description: "Origin criterion code: A (wholly obtained), B (tariff shift), C (tariff shift + RVC), or D (exclusively from originating materials). Extract EXACT code." },
+      regional_value_content_pct: { type: "number", description: "Regional Value Content percentage if stated (required for automotive goods under Chapter 87 and RVC-based criteria)" },
+      // Element 7: Blanket period
+      is_blanket: { type: "boolean", description: "true if this is a blanket certification covering multiple shipments" },
+      blanket_period_start: { type: "string", description: "Blanket period start date ISO format YYYY-MM-DD" },
+      blanket_period_end: { type: "string", description: "Blanket period end date ISO format YYYY-MM-DD. Must not exceed 12 months from start." },
+      is_expired: { type: "boolean", description: "true if blanket_period_end is before today's date" },
+      // Element 8: Authorized signature and date
+      signature_date: { type: "string", description: "Date the certification was signed, ISO format YYYY-MM-DD" },
+      authorized_signature_present: { type: "boolean", description: "true if a wet or electronic signature block is present on the document" },
+      // Element 9: Declaration
+      declaration_present: { type: "boolean", description: "true if the document contains a declaration that the information is true and accurate (required by Annex 5-A)" },
+      // Additional compliance fields
+      fta_program: { type: "string", description: "FTA program name: 'USMCA', 'T-MEC', or 'CUSMA'" },
+      country_of_origin: { type: "string", description: "Country of origin for the certified goods" },
+    },
+  },
+
+  // ── Legacy FTA certificate (non-USMCA) ──
   fta_certificate: {
     type: "object",
     properties: {
@@ -120,6 +164,73 @@ const EXTRACTION_SCHEMAS: Record<string, object> = {
       is_expired: { type: "boolean" },
       blanket_period_start: { type: "string" },
       blanket_period_end: { type: "string" },
+    },
+  },
+
+  // ── Truck BOL / Carrier Manifest (Mexico/Canada land freight — PAPS) ──
+  truck_bol_carrier_manifest: {
+    type: "object",
+    properties: {
+      paps_number: { type: "string", description: "PAPS (Pre-Arrival Processing System) barcode number — ACE filing key. Usually a 12-18 character alphanumeric code." },
+      shipper_name: { type: "string", description: "Full legal name of the shipper/exporter" },
+      shipper_address: { type: "string" },
+      consignee_name: { type: "string", description: "Full legal name of the consignee/importer" },
+      consignee_address: { type: "string" },
+      carrier_name: { type: "string", description: "Name of the trucking carrier/motor carrier" },
+      carrier_scac: { type: "string", description: "4-letter Standard Carrier Alpha Code (SCAC) of the carrier" },
+      truck_number: { type: "string", description: "Truck/tractor unit number or license plate" },
+      trailer_number: { type: "string", description: "Trailer number" },
+      crossing_date: { type: "string", description: "Expected or actual border crossing date ISO format YYYY-MM-DD" },
+      port_of_entry: { type: "string", description: "US port of entry (e.g. Laredo TX, El Paso TX, Nogales AZ)" },
+      gross_weight_kg: { type: "number", description: "Total gross weight in KG. Convert from LBS if needed." },
+      total_pieces: { type: "number", description: "Total number of pieces or cartons" },
+      commodity_description: { type: "string", description: "Description of the goods being transported" },
+      pedimento_number: { type: "string", description: "Mexican Pedimento number referenced on this BOL — critical for cross-reference. Format: AA-AAAAAA-XXXXXXX or similar." },
+      declared_value_usd: { type: "number", description: "Declared cargo value in USD if stated" },
+      seal_numbers: { type: "array", items: { type: "string" }, description: "All seal numbers on the trailer" },
+      pro_number: { type: "string", description: "Carrier PRO number (freight bill number)" },
+    },
+  },
+
+  // ── Mexican Pedimento (export customs declaration) ──
+  pedimento: {
+    type: "object",
+    properties: {
+      pedimento_number: { type: "string", description: "Full pedimento number. Common formats: AA-AAAAAA-XXXXXXX or AAAA-XXXXXXX. Extract EXACTLY as printed." },
+      aduana: { type: "string", description: "Mexican customs office (aduana) code and name" },
+      regime_code: { type: "string", description: "Customs regime code (e.g. A1 = definitive export, IN = temporary import)" },
+      exporter_name: { type: "string", description: "Full legal name of the Mexican exporter" },
+      exporter_rfc: { type: "string", description: "Mexican tax ID (RFC — Registro Federal de Contribuyentes) of the exporter. Format: 3-4 letters + 6 digits + 3 alphanumeric." },
+      importer_name: { type: "string", description: "Full legal name of the US importer if stated" },
+      declared_value_mxn: { type: "number", description: "Declared value in Mexican Pesos (MXN)" },
+      declared_value_usd: { type: "number", description: "Declared value in USD. Convert from MXN using exchange rate stated on pedimento if USD not explicit." },
+      total_gross_weight_kg: { type: "number", description: "Total gross weight in KG" },
+      hts_mexico: { type: "array", items: { type: "string" }, description: "All Mexican tariff fracciones arancelarias (8-digit codes) listed on the pedimento" },
+      issue_date: { type: "string", description: "Pedimento issue/payment date ISO format YYYY-MM-DD" },
+      payment_date: { type: "string", description: "Date taxes/duties were paid ISO format YYYY-MM-DD" },
+      total_taxes_paid_mxn: { type: "number", description: "Total taxes/duties paid in MXN if stated" },
+      transport_mode: { type: "string", description: "Mode of transport code (e.g. 3 = truck/carretera)" },
+      country_of_destination: { type: "string", description: "Country of final destination (should be 'USA' or 'United States')" },
+    },
+  },
+
+  // ── US Customs Bond ──
+  customs_bond: {
+    type: "object",
+    properties: {
+      bond_number: { type: "string", description: "Bond number or reference number" },
+      bond_type: { type: "string", description: "Bond type: 'Single Entry Bond' or 'Continuous Bond'" },
+      bond_amount_usd: { type: "number", description: "Bond face amount in USD (numeric, no currency symbol). This must be ≥ total invoice value per 19 CFR 113.13." },
+      principal_name: { type: "string", description: "Full legal name of the principal (the importer of record)" },
+      principal_address: { type: "string" },
+      surety_company: { type: "string", description: "Name of the surety/insurance company guaranteeing the bond" },
+      surety_code: { type: "string", description: "CBP-assigned surety code (if present)" },
+      cbp_broker_name: { type: "string", description: "Name of the customs broker on the bond (if different from principal)" },
+      validity_start: { type: "string", description: "Bond validity start date ISO format YYYY-MM-DD" },
+      validity_end: { type: "string", description: "Bond validity end date ISO format YYYY-MM-DD. Null for continuous bonds." },
+      is_continuous: { type: "boolean", description: "true if this is a continuous bond (annual), false if single entry" },
+      port_of_entry: { type: "string", description: "Port of entry if specified on a single entry bond" },
+      activity_code: { type: "string", description: "CBP bond activity code (e.g. 1 = importer/broker, 2 = drawback, etc.)" },
     },
   },
 
