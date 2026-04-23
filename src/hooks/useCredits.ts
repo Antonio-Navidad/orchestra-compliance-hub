@@ -2,25 +2,34 @@
  * useCredits — manages validation credits and subscription state.
  *
  * Free tier:  5 credits (one per exceptions report generated)
- * Team:       $1,499/month or $14,999/year — subscription_tier = 'black', unlimited
+ * Team:       $1,499/month or $14,999/year — subscription_tier = 'team', unlimited
  *
  * Calling deductCredit() invokes the `deduct_validation_credit` Postgres
  * function, which is atomic and returns false if the user has no credits left.
+ * Any non-'free' tier is treated as unlimited both client- and server-side.
  */
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-export type SubscriptionTier = "free" | "gold" | "black";
+// 'gold' and 'black' are legacy tier names from the original Starter/Team
+// pricing model. The current Stripe webhook writes 'team' as the canonical
+// paid tier. All three are treated as "subscribed / unlimited" everywhere.
+export type SubscriptionTier = "free" | "gold" | "black" | "team";
 export type PlanName = "Free" | "Starter" | "Team";
+
+// Tiers that should be treated as paid/unlimited. Update this in one place
+// if the tier naming changes again. The DB-side deduct_validation_credit RPC
+// applies the same rule (any tier <> 'free' bypasses deduction).
+const PAID_TIERS: SubscriptionTier[] = ["gold", "black", "team"];
 
 export interface CreditsState {
   creditsRemaining: number;
   subscriptionTier: SubscriptionTier;
   subscriptionStatus: string;
   planName: PlanName;
-  isSubscribed: boolean;   // true when tier is gold or black AND status is active
+  isSubscribed: boolean;   // true when tier ∈ PAID_TIERS AND status === 'active'
   isLoading: boolean;
   error: string | null;
 }
@@ -66,8 +75,7 @@ export function useCredits(): UseCreditsReturn {
 
       const tier = (data?.subscription_tier ?? "free") as SubscriptionTier;
       const status = data?.subscription_status ?? "inactive";
-      const isSubscribed =
-        (tier === "gold" || tier === "black") && status === "active";
+      const isSubscribed = PAID_TIERS.includes(tier) && status === "active";
 
       setState({
         creditsRemaining: data?.credits_remaining ?? 5,
